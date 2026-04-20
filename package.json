@@ -1,0 +1,29 @@
+{
+  "name": "tg-bot-menu",
+  "version": "1.0.0",
+  "description": "A smart Telegram bot for planning daily and weekly meals, managing recipes, and generating shopping lists.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "keywords": [
+    "telegram",
+    "bot",
+    "menu",
+    "planning",
+    "telegraf",
+    "sqlite"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "telegraf": "^4.16.3",
+    "sqlite3": "^5.1.7",
+    "dotenv": "^16.4.5",
+    "winston": "^3.12.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}

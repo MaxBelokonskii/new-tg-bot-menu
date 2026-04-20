@@ -1,0 +1,108 @@
+---
+alwaysApply: true
+---
+
+Modular Organization:
+
+All modules are separated into folders:
+- database/ - database operations
+- features/ - functional modules
+- utils/ - reusable utilities
+- bot/ - bot core
+- interface/ - UI components
+- docs/ - documentation
+
+Documentation:
+
+Code comments:
+
+- For complex logic - bilingual:
+// [RU] Weekly meal calculation
+// [EN] Weekly meal plan calculation
+
+- Simple comments - in Russian
+- JSDoc in English only
+
+README files:
+
+- /docs/README.ru.md (full version)
+
+- /README.md (brief English abstract)
+
+File Structure:
+
+- Each functionality in separate file
+- Maximum file size: 300 lines
+- File naming: kebab-case
+
+
+Functional Modules:
+
+- meal-suggestions/ (dish selection)
+- weekly-planner/ (weekly meal plan)
+- calorie-tracker/ (calorie counting)
+- shopping-list/ (grocery list)
+
+Each module contains:
+- logic.js - business logic
+- api.js - external connections (if any)
+
+Interface:
+
+Screen separation:
+- main-menu.js
+- dish-selection.js
+- weekly-plan.js
+- calorie-settings.js
+- shopping-list-display.js
+- meal-history.js 
+- All texts in /bot/texts.js
+
+Reusable Components:
+
+All common functions in utils/:
+- calculations.js
+- formatters.js
+- date-helpers.js
+- db-helpers.js
+
+Technologies:
+
+- Telegraf
+- sqlite3
+- dotenv
+- winston
+- Allowed to offer additional technologies if needed
+- For more precise work with technologies use mcp context7
+
+
+Development Principles:
+
+- Global variables prohibited
+- Mandatory error handling
+- Max cyclomatic complexity: 10
+- DRY principle
+
+Testing:
+
+- Unit tests for all utilities
+- Integration tests for DB API
+
+Test cases:
+
+- Meal plan generation
+- Calorie calculation
+- Grocery list formation
+
+Localization:
+- All texts in /bot/texts.js
+
+Format:
+module.exports = {
+  mainMenu: {
+    title: "🍳 Main Menu",
+    buttons: {
+      plan: "📅 Meal Plan"
+    }
+  }
+}

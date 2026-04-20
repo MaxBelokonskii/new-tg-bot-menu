@@ -1,0 +1,5338 @@
+{
+  "recipes": [
+    {
+      "id": "breakfast_1",
+      "name": "Овсяная каша с фруктами",
+      "description": "Полезная овсяная каша с сезонными фруктами",
+      "servings": 2,
+      "nutrition": {
+        "calories": 320,
+        "proteins": 12,
+        "fats": 8,
+        "carbs": 52
+      },
+      "nutrition_per_serving": {
+        "calories": 160,
+        "proteins": 6,
+        "fats": 4,
+        "carbs": 26
+      },
+      "ingredients": [
+        {
+          "item": "Овсяные хлопья",
+          "amount": "100 г"
+        },
+        {
+          "item": "Молоко",
+          "amount": "250 мл"
+        },
+        {
+          "item": "Банан",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Яблоко",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Мед",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "breakfast_2",
+      "name": "Омлет с сыром",
+      "description": "Классический омлет с сыром и зеленью",
+      "servings": 2,
+      "nutrition": {
+        "calories": 280,
+        "proteins": 22,
+        "fats": 20,
+        "carbs": 4
+      },
+      "nutrition_per_serving": {
+        "calories": 140,
+        "proteins": 11,
+        "fats": 10,
+        "carbs": 2
+      },
+      "ingredients": [
+        {
+          "item": "Яйцо",
+          "amount": "3 шт"
+        },
+        {
+          "item": "Молоко",
+          "amount": "100 мл"
+        },
+        {
+          "item": "Сыр тертый",
+          "amount": "50 г"
+        },
+        {
+          "item": "Зелень",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Соль",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "breakfast_3",
+      "name": "Яичница с томатами и сыром",
+      "description": "Аппетитная яичница с сочными томатами и расплавленным сыром",
+      "servings": 2,
+      "nutrition": {
+        "calories": 320,
+        "proteins": 24,
+        "fats": 22,
+        "carbs": 6
+      },
+      "nutrition_per_serving": {
+        "calories": 160,
+        "proteins": 12,
+        "fats": 11,
+        "carbs": 3
+      },
+      "ingredients": [
+        {
+          "item": "Яйцо",
+          "amount": "4 шт"
+        },
+        {
+          "item": "Помидор",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Сыр тертый",
+          "amount": "70 г"
+        },
+        {
+          "item": "Масло растительное",
+          "amount": "1 ст.л."
+        },
+        {
+          "item": "Соль",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Перец",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "breakfast_4",
+      "name": "Омлет с томатами и сыром",
+      "description": "Пышный омлет с сочными томатами и расплавленным сыром",
+      "servings": 2,
+      "nutrition": {
+        "calories": 340,
+        "proteins": 26,
+        "fats": 24,
+        "carbs": 8
+      },
+      "nutrition_per_serving": {
+        "calories": 170,
+        "proteins": 13,
+        "fats": 12,
+        "carbs": 4
+      },
+      "ingredients": [
+        {
+          "item": "Яйцо",
+          "amount": "4 шт"
+        },
+        {
+          "item": "Помидор",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Сыр тертый",
+          "amount": "70 г"
+        },
+        {
+          "item": "Молоко",
+          "amount": "100 мл"
+        },
+        {
+          "item": "Масло растительное",
+          "amount": "1 ст.л."
+        },
+        {
+          "item": "Соль",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Перец",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "breakfast_5",
+      "name": "Бутерброды с красной рыбой и огурцом",
+      "description": "Аппетитные бутерброды с семгой и свежим огурцом",
+      "servings": 3,
+      "nutrition": {
+        "calories": 380,
+        "proteins": 28,
+        "fats": 18,
+        "carbs": 32
+      },
+      "nutrition_per_serving": {
+        "calories": 127,
+        "proteins": 9,
+        "fats": 6,
+        "carbs": 11
+      },
+      "ingredients": [
+        {
+          "item": "Хлеб тостовый",
+          "amount": "6 куска"
+        },
+        {
+          "item": "Семга слабосоленая",
+          "amount": "150 г"
+        },
+        {
+          "item": "Огурец",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Сыр творожный",
+          "amount": "30 г"
+        },
+        {
+          "item": "Зелень",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "breakfast_6",
+      "name": "Гранола с питьевым йогуртом",
+      "description": "Хрустящая домашняя гранола с натуральным йогуртом и свежими ягодами",
+      "servings": 2,
+      "nutrition": {
+        "calories": 420,
+        "proteins": 16,
+        "fats": 14,
+        "carbs": 64
+      },
+      "nutrition_per_serving": {
+        "calories": 210,
+        "proteins": 8,
+        "fats": 7,
+        "carbs": 32
+      },
+      "ingredients": [
+        {
+          "item": "Гранола",
+          "amount": "100 г"
+        },
+        {
+          "item": "Йогурт",
+          "amount": "250 мл"
+        },
+        {
+          "item": "Мед",
+          "amount": "1 ст.л."
+        },
+        {
+          "item": "Ягоды",
+          "amount": "100 г"
+        },
+        {
+          "item": "Банан",
+          "amount": "1 шт"
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "breakfast_7",
+      "name": "Творог с вареньем и сметаной",
+      "description": "Нежный творог со сладким вареньем и свежей сметаной",
+      "servings": 2,
+      "nutrition": {
+        "calories": 280,
+        "proteins": 24,
+        "fats": 16,
+        "carbs": 20
+      },
+      "nutrition_per_serving": {
+        "calories": 140,
+        "proteins": 12,
+        "fats": 8,
+        "carbs": 10
+      },
+      "ingredients": [
+        {
+          "item": "Творог",
+          "amount": "200 г"
+        },
+        {
+          "item": "Сметана",
+          "amount": "2 ст.л."
+        },
+        {
+          "item": "Мед",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "breakfast_8",
+      "name": "Нежный омлет с овощами",
+      "description": "Омлет с замороженными овощами и помидором",
+      "servings": 1,
+      "nutrition": {
+        "calories": 94,
+        "proteins": 5,
+        "fats": 5.5,
+        "carbs": 5.9
+      },
+      "nutrition_per_serving": {
+        "calories": 94,
+        "proteins": 5,
+        "fats": 5.5,
+        "carbs": 5.9
+      },
+      "ingredients": [
+        {
+          "item": "Смесь замороженных овощей",
+          "amount": "200 г"
+        },
+        {
+          "item": "Помидор",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Оливковое масло",
+          "amount": "1 ст. л."
+        },
+        {
+          "item": "Соль, перец",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "breakfast_9",
+      "name": "Творожный омлет",
+      "description": "Омлет с творогом и зеленью",
+      "servings": 1,
+      "nutrition": {
+        "calories": 126,
+        "proteins": 15.5,
+        "fats": 5.9,
+        "carbs": 2.2
+      },
+      "nutrition_per_serving": {
+        "calories": 126,
+        "proteins": 15.5,
+        "fats": 5.9,
+        "carbs": 2.2
+      },
+      "ingredients": [
+        {
+          "item": "Творог",
+          "amount": "180 г"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "3 шт"
+        },
+        {
+          "item": "Соль, перец, специи, зелень",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "breakfast_10",
+      "name": "Омлет с кабачком и сыром",
+      "description": "Омлет с тертым кабачком и сыром",
+      "servings": 1,
+      "nutrition": {
+        "calories": 85.18,
+        "proteins": 6.5,
+        "fats": 4.97,
+        "carbs": 3.17
+      },
+      "nutrition_per_serving": {
+        "calories": 85.18,
+        "proteins": 6.5,
+        "fats": 4.97,
+        "carbs": 3.17
+      },
+      "ingredients": [
+        {
+          "item": "Кабачок",
+          "amount": "200 г"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Сыр 45%",
+          "amount": "30 г"
+        },
+        {
+          "item": "Молоко",
+          "amount": "50 мл"
+        },
+        {
+          "item": "Соль, перец",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "breakfast_11",
+      "name": "Сырно-кабачковые оладьи",
+      "description": "Оладьи из кабачков с сыром и чесноком",
+      "servings": 1,
+      "nutrition": {
+        "calories": 109.86,
+        "proteins": 7.23,
+        "fats": 4.14,
+        "carbs": 10.81
+      },
+      "nutrition_per_serving": {
+        "calories": 109.86,
+        "proteins": 7.23,
+        "fats": 4.14,
+        "carbs": 10.81
+      },
+      "ingredients": [
+        {
+          "item": "Кабачок",
+          "amount": "2 шт (~500 г)"
+        },
+        {
+          "item": "Мука цельнозерновая",
+          "amount": "100 г"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Сыр",
+          "amount": "80 г"
+        },
+        {
+          "item": "Чеснок",
+          "amount": "2 зубчика"
+        },
+        {
+          "item": "Соль",
+          "amount": "щепотка"
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "breakfast_12",
+      "name": "Творожная запеканка с морковью",
+      "description": "Запеканка из творога с морковью и кунжутом",
+      "servings": 1,
+      "nutrition": {
+        "calories": 65,
+        "proteins": 5.4,
+        "fats": 2.6,
+        "carbs": 5.3
+      },
+      "nutrition_per_serving": {
+        "calories": 65,
+        "proteins": 5.4,
+        "fats": 2.6,
+        "carbs": 5.3
+      },
+      "ingredients": [
+        {
+          "item": "Морковь",
+          "amount": "1 кг"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "4 шт"
+        },
+        {
+          "item": "Творог",
+          "amount": "200 г"
+        },
+        {
+          "item": "Кунжут",
+          "amount": "20 г"
+        },
+        {
+          "item": "Ванилин",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "breakfast_13",
+      "name": "Овсяноблин",
+      "description": "Блин из овсяных хлопьев с начинкой на выбор",
+      "servings": 1,
+      "nutrition": {
+        "calories": 103.2,
+        "proteins": 8.31,
+        "fats": 5.83,
+        "carbs": 3.34
+      },
+      "nutrition_per_serving": {
+        "calories": 103.2,
+        "proteins": 8.31,
+        "fats": 5.83,
+        "carbs": 3.34
+      },
+      "ingredients": [
+        {
+          "item": "Яйцо",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Овсяные отруби",
+          "amount": "3 ст. л."
+        },
+        {
+          "item": "Кефир",
+          "amount": "70 мл"
+        },
+        {
+          "item": "Мука цельнозерновая",
+          "amount": "1 ст. л."
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "breakfast_14",
+      "name": "Легкий куриный пирог-запеканка",
+      "description": "Пирог с куриным филе и цельнозерновой мукой",
+      "servings": 1,
+      "nutrition": {
+        "calories": 136.49,
+        "proteins": 16.12,
+        "fats": 4.52,
+        "carbs": 5.69
+      },
+      "nutrition_per_serving": {
+        "calories": 136.49,
+        "proteins": 16.12,
+        "fats": 4.52,
+        "carbs": 5.69
+      },
+      "ingredients": [
+        {
+          "item": "Куриное филе",
+          "amount": "300 г"
+        },
+        {
+          "item": "Мука цельнозерновая",
+          "amount": "50 г"
+        },
+        {
+          "item": "Молоко",
+          "amount": "150 г"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Разрыхлитель",
+          "amount": "1/2 ч. л."
+        },
+        {
+          "item": "Приправы",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "breakfast_15",
+      "name": "Яйцо пашот",
+      "description": "Яйцо, приготовленное в горячей воде с уксусом",
+      "servings": 1,
+      "nutrition": {
+        "calories": 88,
+        "proteins": 7.1,
+        "fats": 6.4,
+        "carbs": 0.4
+      },
+      "nutrition_per_serving": {
+        "calories": 88,
+        "proteins": 7.1,
+        "fats": 6.4,
+        "carbs": 0.4
+      },
+      "ingredients": [
+        {
+          "item": "Яйцо",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Уксус или лимонная кислота",
+          "amount": "1 ст. л."
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "breakfast_16",
+      "name": "Бутерброд с авокадо и красной рыбой",
+      "description": "Бутерброд с пюре авокадо и слабосоленой рыбой",
+      "servings": 1,
+      "nutrition": {
+        "calories": 256,
+        "proteins": 14.4,
+        "fats": 16.6,
+        "carbs": 11.5
+      },
+      "nutrition_per_serving": {
+        "calories": 256,
+        "proteins": 14.4,
+        "fats": 16.6,
+        "carbs": 11.5
+      },
+      "ingredients": [
+        {
+          "item": "Хлеб цельнозерновой",
+          "amount": "20 г"
+        },
+        {
+          "item": "Авокадо",
+          "amount": "1/2 шт (60 г)"
+        },
+        {
+          "item": "Красная рыба слабосоленая",
+          "amount": "60 г"
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "breakfast_8010",
+      "name": "Ленивая овсянка с ягодами и орехами",
+      "description": "Овсянка, приготовленная с йогуртом и ягодами",
+      "servings": 1,
+      "nutrition": {
+        "calories": 195.5,
+        "proteins": 6.8,
+        "fats": 8.4,
+        "carbs": 24.5
+      },
+      "nutrition_per_serving": {
+        "calories": 195.5,
+        "proteins": 6.8,
+        "fats": 8.4,
+        "carbs": 24.5
+      },
+      "ingredients": [
+        {
+          "item": "Овсяные хлопья",
+          "amount": "50 г"
+        },
+        {
+          "item": "Йогурт",
+          "amount": "50 г"
+        },
+        {
+          "item": "Клубника",
+          "amount": "5 шт"
+        },
+        {
+          "item": "Зерна граната",
+          "amount": "1 ст. л."
+        },
+        {
+          "item": "Ягоды",
+          "amount": "1 ст. л."
+        },
+        {
+          "item": "Миндаль/фундук",
+          "amount": "1-2 шт"
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "breakfast_17",
+      "name": "Омлет со спаржей, болгарским перцем и сыром",
+      "description": "Омлет с овощами и тертым сыром",
+      "servings": 1,
+      "nutrition": {
+        "calories": 130,
+        "proteins": 9.9,
+        "fats": 8.6,
+        "carbs": 2.3
+      },
+      "nutrition_per_serving": {
+        "calories": 130,
+        "proteins": 9.9,
+        "fats": 8.6,
+        "carbs": 2.3
+      },
+      "ingredients": [
+        {
+          "item": "Спаржа стручковая",
+          "amount": "50 г"
+        },
+        {
+          "item": "Болгарский перец",
+          "amount": "100 г"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "3 шт"
+        },
+        {
+          "item": "Сыр",
+          "amount": "50 г"
+        },
+        {
+          "item": "Перец, соль",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "breakfast_18",
+      "name": "Овсяное смузи с ягодами",
+      "description": "Смузи из овсяных хлопьев, творога и ягод",
+      "servings": 1,
+      "nutrition": {
+        "calories": 126.7,
+        "proteins": 6.3,
+        "fats": 2.9,
+        "carbs": 19.9
+      },
+      "nutrition_per_serving": {
+        "calories": 126.7,
+        "proteins": 6.3,
+        "fats": 2.9,
+        "carbs": 19.9
+      },
+      "ingredients": [
+        {
+          "item": "Овсяные хлопья",
+          "amount": "5 ст. л."
+        },
+        {
+          "item": "Творог",
+          "amount": "3 ст. л."
+        },
+        {
+          "item": "Ягоды",
+          "amount": "100 г"
+        },
+        {
+          "item": "Банан",
+          "amount": "1/2 шт"
+        },
+        {
+          "item": "Молоко",
+          "amount": "по необходимости"
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "breakfast_19",
+      "name": "Белковые блинчики",
+      "description": "Блинчики из яиц с начинкой из индейки и сыра",
+      "servings": 1,
+      "nutrition": {
+        "calories": 131.57,
+        "proteins": 15.67,
+        "fats": 7,
+        "carbs": 0.78
+      },
+      "nutrition_per_serving": {
+        "calories": 131.57,
+        "proteins": 15.67,
+        "fats": 7,
+        "carbs": 0.78
+      },
+      "ingredients": [
+        {
+          "item": "Яйцо",
+          "amount": "4-5 шт"
+        },
+        {
+          "item": "Молоко",
+          "amount": "1-3 ст. л."
+        },
+        {
+          "item": "Специи, зелень",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Индейка",
+          "amount": "для начинки"
+        },
+        {
+          "item": "Сыр",
+          "amount": "для начинки"
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "breakfast_20",
+      "name": "Печеночно-морковный паштет",
+      "description": "Паштет из куриной печени с морковью и луком",
+      "servings": 1,
+      "nutrition": {
+        "calories": 130,
+        "proteins": 14,
+        "fats": 7,
+        "carbs": 4
+      },
+      "nutrition_per_serving": {
+        "calories": 130,
+        "proteins": 14,
+        "fats": 7,
+        "carbs": 4
+      },
+      "ingredients": [
+        {
+          "item": "Печень куриная",
+          "amount": "400 г"
+        },
+        {
+          "item": "Морковь",
+          "amount": "60 г"
+        },
+        {
+          "item": "Лук репчатый",
+          "amount": "60 г"
+        },
+        {
+          "item": "Зелень",
+          "amount": "1 веточка (15 г)"
+        },
+        {
+          "item": "Масло сливочное 82.5%",
+          "amount": "20 г"
+        },
+        {
+          "item": "Специи",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "breakfast_21",
+      "name": "Баклажанная паста",
+      "description": "Паста из запеченных баклажанов с грецкими орехами",
+      "servings": 1,
+      "nutrition": {
+        "calories": 64.07,
+        "proteins": 2.16,
+        "fats": 4.14,
+        "carbs": 4.97
+      },
+      "nutrition_per_serving": {
+        "calories": 64.07,
+        "proteins": 2.16,
+        "fats": 4.14,
+        "carbs": 4.97
+      },
+      "ingredients": [
+        {
+          "item": "Баклажан",
+          "amount": "2-3 шт (200-300 г)"
+        },
+        {
+          "item": "Грецкий орех",
+          "amount": "40 г"
+        },
+        {
+          "item": "Чеснок",
+          "amount": "1 зубчик"
+        },
+        {
+          "item": "Соль, специи",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "breakfast_22",
+      "name": "Творожная паста",
+      "description": "Паста из творога с зеленью для бутербродов",
+      "servings": 1,
+      "nutrition": {
+        "calories": 117.69,
+        "proteins": 11.86,
+        "fats": 6.09,
+        "carbs": 3.47
+      },
+      "nutrition_per_serving": {
+        "calories": 117.69,
+        "proteins": 11.86,
+        "fats": 6.09,
+        "carbs": 3.47
+      },
+      "ingredients": [
+        {
+          "item": "Творог",
+          "amount": "100 г"
+        },
+        {
+          "item": "Укроп, петрушка",
+          "amount": "50 г"
+        },
+        {
+          "item": "Специи",
+          "amount": "щепотка"
+        },
+        {
+          "item": "Соль",
+          "amount": "щепотка"
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "breakfast_23",
+      "name": "Фриттата",
+      "description": "Итальянский омлет с кабачками, помидорами и сыром",
+      "servings": 1,
+      "nutrition": {
+        "calories": 92.91,
+        "proteins": 6.45,
+        "fats": 6,
+        "carbs": 2.84
+      },
+      "nutrition_per_serving": {
+        "calories": 92.91,
+        "proteins": 6.45,
+        "fats": 6,
+        "carbs": 2.84
+      },
+      "ingredients": [
+        {
+          "item": "Кабачок",
+          "amount": "300 г"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "5 шт"
+        },
+        {
+          "item": "Сыр",
+          "amount": "50 г"
+        },
+        {
+          "item": "Помидор",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Соль, перец",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Базилик",
+          "amount": "2 г"
+        },
+        {
+          "item": "Оливковое масло",
+          "amount": "10 г"
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "breakfast_24",
+      "name": "Омлет с замороженными овощами",
+      "description": "Омлет с замороженными овощами и зеленью",
+      "servings": 1,
+      "nutrition": {
+        "calories": 82.7,
+        "proteins": 6.3,
+        "fats": 4.7,
+        "carbs": 4.1
+      },
+      "nutrition_per_serving": {
+        "calories": 82.7,
+        "proteins": 6.3,
+        "fats": 4.7,
+        "carbs": 4.1
+      },
+      "ingredients": [
+        {
+          "item": "Яйцо",
+          "amount": "3 шт"
+        },
+        {
+          "item": "Молоко",
+          "amount": "1/2 ст."
+        },
+        {
+          "item": "Замороженные овощи",
+          "amount": "200 г"
+        },
+        {
+          "item": "Соль, зелень",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "breakfast_25",
+      "name": "Бутерброд с тунцом",
+      "description": "Бутерброд с консервированным тунцом и яйцом",
+      "servings": 1,
+      "nutrition": {
+        "calories": 145.7,
+        "proteins": 14.3,
+        "fats": 6.4,
+        "carbs": 7.2
+      },
+      "nutrition_per_serving": {
+        "calories": 145.7,
+        "proteins": 14.3,
+        "fats": 6.4,
+        "carbs": 7.2
+      },
+      "ingredients": [
+        {
+          "item": "Хлеб цельнозерновой",
+          "amount": "1 шт (20 г)"
+        },
+        {
+          "item": "Тунец",
+          "amount": "40 г"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Шпинат, кунжут",
+          "amount": "для украшения"
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "breakfast_26",
+      "name": "Шпинатные оладьи",
+      "description": "Оладьи из шпината с цельнозерновой мукой",
+      "servings": 1,
+      "nutrition": {
+        "calories": 139.86,
+        "proteins": 6.76,
+        "fats": 3.73,
+        "carbs": 19.4
+      },
+      "nutrition_per_serving": {
+        "calories": 139.86,
+        "proteins": 6.76,
+        "fats": 3.73,
+        "carbs": 19.4
+      },
+      "ingredients": [
+        {
+          "item": "Шпинат",
+          "amount": "3 шарика заморозки"
+        },
+        {
+          "item": "Мука цельнозерновая",
+          "amount": "220 г"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Кефир",
+          "amount": "2 ст."
+        },
+        {
+          "item": "Соль",
+          "amount": "щепотка"
+        },
+        {
+          "item": "Разрыхлитель",
+          "amount": "1 ч. л."
+        }
+      ],
+      "category": "breakfast"
+    },
+    {
+      "id": "main_1",
+      "name": "Паста Болоньезе",
+      "description": "Классическая итальянская паста с мясным соусом",
+      "servings": 4,
+      "lunch_only": false,
+      "nutrition": {
+        "calories": 680,
+        "proteins": 32,
+        "fats": 24,
+        "carbs": 82
+      },
+      "nutrition_per_serving": {
+        "calories": 170,
+        "proteins": 8,
+        "fats": 6,
+        "carbs": 20.5
+      },
+      "ingredients": [
+        {
+          "item": "Макароны",
+          "amount": "250 г"
+        },
+        {
+          "item": "Говядина",
+          "amount": "400 г"
+        },
+        {
+          "item": "Соус болоньезе",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Лук репчатый",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Морковь",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Чеснок",
+          "amount": "2 зубчика"
+        },
+        {
+          "item": "Сыр тертый",
+          "amount": "100 г"
+        },
+        {
+          "item": "Оливковое масло",
+          "amount": "2 ст.л."
+        },
+        {
+          "item": "Соль",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Перец",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Базилик",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_2",
+      "name": "Куриная грудка с рисом",
+      "description": "Запеченная куриная грудка с гарниром из риса",
+      "servings": 2,
+      "lunch_only": false,
+      "nutrition": {
+        "calories": 520,
+        "proteins": 42,
+        "fats": 12,
+        "carbs": 64
+      },
+      "nutrition_per_serving": {
+        "calories": 260,
+        "proteins": 21,
+        "fats": 6,
+        "carbs": 32
+      },
+      "ingredients": [
+        {
+          "item": "Куриное филе",
+          "amount": "300 г"
+        },
+        {
+          "item": "Рис",
+          "amount": "200 г"
+        },
+        {
+          "item": "Специи",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Чеснок",
+          "amount": "2 зубчика"
+        },
+        {
+          "item": "Растительное масло",
+          "amount": "2 ст.л."
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_3",
+      "name": "Хрючево",
+      "description": "Сытное рагу из овощей с нежным куриным филе",
+      "servings": 4,
+      "lunch_only": false,
+      "nutrition": {
+        "calories": 480,
+        "proteins": 36,
+        "fats": 18,
+        "carbs": 52
+      },
+      "nutrition_per_serving": {
+        "calories": 120,
+        "proteins": 9,
+        "fats": 4.5,
+        "carbs": 13
+      },
+      "ingredients": [
+        {
+          "item": "Куриное филе",
+          "amount": "400 г"
+        },
+        {
+          "item": "Картофель",
+          "amount": "600 г"
+        },
+        {
+          "item": "Морковь",
+          "amount": "200 г"
+        },
+        {
+          "item": "Лук репчатый",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Растительное масло",
+          "amount": "3 ст.л."
+        },
+        {
+          "item": "Соль",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Перец",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_4",
+      "name": "Стейк из говядины с картофельным пюре",
+      "description": "Сочный стейк из говядины с нежным картофельным пюре",
+      "servings": 2,
+      "lunch_only": false,
+      "nutrition": {
+        "calories": 1200,
+        "proteins": 80,
+        "fats": 60,
+        "carbs": 100
+      },
+      "nutrition_per_serving": {
+        "calories": 600,
+        "proteins": 40,
+        "fats": 30,
+        "carbs": 50
+      },
+      "ingredients": [
+        {
+          "item": "Говяжья вырезка",
+          "amount": "400 г"
+        },
+        {
+          "item": "Картофель",
+          "amount": "500 г"
+        },
+        {
+          "item": "Молоко",
+          "amount": "100 мл"
+        },
+        {
+          "item": "Сливочное масло",
+          "amount": "50 г"
+        },
+        {
+          "item": "Соль",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Перец",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_5",
+      "name": "Лазанья с мясом",
+      "description": "Классическая итальянская лазанья с мясным соусом и сыром",
+      "servings": 4,
+      "lunch_only": false,
+      "nutrition": {
+        "calories": 1600,
+        "proteins": 100,
+        "fats": 80,
+        "carbs": 160
+      },
+      "nutrition_per_serving": {
+        "calories": 400,
+        "proteins": 25,
+        "fats": 20,
+        "carbs": 40
+      },
+      "ingredients": [
+        {
+          "item": "Листы лазаньи",
+          "amount": "250 г"
+        },
+        {
+          "item": "Говядина",
+          "amount": "500 г"
+        },
+        {
+          "item": "Соус бешамель",
+          "amount": "500 мл"
+        },
+        {
+          "item": "Сыр моцарелла",
+          "amount": "200 г"
+        },
+        {
+          "item": "Сыр пармезан",
+          "amount": "100 г"
+        },
+        {
+          "item": "Лук репчатый",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Морковь",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Чеснок",
+          "amount": "4 зубчика"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_6",
+      "name": "Жаркое по-домашнему",
+      "description": "Сытное жаркое из свинины с овощами",
+      "servings": 4,
+      "lunch_only": false,
+      "nutrition": {
+        "calories": 1400,
+        "proteins": 90,
+        "fats": 70,
+        "carbs": 120
+      },
+      "nutrition_per_serving": {
+        "calories": 350,
+        "proteins": 22.5,
+        "fats": 17.5,
+        "carbs": 30
+      },
+      "ingredients": [
+        {
+          "item": "Свинина",
+          "amount": "500 г"
+        },
+        {
+          "item": "Картофель",
+          "amount": "600 г"
+        },
+        {
+          "item": "Морковь",
+          "amount": "200 г"
+        },
+        {
+          "item": "Лук репчатый",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Грибы",
+          "amount": "200 г"
+        },
+        {
+          "item": "Растительное масло",
+          "amount": "3 ст.л."
+        },
+        {
+          "item": "Соль",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Перец",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_7",
+      "name": "Паста с морепродуктами",
+      "description": "Спагетти с креветками и мидиями в сливочном соусе",
+      "servings": 4,
+      "nutrition": {
+        "calories": 720,
+        "proteins": 38,
+        "fats": 28,
+        "carbs": 82
+      },
+      "nutrition_per_serving": {
+        "calories": 180,
+        "proteins": 9.5,
+        "fats": 7,
+        "carbs": 20.5
+      },
+      "ingredients": [
+        {
+          "item": "Макароны",
+          "amount": "250 г"
+        },
+        {
+          "item": "Морской коктейль",
+          "amount": "500 г"
+        },
+        {
+          "item": "Сливки 33%",
+          "amount": "200 мл"
+        },
+        {
+          "item": "Чеснок",
+          "amount": "3 зубчика"
+        },
+        {
+          "item": "Лук репчатый",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Оливковое масло",
+          "amount": "3 ст.л."
+        },
+        {
+          "item": "Зелень",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Соль",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Перец",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_8",
+      "name": "Фаршированные кабачки",
+      "description": "Кабачки, фаршированные куриным фаршем и зеленью",
+      "servings": 1,
+      "lunch_only": true,
+      "nutrition": {
+        "calories": 80,
+        "proteins": 7,
+        "fats": 4.3,
+        "carbs": 3.1
+      },
+      "nutrition_per_serving": {
+        "calories": 80,
+        "proteins": 7,
+        "fats": 4.3,
+        "carbs": 3.1
+      },
+      "ingredients": [
+        {
+          "item": "Кабачок",
+          "amount": "1 кг"
+        },
+        {
+          "item": "Куриный фарш",
+          "amount": "500 г"
+        },
+        {
+          "item": "Зелень",
+          "amount": "100 г"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_9",
+      "name": "Куриные котлеты с морковью и кабачком",
+      "description": "Котлеты из куриного фарша с овощами",
+      "servings": 1,
+      "lunch_only": true,
+      "nutrition": {
+        "calories": 43.4,
+        "proteins": 3.31,
+        "fats": 1.4,
+        "carbs": 4.3
+      },
+      "nutrition_per_serving": {
+        "calories": 43.4,
+        "proteins": 3.31,
+        "fats": 1.4,
+        "carbs": 4.3
+      },
+      "ingredients": [
+        {
+          "item": "Куриный фарш",
+          "amount": "200 г"
+        },
+        {
+          "item": "Морковь",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Кабачок",
+          "amount": "1 шт (500 г)"
+        },
+        {
+          "item": "Лук",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Специи",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_10",
+      "name": "Баклажаны, фаршированные курицей",
+      "description": "Баклажаны с начинкой из куриного филе и овощей",
+      "servings": 1,
+      "lunch_only": true,
+      "nutrition": {
+        "calories": 90,
+        "proteins": 8.4,
+        "fats": 4.4,
+        "carbs": 4.1
+      },
+      "nutrition_per_serving": {
+        "calories": 90,
+        "proteins": 8.4,
+        "fats": 4.4,
+        "carbs": 4.1
+      },
+      "ingredients": [
+        {
+          "item": "Баклажан",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Куриное филе",
+          "amount": "300 г"
+        },
+        {
+          "item": "Болгарский перец",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Лук",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Морковь",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Помидор",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Йогурт или сметана",
+          "amount": "100 г"
+        },
+        {
+          "item": "Зелень",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Оливковое масло",
+          "amount": "2 ст. л."
+        },
+        {
+          "item": "Соль, перец",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_11",
+      "name": "Фаршированный перец с мясом",
+      "description": "Болгарский перец, фаршированный мясным фаршем",
+      "servings": 1,
+      "lunch_only": true,
+      "nutrition": {
+        "calories": 147,
+        "proteins": 9,
+        "fats": 0.7,
+        "carbs": 5.7
+      },
+      "nutrition_per_serving": {
+        "calories": 147,
+        "proteins": 9,
+        "fats": 0.7,
+        "carbs": 5.7
+      },
+      "ingredients": [
+        {
+          "item": "Болгарский перец",
+          "amount": "8 шт"
+        },
+        {
+          "item": "Мясной фарш",
+          "amount": "500 г"
+        },
+        {
+          "item": "Морковь",
+          "amount": "200 г"
+        },
+        {
+          "item": "Лук репчатый",
+          "amount": "200 г"
+        },
+        {
+          "item": "Йогурт",
+          "amount": "150 г"
+        },
+        {
+          "item": "Томатная паста",
+          "amount": "150 г"
+        },
+        {
+          "item": "Перец черный",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Соль",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_12",
+      "name": "Рыбные котлетки с морковью",
+      "description": "Котлеты из рыбного фарша с морковью и луком",
+      "servings": 1,
+      "lunch_only": true,
+      "nutrition": {
+        "calories": 97,
+        "proteins": 13.3,
+        "fats": 4,
+        "carbs": 2.1
+      },
+      "nutrition_per_serving": {
+        "calories": 97,
+        "proteins": 13.3,
+        "fats": 4,
+        "carbs": 2.1
+      },
+      "ingredients": [
+        {
+          "item": "Рыба",
+          "amount": "500 г"
+        },
+        {
+          "item": "Морковь",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Лук",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Йогурт",
+          "amount": "2 ст. л."
+        },
+        {
+          "item": "Специи",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_13",
+      "name": "Крем-суп из брокколи с цветной капустой",
+      "description": "Суп-пюре из брокколи и цветной капусты",
+      "servings": 1,
+      "lunch_only": true,
+      "nutrition": {
+        "calories": 22.6,
+        "proteins": 1.4,
+        "fats": 0.6,
+        "carbs": 3.6
+      },
+      "nutrition_per_serving": {
+        "calories": 22.6,
+        "proteins": 1.4,
+        "fats": 0.6,
+        "carbs": 3.6
+      },
+      "ingredients": [
+        {
+          "item": "Оливковое масло",
+          "amount": "1 ст. л."
+        },
+        {
+          "item": "Картофель",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Лук репчатый",
+          "amount": "1/2 шт"
+        },
+        {
+          "item": "Овощной бульон",
+          "amount": "6 стаканов"
+        },
+        {
+          "item": "Брокколи",
+          "amount": "1/2 кг"
+        },
+        {
+          "item": "Цветная капуста",
+          "amount": "1/2 кг"
+        },
+        {
+          "item": "Соль морская",
+          "amount": "3/4 ч. л."
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_14",
+      "name": "Запеченная курица с фасолью",
+      "description": "Куриная грудка с фасолью и овощами",
+      "servings": 1,
+      "lunch_only": true,
+      "nutrition": {
+        "calories": 79.52,
+        "proteins": 12.35,
+        "fats": 0.98,
+        "carbs": 5.41
+      },
+      "nutrition_per_serving": {
+        "calories": 79.52,
+        "proteins": 12.35,
+        "fats": 0.98,
+        "carbs": 5.41
+      },
+      "ingredients": [
+        {
+          "item": "Куриное филе",
+          "amount": "1 кг"
+        },
+        {
+          "item": "Фасоль замороженная",
+          "amount": "400 г"
+        },
+        {
+          "item": "Лук красный",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Чеснок",
+          "amount": "7 г"
+        },
+        {
+          "item": "Помидор",
+          "amount": "6 шт"
+        },
+        {
+          "item": "Зелень",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Специи",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Соль",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_15",
+      "name": "Капустные котлеты",
+      "description": "Котлеты из белокочанной капусты с луком и чесноком",
+      "servings": 1,
+      "lunch_only": true,
+      "nutrition": {
+        "calories": 73.72,
+        "proteins": 3.52,
+        "fats": 0.91,
+        "carbs": 12.54
+      },
+      "nutrition_per_serving": {
+        "calories": 73.72,
+        "proteins": 3.52,
+        "fats": 0.91,
+        "carbs": 12.54
+      },
+      "ingredients": [
+        {
+          "item": "Капуста белокочанная",
+          "amount": "600 г"
+        },
+        {
+          "item": "Лук",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Чеснок",
+          "amount": "5 г"
+        },
+        {
+          "item": "Зелень",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Соль, перец",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_16",
+      "name": "Рис с курицей и овощами",
+      "description": "Рис с куриной грудкой и замороженными овощами",
+      "servings": 1,
+      "lunch_only": true,
+      "nutrition": {
+        "calories": 0,
+        "proteins": 11.42,
+        "fats": 4.27,
+        "carbs": 32.72
+      },
+      "nutrition_per_serving": {
+        "calories": 0,
+        "proteins": 11.42,
+        "fats": 4.27,
+        "carbs": 32.72
+      },
+      "ingredients": [
+        {
+          "item": "Куриное филе",
+          "amount": "500 г"
+        },
+        {
+          "item": "Рис",
+          "amount": "3 стакана"
+        },
+        {
+          "item": "Кунжутное масло",
+          "amount": "2 ст. л."
+        },
+        {
+          "item": "Лук",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Овощи замороженные",
+          "amount": "160 г"
+        },
+        {
+          "item": "Соевый соус",
+          "amount": "2-3 ст. л."
+        },
+        {
+          "item": "Яйцо",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Зелень",
+          "amount": "2 ст. л."
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_17",
+      "name": "Булгур с овощами",
+      "description": "Булгур с тушеными овощами и томатной пастой",
+      "servings": 1,
+      "lunch_only": true,
+      "nutrition": {
+        "calories": 76.99,
+        "proteins": 3.07,
+        "fats": 0.28,
+        "carbs": 13.85
+      },
+      "nutrition_per_serving": {
+        "calories": 76.99,
+        "proteins": 3.07,
+        "fats": 0.28,
+        "carbs": 13.85
+      },
+      "ingredients": [
+        {
+          "item": "Морковь",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Лук репчатый",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Болгарский перец",
+          "amount": "3 шт"
+        },
+        {
+          "item": "Чеснок",
+          "amount": "2 зубчика"
+        },
+        {
+          "item": "Томатная паста",
+          "amount": "1 ст. л."
+        },
+        {
+          "item": "Помидор",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Булгур",
+          "amount": "120 г"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_18",
+      "name": "Куриное филе с грибами",
+      "description": "Куриное филе с шампиньонами в йогуртовом соусе",
+      "servings": 1,
+      "lunch_only": true,
+      "nutrition": {
+        "calories": 64.1,
+        "proteins": 9.42,
+        "fats": 1.12,
+        "carbs": 3.56
+      },
+      "nutrition_per_serving": {
+        "calories": 64.1,
+        "proteins": 9.42,
+        "fats": 1.12,
+        "carbs": 3.56
+      },
+      "ingredients": [
+        {
+          "item": "Куриное филе",
+          "amount": "120 г"
+        },
+        {
+          "item": "Грибы",
+          "amount": "100 г"
+        },
+        {
+          "item": "Лук",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Йогурт",
+          "amount": "1/2 ст."
+        },
+        {
+          "item": "Соль, перец",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_19",
+      "name": "Плов из кус-куса",
+      "description": "Плов с куриным филе и кус-кусом",
+      "servings": 1,
+      "lunch_only": true,
+      "nutrition": {
+        "calories": 89.4,
+        "proteins": 5.3,
+        "fats": 0.3,
+        "carbs": 3.1
+      },
+      "nutrition_per_serving": {
+        "calories": 89.4,
+        "proteins": 5.3,
+        "fats": 0.3,
+        "carbs": 3.1
+      },
+      "ingredients": [
+        {
+          "item": "Кус-кус",
+          "amount": "120 г"
+        },
+        {
+          "item": "Куриное филе",
+          "amount": "300 г"
+        },
+        {
+          "item": "Лук",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Морковь",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Чеснок",
+          "amount": "1 зубчик"
+        },
+        {
+          "item": "Болгарский перец",
+          "amount": "1/2 шт"
+        },
+        {
+          "item": "Бульон",
+          "amount": "300 мл"
+        },
+        {
+          "item": "Томатная паста",
+          "amount": "1 ст. л."
+        },
+        {
+          "item": "Куркума",
+          "amount": "1 ч. л."
+        },
+        {
+          "item": "Паприка",
+          "amount": "0,5 ч. л."
+        },
+        {
+          "item": "Соль, перец",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_20",
+      "name": "Спагетти с котлетами в томатном соусе",
+      "description": "Спагетти с говяжьими котлетами и томатным соусом",
+      "servings": 1,
+      "lunch_only": true,
+      "nutrition": {
+        "calories": 132.9,
+        "proteins": 7.7,
+        "fats": 4.8,
+        "carbs": 13.9
+      },
+      "nutrition_per_serving": {
+        "calories": 132.9,
+        "proteins": 7.7,
+        "fats": 4.8,
+        "carbs": 13.9
+      },
+      "ingredients": [
+        {
+          "item": "Спагетти цельнозерновые",
+          "amount": "100 г"
+        },
+        {
+          "item": "Говядина",
+          "amount": "200 г"
+        },
+        {
+          "item": "Лук красный",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Чеснок",
+          "amount": "3 зубчика"
+        },
+        {
+          "item": "Томаты в собственном соку",
+          "amount": "250 мл"
+        },
+        {
+          "item": "Зелень",
+          "amount": "1 пучок"
+        },
+        {
+          "item": "Соль, перец, приправы",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_21",
+      "name": "Гречка с курицей и шампиньонами",
+      "description": "Гречневая крупа с куриными бедрами и грибами",
+      "servings": 1,
+      "lunch_only": true,
+      "nutrition": {
+        "calories": 141.9,
+        "proteins": 11.2,
+        "fats": 4.8,
+        "carbs": 14.2
+      },
+      "nutrition_per_serving": {
+        "calories": 141.9,
+        "proteins": 11.2,
+        "fats": 4.8,
+        "carbs": 14.2
+      },
+      "ingredients": [
+        {
+          "item": "Гречневая крупа",
+          "amount": "50 г"
+        },
+        {
+          "item": "Куриные бедра",
+          "amount": "2 шт (150 г)"
+        },
+        {
+          "item": "Грибы",
+          "amount": "50 г"
+        },
+        {
+          "item": "Лук",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Масло растительное",
+          "amount": "1 ч. л."
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_22",
+      "name": "Гречневая лапша с индейкой и овощами",
+      "description": "Лапша соба с индейкой, брокколи и болгарским перцем",
+      "servings": 1,
+      "lunch_only": true,
+      "nutrition": {
+        "calories": 114.5,
+        "proteins": 11.6,
+        "fats": 0.5,
+        "carbs": 16.2
+      },
+      "nutrition_per_serving": {
+        "calories": 114.5,
+        "proteins": 11.6,
+        "fats": 0.5,
+        "carbs": 16.2
+      },
+      "ingredients": [
+        {
+          "item": "Гречневая лапша",
+          "amount": "45 г"
+        },
+        {
+          "item": "Индейка",
+          "amount": "150 г"
+        },
+        {
+          "item": "Брокколи",
+          "amount": "70 г"
+        },
+        {
+          "item": "Болгарский перец",
+          "amount": "30 г"
+        },
+        {
+          "item": "Соевый соус",
+          "amount": "2 ст. л."
+        },
+        {
+          "item": "Чеснок, перец",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_23",
+      "name": "Куриный пирог",
+      "description": "Пирог с куриной грудкой, грибами и овощами",
+      "servings": 4,
+      "lunch_only": true,
+      "nutrition": {
+        "calories": 98,
+        "proteins": 13.3,
+        "fats": 2.1,
+        "carbs": 6.4
+      },
+      "nutrition_per_serving": {
+        "calories": 98,
+        "proteins": 13.3,
+        "fats": 2.1,
+        "carbs": 6.4
+      },
+      "ingredients": [
+        {
+          "item": "Куриное филе",
+          "amount": "200 г"
+        },
+        {
+          "item": "Грибы",
+          "amount": "100 г"
+        },
+        {
+          "item": "Лук красный",
+          "amount": "50 г"
+        },
+        {
+          "item": "Цветная капуста",
+          "amount": "50 г"
+        },
+        {
+          "item": "Брокколи",
+          "amount": "50 г"
+        },
+        {
+          "item": "Томаты черри",
+          "amount": "50 г"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "3 шт"
+        },
+        {
+          "item": "Базилик",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Специи",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_24",
+      "name": "Пирог из лаваша с грибами, курицей и сыром",
+      "description": "Пирог из лаваша с начинкой из курицы, грибов и сыра",
+      "servings": 1,
+      "lunch_only": true,
+      "nutrition": {
+        "calories": 111.13,
+        "proteins": 10.7,
+        "fats": 2.39,
+        "carbs": 11.46
+      },
+      "nutrition_per_serving": {
+        "calories": 111.13,
+        "proteins": 10.7,
+        "fats": 2.39,
+        "carbs": 11.46
+      },
+      "ingredients": [
+        {
+          "item": "Лаваш",
+          "amount": "250 г"
+        },
+        {
+          "item": "Куриное филе",
+          "amount": "250-300 г"
+        },
+        {
+          "item": "Грибы",
+          "amount": "250 г"
+        },
+        {
+          "item": "Лук",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Помидор",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Йогурт",
+          "amount": "4 ст. л."
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_25",
+      "name": "Пицца на основе мясного фарша",
+      "description": "Пицца с основой из фарша индейки и овощами",
+      "servings": 1,
+      "lunch_only": true,
+      "nutrition": {
+        "calories": 84.59,
+        "proteins": 13.13,
+        "fats": 2.64,
+        "carbs": 1.74
+      },
+      "nutrition_per_serving": {
+        "calories": 84.59,
+        "proteins": 13.13,
+        "fats": 2.64,
+        "carbs": 1.74
+      },
+      "ingredients": [
+        {
+          "item": "Индейка",
+          "amount": "400 г"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Кефир",
+          "amount": "20 мл"
+        },
+        {
+          "item": "Болгарский перец",
+          "amount": "1/2 шт"
+        },
+        {
+          "item": "Помидор",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Сыр нежирный",
+          "amount": "30 г"
+        },
+        {
+          "item": "Зелень",
+          "amount": "1 веточка"
+        },
+        {
+          "item": "Итальянские травы",
+          "amount": "1/2 ч. л."
+        },
+        {
+          "item": "Паприка",
+          "amount": "1/2 ч. л."
+        },
+        {
+          "item": "Соль, перец",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_26",
+      "name": "Рыбный пирог",
+      "description": "Пирог с филе минтая и сыром",
+      "servings": 1,
+      "lunch_only": true,
+      "nutrition": {
+        "calories": 106,
+        "proteins": 13.5,
+        "fats": 3,
+        "carbs": 6.2
+      },
+      "nutrition_per_serving": {
+        "calories": 106,
+        "proteins": 13.5,
+        "fats": 3,
+        "carbs": 6.2
+      },
+      "ingredients": [
+        {
+          "item": "Яйцо",
+          "amount": "5 шт"
+        },
+        {
+          "item": "Клетчатка",
+          "amount": "2 ст. л."
+        },
+        {
+          "item": "Отруби",
+          "amount": "2 ст. л."
+        },
+        {
+          "item": "Филе минтая",
+          "amount": "150 г"
+        },
+        {
+          "item": "Сыр 9%",
+          "amount": "30 г"
+        },
+        {
+          "item": "Зелень",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_27",
+      "name": "Куриная грудка с творожно-сырной начинкой",
+      "description": "Куриное филе, фаршированное творогом и сыром",
+      "servings": 1,
+      "lunch_only": false,
+      "nutrition": {
+        "calories": 116,
+        "proteins": 21.3,
+        "fats": 2.4,
+        "carbs": 0.9
+      },
+      "nutrition_per_serving": {
+        "calories": 116,
+        "proteins": 21.3,
+        "fats": 2.4,
+        "carbs": 0.9
+      },
+      "ingredients": [
+        {
+          "item": "Куриное филе",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Творог",
+          "amount": "100 г"
+        },
+        {
+          "item": "Сыр",
+          "amount": "30 г"
+        },
+        {
+          "item": "Соль, перец",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Зелень",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Йогурт",
+          "amount": "50 г"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_28",
+      "name": "Треска в томатном соусе",
+      "description": "Треска, тушенная с луком, морковью и томатной пастой",
+      "servings": 1,
+      "lunch_only": false,
+      "nutrition": {
+        "calories": 74.62,
+        "proteins": 12.65,
+        "fats": 0.79,
+        "carbs": 4.77
+      },
+      "nutrition_per_serving": {
+        "calories": 74.62,
+        "proteins": 12.65,
+        "fats": 0.79,
+        "carbs": 4.77
+      },
+      "ingredients": [
+        {
+          "item": "Рыба",
+          "amount": "2 кг"
+        },
+        {
+          "item": "Лук репчатый",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Морковь",
+          "amount": "5 шт"
+        },
+        {
+          "item": "Томатная паста",
+          "amount": "700 г"
+        },
+        {
+          "item": "Соль морская",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_29",
+      "name": "Овощное рагу",
+      "description": "Рагу из помидоров, перца, моркови, кабачка и цветной капусты",
+      "servings": 1,
+      "lunch_only": false,
+      "nutrition": {
+        "calories": 29,
+        "proteins": 1.6,
+        "fats": 0.4,
+        "carbs": 5.1
+      },
+      "nutrition_per_serving": {
+        "calories": 29,
+        "proteins": 1.6,
+        "fats": 0.4,
+        "carbs": 5.1
+      },
+      "ingredients": [
+        {
+          "item": "Помидор",
+          "amount": "3-4 шт"
+        },
+        {
+          "item": "Болгарский перец",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Морковь",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Цветная капуста",
+          "amount": "1 вилок"
+        },
+        {
+          "item": "Кабачок",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Лук",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Соль, перец",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Йогурт",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_30",
+      "name": "Куриное филе с сыром",
+      "description": "Куриное филе, запеченное с помидорами и сыром",
+      "servings": 1,
+      "lunch_only": false,
+      "nutrition": {
+        "calories": 113,
+        "proteins": 16.9,
+        "fats": 3.9,
+        "carbs": 1.7
+      },
+      "nutrition_per_serving": {
+        "calories": 113,
+        "proteins": 16.9,
+        "fats": 3.9,
+        "carbs": 1.7
+      },
+      "ingredients": [
+        {
+          "item": "Куриное филе",
+          "amount": "300 г"
+        },
+        {
+          "item": "Помидор",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Йогурт",
+          "amount": "50 г"
+        },
+        {
+          "item": "Сыр",
+          "amount": "30 г"
+        },
+        {
+          "item": "Зелень",
+          "amount": "5 г"
+        },
+        {
+          "item": "Чеснок",
+          "amount": "5 г"
+        },
+        {
+          "item": "Соль, перец",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_31",
+      "name": "Котлетки с болгарским перчиком",
+      "description": "Куриные котлеты с болгарским перцем",
+      "servings": 1,
+      "lunch_only": false,
+      "nutrition": {
+        "calories": 81,
+        "proteins": 13.6,
+        "fats": 0.7,
+        "carbs": 4.3
+      },
+      "nutrition_per_serving": {
+        "calories": 81,
+        "proteins": 13.6,
+        "fats": 0.7,
+        "carbs": 4.3
+      },
+      "ingredients": [
+        {
+          "item": "Яйцо",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Куриное филе",
+          "amount": "500 г"
+        },
+        {
+          "item": "Болгарский перец",
+          "amount": "350 г"
+        },
+        {
+          "item": "Соевый соус",
+          "amount": "2 ст. л."
+        },
+        {
+          "item": "Чеснок",
+          "amount": "1 зубчик"
+        },
+        {
+          "item": "Соль, перец",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_32",
+      "name": "Тефтели из куриной грудки с лёгким соусом",
+      "description": "Тефтели из куриного фарша с творожным соусом",
+      "servings": 1,
+      "lunch_only": false,
+      "nutrition": {
+        "calories": 93,
+        "proteins": 17,
+        "fats": 1,
+        "carbs": 4
+      },
+      "nutrition_per_serving": {
+        "calories": 93,
+        "proteins": 17,
+        "fats": 1,
+        "carbs": 4
+      },
+      "ingredients": [
+        {
+          "item": "Куриное филе",
+          "amount": "500 г"
+        },
+        {
+          "item": "Творог",
+          "amount": "250 г"
+        },
+        {
+          "item": "Молоко",
+          "amount": "50 мл"
+        },
+        {
+          "item": "Лук",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Чеснок",
+          "amount": "2-3 зубчика"
+        },
+        {
+          "item": "Зелень, специи",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_33",
+      "name": "Рыба по-французски",
+      "description": "Филе рыбы, запеченное с помидорами и сыром",
+      "servings": 1,
+      "lunch_only": false,
+      "nutrition": {
+        "calories": 99.5,
+        "proteins": 14.3,
+        "fats": 4.5,
+        "carbs": 0.8
+      },
+      "nutrition_per_serving": {
+        "calories": 99.5,
+        "proteins": 14.3,
+        "fats": 4.5,
+        "carbs": 0.8
+      },
+      "ingredients": [
+        {
+          "item": "Филе рыбы",
+          "amount": "500 г"
+        },
+        {
+          "item": "Помидор",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Йогурт",
+          "amount": "1 ст. л."
+        },
+        {
+          "item": "Сыр нежирный",
+          "amount": "75 г"
+        },
+        {
+          "item": "Соль, перец",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_34",
+      "name": "Ленивые отбивные",
+      "description": "Отбивные из куриной грудки с луком и зеленью",
+      "servings": 2,
+      "lunch_only": false,
+      "nutrition": {
+        "calories": 300,
+        "proteins": 42.1,
+        "fats": 12.2,
+        "carbs": 2.8
+      },
+      "nutrition_per_serving": {
+        "calories": 150,
+        "proteins": 21.05,
+        "fats": 6.1,
+        "carbs": 1.4
+      },
+      "ingredients": [
+        {
+          "item": "Яйцо",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Куриное филе",
+          "amount": "250 г"
+        },
+        {
+          "item": "Лук репчатый",
+          "amount": "100 г"
+        },
+        {
+          "item": "Зелень",
+          "amount": "1 пучок"
+        },
+        {
+          "item": "Перец черный/красный",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_35",
+      "name": "Рататуй",
+      "description": "Овощное рагу с индюшиным фаршем",
+      "servings": 2,
+      "lunch_only": false,
+      "nutrition": {
+        "calories": 182.5,
+        "proteins": 16.4,
+        "fats": 6.8,
+        "carbs": 16
+      },
+      "nutrition_per_serving": {
+        "calories": 91.25,
+        "proteins": 8.2,
+        "fats": 3.4,
+        "carbs": 8
+      },
+      "ingredients": [
+        {
+          "item": "Индюшиный фарш",
+          "amount": "150 г"
+        },
+        {
+          "item": "Баклажан",
+          "amount": "200 г"
+        },
+        {
+          "item": "Кабачок",
+          "amount": "200 г"
+        },
+        {
+          "item": "Помидор",
+          "amount": "200 г"
+        },
+        {
+          "item": "Лук репчатый",
+          "amount": "50 г"
+        },
+        {
+          "item": "Перец красный острый",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Специи",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Зелень",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_36",
+      "name": "Брокколи с моцареллой",
+      "description": "Запеченная брокколи с моцареллой",
+      "servings": 1,
+      "lunch_only": false,
+      "nutrition": {
+        "calories": 99,
+        "proteins": 8,
+        "fats": 8.3,
+        "carbs": 3.5
+      },
+      "nutrition_per_serving": {
+        "calories": 99,
+        "proteins": 8,
+        "fats": 8.3,
+        "carbs": 3.5
+      },
+      "ingredients": [
+        {
+          "item": "Брокколи",
+          "amount": "400 г"
+        },
+        {
+          "item": "Моцарелла",
+          "amount": "200 г"
+        },
+        {
+          "item": "Специи",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_37",
+      "name": "Голубцы в томатном соусе",
+      "description": "Голубцы с говяжьим фаршем и томатным соусом",
+      "servings": 1,
+      "lunch_only": false,
+      "nutrition": {
+        "calories": 111,
+        "proteins": 7.3,
+        "fats": 7.3,
+        "carbs": 3.6
+      },
+      "nutrition_per_serving": {
+        "calories": 111,
+        "proteins": 7.3,
+        "fats": 7.3,
+        "carbs": 3.6
+      },
+      "ingredients": [
+        {
+          "item": "Говядина",
+          "amount": "1000 г"
+        },
+        {
+          "item": "Капуста белокочанная",
+          "amount": "1000 г"
+        },
+        {
+          "item": "Лук",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Чеснок",
+          "amount": "2 зубчика"
+        },
+        {
+          "item": "Морковь",
+          "amount": "200 г"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Помидор",
+          "amount": "400 г"
+        },
+        {
+          "item": "Томатная паста",
+          "amount": "30 г"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_38",
+      "name": "Блюдо с овощами и куриным фаршем",
+      "description": "Тушеные овощи с куриным фаршем в томатном соусе",
+      "servings": 1,
+      "lunch_only": false,
+      "nutrition": {
+        "calories": 67,
+        "proteins": 6.5,
+        "fats": 2.5,
+        "carbs": 5.4
+      },
+      "nutrition_per_serving": {
+        "calories": 67,
+        "proteins": 6.5,
+        "fats": 2.5,
+        "carbs": 5.4
+      },
+      "ingredients": [
+        {
+          "item": "Морковь",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Лук",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Куриный фарш",
+          "amount": "200 г"
+        },
+        {
+          "item": "Фасоль стручковая",
+          "amount": "300 г"
+        },
+        {
+          "item": "Томатная паста",
+          "amount": "0,5 ст."
+        },
+        {
+          "item": "Соль, специи",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_39",
+      "name": "Тушеная говядина в томатном соусе",
+      "description": "Говядина, тушенная с морковью и томатным соком",
+      "servings": 1,
+      "lunch_only": false,
+      "nutrition": {
+        "calories": 119.58,
+        "proteins": 11.49,
+        "fats": 7.28,
+        "carbs": 2.19
+      },
+      "nutrition_per_serving": {
+        "calories": 119.58,
+        "proteins": 11.49,
+        "fats": 7.28,
+        "carbs": 2.19
+      },
+      "ingredients": [
+        {
+          "item": "Говядина",
+          "amount": "1 кг"
+        },
+        {
+          "item": "Морковь",
+          "amount": "150 г"
+        },
+        {
+          "item": "Лук репчатый",
+          "amount": "65 г"
+        },
+        {
+          "item": "Чеснок",
+          "amount": "5 г"
+        },
+        {
+          "item": "Томатный сок",
+          "amount": "500 мл"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_40",
+      "name": "Куриное филе в медово-горчичном соусе",
+      "description": "Куриное филе, запеченное в медово-горчичном соусе",
+      "servings": 1,
+      "lunch_only": false,
+      "nutrition": {
+        "calories": 120.31,
+        "proteins": 21.92,
+        "fats": 1.96,
+        "carbs": 2.19
+      },
+      "nutrition_per_serving": {
+        "calories": 120.31,
+        "proteins": 21.92,
+        "fats": 1.96,
+        "carbs": 2.19
+      },
+      "ingredients": [
+        {
+          "item": "Куриное филе",
+          "amount": "800 г"
+        },
+        {
+          "item": "Горчица зернистая",
+          "amount": "2 ч. л."
+        },
+        {
+          "item": "Мед",
+          "amount": "1 ч. л."
+        },
+        {
+          "item": "Сок лимона",
+          "amount": "1 ч. л."
+        },
+        {
+          "item": "Оливковое масло",
+          "amount": "1 ч. л."
+        },
+        {
+          "item": "Соль, перец",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_41",
+      "name": "Куриная грудка под сыром",
+      "description": "Куриное филе, запеченное с луком, помидорами и сыром",
+      "servings": 1,
+      "lunch_only": false,
+      "nutrition": {
+        "calories": 102.25,
+        "proteins": 18.24,
+        "fats": 2.05,
+        "carbs": 1.71
+      },
+      "nutrition_per_serving": {
+        "calories": 102.25,
+        "proteins": 18.24,
+        "fats": 2.05,
+        "carbs": 1.71
+      },
+      "ingredients": [
+        {
+          "item": "Куриное филе",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Лук репчатый",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Помидор",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Сыр 20%",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Перец черный",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Соль",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Травы прованские",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_42",
+      "name": "Куриная запеканка с грибами и сыром",
+      "description": "Запеканка из курицы, грибов и сыра",
+      "servings": 1,
+      "lunch_only": false,
+      "nutrition": {
+        "calories": 0,
+        "proteins": 0,
+        "fats": 0,
+        "carbs": 0
+      },
+      "nutrition_per_serving": {
+        "calories": 0,
+        "proteins": 0,
+        "fats": 0,
+        "carbs": 0
+      },
+      "ingredients": [
+        {
+          "item": "Куриное филе",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Грибы",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "3 шт"
+        },
+        {
+          "item": "Йогурт",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Сыр",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Соль, перец",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_43",
+      "name": "Тушеное куриное филе со сладким перцем",
+      "description": "Куриное филе, тушенное с болгарским перцем и морковью",
+      "servings": 1,
+      "lunch_only": false,
+      "nutrition": {
+        "calories": 74.5,
+        "proteins": 11.92,
+        "fats": 0.6,
+        "carbs": 4.83
+      },
+      "nutrition_per_serving": {
+        "calories": 74.5,
+        "proteins": 11.92,
+        "fats": 0.6,
+        "carbs": 4.83
+      },
+      "ingredients": [
+        {
+          "item": "Куриное филе",
+          "amount": "900 г"
+        },
+        {
+          "item": "Морковь",
+          "amount": "300 г"
+        },
+        {
+          "item": "Лук",
+          "amount": "300 г"
+        },
+        {
+          "item": "Болгарский перец",
+          "amount": "300 г"
+        },
+        {
+          "item": "Соевый соус",
+          "amount": "50 мл"
+        },
+        {
+          "item": "Зелень",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Соль, перец",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_44",
+      "name": "Запеченная скумбрия в йогуртовом соусе",
+      "description": "Скумбрия, запеченная с йогуртом и лимонным соком",
+      "servings": 1,
+      "lunch_only": false,
+      "nutrition": {
+        "calories": 87,
+        "proteins": 7.5,
+        "fats": 4.2,
+        "carbs": 5.1
+      },
+      "nutrition_per_serving": {
+        "calories": 87,
+        "proteins": 7.5,
+        "fats": 4.2,
+        "carbs": 5.1
+      },
+      "ingredients": [
+        {
+          "item": "Рыба",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Йогурт",
+          "amount": "150 г"
+        },
+        {
+          "item": "Лук",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Сок лимона",
+          "amount": "1/2 шт"
+        },
+        {
+          "item": "Соль",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_45",
+      "name": "Рыбная запеканка",
+      "description": "Запеканка из рыбного филе с луком, морковью и сыром",
+      "servings": 1,
+      "lunch_only": false,
+      "nutrition": {
+        "calories": 97.06,
+        "proteins": 14.02,
+        "fats": 3.45,
+        "carbs": 2.43
+      },
+      "nutrition_per_serving": {
+        "calories": 97.06,
+        "proteins": 14.02,
+        "fats": 3.45,
+        "carbs": 2.43
+      },
+      "ingredients": [
+        {
+          "item": "Филе рыбы",
+          "amount": "400 г"
+        },
+        {
+          "item": "Лук",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Морковь",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Йогурт",
+          "amount": "100 г"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Соль, перец",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "main_46",
+      "name": "Сырная лазанья",
+      "description": "Лазанья с куриным фаршем и сыром",
+      "servings": 1,
+      "lunch_only": false,
+      "nutrition": {
+        "calories": 154,
+        "proteins": 16.4,
+        "fats": 8.8,
+        "carbs": 2.5
+      },
+      "nutrition_per_serving": {
+        "calories": 154,
+        "proteins": 16.4,
+        "fats": 8.8,
+        "carbs": 2.5
+      },
+      "ingredients": [
+        {
+          "item": "Лук репчатый",
+          "amount": "3 шт"
+        },
+        {
+          "item": "Помидор",
+          "amount": "3 шт"
+        },
+        {
+          "item": "Куриный фарш",
+          "amount": "700 г"
+        },
+        {
+          "item": "Томатная паста",
+          "amount": "3 ст. л."
+        },
+        {
+          "item": "Сыр",
+          "amount": "600 г"
+        },
+        {
+          "item": "Зелень",
+          "amount": "15 г"
+        },
+        {
+          "item": "Соль, перец",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "main"
+    },
+    {
+      "id": "salads_1",
+      "name": "Греческий салат",
+      "description": "Традиционный греческий салат с фетой",
+      "servings": 2,
+      "nutrition": {
+        "calories": 280,
+        "proteins": 8,
+        "fats": 22,
+        "carbs": 12
+      },
+      "nutrition_per_serving": {
+        "calories": 140,
+        "proteins": 4,
+        "fats": 11,
+        "carbs": 6
+      },
+      "ingredients": [
+        {
+          "item": "Помидор",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Огурец",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Сыр фета",
+          "amount": "100 г"
+        },
+        {
+          "item": "Маслины",
+          "amount": "50 г"
+        },
+        {
+          "item": "Красный лук",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Оливковое масло",
+          "amount": "2 ст.л."
+        }
+      ],
+      "category": "salads"
+    },
+    {
+      "id": "salad_2",
+      "name": "Цезарь с курицей",
+      "description": "Классический салат Цезарь с куриной грудкой",
+      "servings": 2,
+      "nutrition": {
+        "calories": 420,
+        "proteins": 32,
+        "fats": 28,
+        "carbs": 18
+      },
+      "nutrition_per_serving": {
+        "calories": 210,
+        "proteins": 16,
+        "fats": 14,
+        "carbs": 9
+      },
+      "ingredients": [
+        {
+          "item": "Салат романо",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Куриное филе",
+          "amount": "200 г"
+        },
+        {
+          "item": "Пармезан",
+          "amount": "50 г"
+        },
+        {
+          "item": "Гренки",
+          "amount": "100 г"
+        },
+        {
+          "item": "Соус Цезарь",
+          "amount": "100 г"
+        }
+      ],
+      "category": "salads"
+    },
+    {
+      "id": "salad_3",
+      "name": "Салат с морковью и яблоком",
+      "description": "Салат из моркови, яблока и сыра с йогуртовой заправкой",
+      "servings": 1,
+      "nutrition": {
+        "calories": 82,
+        "proteins": 6.4,
+        "fats": 3.5,
+        "carbs": 6.3
+      },
+      "nutrition_per_serving": {
+        "calories": 82,
+        "proteins": 6.4,
+        "fats": 3.5,
+        "carbs": 6.3
+      },
+      "ingredients": [
+        {
+          "item": "Морковь",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Яблоко",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Зелень",
+          "amount": "1 пучок"
+        },
+        {
+          "item": "Йогурт или сметана",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Сыр нежирный",
+          "amount": "100 г"
+        },
+        {
+          "item": "Сок лимона",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "salads"
+    },
+    {
+      "id": "salad_4",
+      "name": "Салат 'Мимоза' с тунцом",
+      "description": "Салат с консервированным тунцом, яйцами и морковью",
+      "servings": 1,
+      "nutrition": {
+        "calories": 66,
+        "proteins": 5.7,
+        "fats": 1.8,
+        "carbs": 6.2
+      },
+      "nutrition_per_serving": {
+        "calories": 66,
+        "proteins": 5.7,
+        "fats": 1.8,
+        "carbs": 6.2
+      },
+      "ingredients": [
+        {
+          "item": "Тунец",
+          "amount": "1 банка"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "3 шт"
+        },
+        {
+          "item": "Морковь",
+          "amount": "4 шт"
+        },
+        {
+          "item": "Яблоко",
+          "amount": "500 г"
+        },
+        {
+          "item": "Лук репчатый",
+          "amount": "50 г"
+        },
+        {
+          "item": "Соль",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "salads"
+    },
+    {
+      "id": "salad_5",
+      "name": "Салат 'Жульен'",
+      "description": "Салат с куриной грудкой, грибами и огурцами",
+      "servings": 1,
+      "nutrition": {
+        "calories": 90.37,
+        "proteins": 11.63,
+        "fats": 4.18,
+        "carbs": 1.39
+      },
+      "nutrition_per_serving": {
+        "calories": 90.37,
+        "proteins": 11.63,
+        "fats": 4.18,
+        "carbs": 1.39
+      },
+      "ingredients": [
+        {
+          "item": "Куриное филе",
+          "amount": "300 г"
+        },
+        {
+          "item": "Грибы",
+          "amount": "300 г"
+        },
+        {
+          "item": "Огурец",
+          "amount": "200 г"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Лук репчатый",
+          "amount": "60 г"
+        },
+        {
+          "item": "Сыр",
+          "amount": "100 г"
+        },
+        {
+          "item": "Зелень",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Перец, соль",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Оливковое масло",
+          "amount": "1 ч. л."
+        },
+        {
+          "item": "Сметана",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "salads"
+    },
+    {
+      "id": "salad_6",
+      "name": "Салат с индейкой",
+      "description": "Салат с отварной грудкой индейки и солеными огурцами",
+      "servings": 1,
+      "nutrition": {
+        "calories": 80.82,
+        "proteins": 7.87,
+        "fats": 2.55,
+        "carbs": 6.12
+      },
+      "nutrition_per_serving": {
+        "calories": 80.82,
+        "proteins": 7.87,
+        "fats": 2.55,
+        "carbs": 6.12
+      },
+      "ingredients": [
+        {
+          "item": "Индейка",
+          "amount": "250 г"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "3 шт"
+        },
+        {
+          "item": "Огурец",
+          "amount": "150 г"
+        },
+        {
+          "item": "Кукуруза замороженная",
+          "amount": "250 г"
+        },
+        {
+          "item": "Сметана",
+          "amount": "50 г"
+        },
+        {
+          "item": "Горчица",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Соль",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "salads"
+    },
+    {
+      "id": "salad_7",
+      "name": "Салат с курицей и огурцами",
+      "description": "Салат с куриной грудкой, огурцами и соевым соусом",
+      "servings": 1,
+      "nutrition": {
+        "calories": 97,
+        "proteins": 17,
+        "fats": 2.4,
+        "carbs": 1.9
+      },
+      "nutrition_per_serving": {
+        "calories": 97,
+        "proteins": 17,
+        "fats": 2.4,
+        "carbs": 1.9
+      },
+      "ingredients": [
+        {
+          "item": "Куриное филе",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Соевый соус",
+          "amount": "2 ч. л."
+        },
+        {
+          "item": "Сыр",
+          "amount": "50 г"
+        },
+        {
+          "item": "Огурец",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Сок лимонный",
+          "amount": "1 ч. л."
+        }
+      ],
+      "category": "salads"
+    },
+    {
+      "id": "salad_8",
+      "name": "Белковый салат",
+      "description": "Салат с куриной грудкой, огурцами и яйцами",
+      "servings": 1,
+      "nutrition": {
+        "calories": 74,
+        "proteins": 10.8,
+        "fats": 2.5,
+        "carbs": 2.1
+      },
+      "nutrition_per_serving": {
+        "calories": 74,
+        "proteins": 10.8,
+        "fats": 2.5,
+        "carbs": 2.1
+      },
+      "ingredients": [
+        {
+          "item": "Огурец",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Куриное филе",
+          "amount": "200 г"
+        },
+        {
+          "item": "Салат айсберг",
+          "amount": "100 г"
+        },
+        {
+          "item": "Яйца перепелиные",
+          "amount": "5 шт"
+        },
+        {
+          "item": "Йогурт",
+          "amount": "100 г"
+        }
+      ],
+      "category": "salads"
+    },
+    {
+      "id": "salad_9",
+      "name": "Салат 'Нептун'",
+      "description": "Салат с кальмарами, огурцами и яйцами",
+      "servings": 1,
+      "nutrition": {
+        "calories": 96,
+        "proteins": 11.6,
+        "fats": 14.7,
+        "carbs": 2.1
+      },
+      "nutrition_per_serving": {
+        "calories": 96,
+        "proteins": 11.6,
+        "fats": 14.7,
+        "carbs": 2.1
+      },
+      "ingredients": [
+        {
+          "item": "Кальмары",
+          "amount": "300 г"
+        },
+        {
+          "item": "Огурец",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "5 шт"
+        },
+        {
+          "item": "Йогурт",
+          "amount": "2 ст. л."
+        },
+        {
+          "item": "Горчица",
+          "amount": "1 ч. л."
+        }
+      ],
+      "category": "salads"
+    },
+    {
+      "id": "salad_10",
+      "name": "Салат с креветками, грибами и авокадо",
+      "description": "Салат с креветками, шампиньонами и авокадо",
+      "servings": 1,
+      "nutrition": {
+        "calories": 72.4,
+        "proteins": 1.8,
+        "fats": 5.3,
+        "carbs": 4.3
+      },
+      "nutrition_per_serving": {
+        "calories": 72.4,
+        "proteins": 1.8,
+        "fats": 5.3,
+        "carbs": 4.3
+      },
+      "ingredients": [
+        {
+          "item": "Креветки",
+          "amount": "200 г"
+        },
+        {
+          "item": "Грибы",
+          "amount": "200 г"
+        },
+        {
+          "item": "Салат айсберг",
+          "amount": "150 г"
+        },
+        {
+          "item": "Авокадо",
+          "amount": "0,5 шт"
+        },
+        {
+          "item": "Помидор",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Оливковое масло",
+          "amount": "1 ст. л."
+        }
+      ],
+      "category": "salads"
+    },
+    {
+      "id": "salad_11",
+      "name": "Салат овощной с сыром",
+      "description": "Салат с листьями салата, помидорами и сыром",
+      "servings": 1,
+      "nutrition": {
+        "calories": 67.3,
+        "proteins": 2.5,
+        "fats": 3,
+        "carbs": 3.2
+      },
+      "nutrition_per_serving": {
+        "calories": 67.3,
+        "proteins": 2.5,
+        "fats": 3,
+        "carbs": 3.2
+      },
+      "ingredients": [
+        {
+          "item": "Салат айсберг",
+          "amount": "200 г"
+        },
+        {
+          "item": "Помидор",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Огурец",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Болгарский перец",
+          "amount": "50 г"
+        },
+        {
+          "item": "Лук красный",
+          "amount": "0,5 шт"
+        },
+        {
+          "item": "Сыр нежирный",
+          "amount": "50 г"
+        },
+        {
+          "item": "Оливковое масло",
+          "amount": "2 ст. л."
+        },
+        {
+          "item": "Сок апельсина",
+          "amount": "2-3 ст. л."
+        }
+      ],
+      "category": "salads"
+    },
+    {
+      "id": "salad_12",
+      "name": "Салат овощной с брокколи",
+      "description": "Салат с брокколи, морковью и помидорами черри",
+      "servings": 1,
+      "nutrition": {
+        "calories": 50.7,
+        "proteins": 1.4,
+        "fats": 2.9,
+        "carbs": 3.2
+      },
+      "nutrition_per_serving": {
+        "calories": 50.7,
+        "proteins": 1.4,
+        "fats": 2.9,
+        "carbs": 3.2
+      },
+      "ingredients": [
+        {
+          "item": "Брокколи",
+          "amount": "100 г"
+        },
+        {
+          "item": "Морковь",
+          "amount": "60 г"
+        },
+        {
+          "item": "Помидоры черри",
+          "amount": "6 шт"
+        },
+        {
+          "item": "Салатные листья",
+          "amount": "200 г"
+        },
+        {
+          "item": "Зелень",
+          "amount": "1 пучок"
+        },
+        {
+          "item": "Оливковое масло",
+          "amount": "2 ст. л."
+        }
+      ],
+      "category": "salads"
+    },
+    {
+      "id": "salad_13",
+      "name": "Легкий салатик",
+      "description": "Салат из огурцов, моркови и яблок с йогуртовой заправкой",
+      "servings": 1,
+      "nutrition": {
+        "calories": 33.95,
+        "proteins": 1.17,
+        "fats": 0.44,
+        "carbs": 6.21
+      },
+      "nutrition_per_serving": {
+        "calories": 33.95,
+        "proteins": 1.17,
+        "fats": 0.44,
+        "carbs": 6.21
+      },
+      "ingredients": [
+        {
+          "item": "Огурец",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Морковь",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Яблоко",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Салат зеленый",
+          "amount": "100 г"
+        },
+        {
+          "item": "Йогурт",
+          "amount": "1/2 стакана"
+        },
+        {
+          "item": "Лимон",
+          "amount": "1/4 шт"
+        },
+        {
+          "item": "Соль, перец",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "salads"
+    },
+    {
+      "id": "salad_14",
+      "name": "Салат с сырно-горчичной заправкой",
+      "description": "Салат с листьями салата, помидорами и сырной заправкой",
+      "servings": 1,
+      "nutrition": {
+        "calories": 42.9,
+        "proteins": 3.78,
+        "fats": 1.96,
+        "carbs": 3.53
+      },
+      "nutrition_per_serving": {
+        "calories": 42.9,
+        "proteins": 3.78,
+        "fats": 1.96,
+        "carbs": 3.53
+      },
+      "ingredients": [
+        {
+          "item": "Листья салата",
+          "amount": "260 г"
+        },
+        {
+          "item": "Помидор",
+          "amount": "200 г"
+        },
+        {
+          "item": "Огурец",
+          "amount": "200 г"
+        },
+        {
+          "item": "Лук репчатый",
+          "amount": "100 г"
+        },
+        {
+          "item": "Кинза",
+          "amount": "1/2 пучка"
+        },
+        {
+          "item": "Зелень",
+          "amount": "1 пучок"
+        },
+        {
+          "item": "Йогурт",
+          "amount": "4 ст. л."
+        },
+        {
+          "item": "Горчица",
+          "amount": "1 ст. л."
+        },
+        {
+          "item": "Сыр",
+          "amount": "80 г"
+        }
+      ],
+      "category": "salads"
+    },
+    {
+      "id": "salad_15",
+      "name": "Салат с консервированным тунцом",
+      "description": "Салат с тунцом, огурцами, помидорами и фасолью",
+      "servings": 1,
+      "nutrition": {
+        "calories": 65.97,
+        "proteins": 6.18,
+        "fats": 1.38,
+        "carbs": 7.18
+      },
+      "nutrition_per_serving": {
+        "calories": 65.97,
+        "proteins": 6.18,
+        "fats": 1.38,
+        "carbs": 7.18
+      },
+      "ingredients": [
+        {
+          "item": "Огурец",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Помидор",
+          "amount": "4 шт"
+        },
+        {
+          "item": "Фасоль",
+          "amount": "250 г"
+        },
+        {
+          "item": "Тунец",
+          "amount": "1 банка"
+        },
+        {
+          "item": "Лук сладкий",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Сок лимона",
+          "amount": "1/2 шт"
+        },
+        {
+          "item": "Оливковое масло",
+          "amount": "1 ст. л."
+        },
+        {
+          "item": "Соль, перец, травы",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "salads"
+    },
+    {
+      "id": "salad_16",
+      "name": "Салат с кальмарами",
+      "description": "Салат с кальмарами, помидорами и сыром",
+      "servings": 1,
+      "nutrition": {
+        "calories": 55,
+        "proteins": 2.8,
+        "fats": 0.62,
+        "carbs": 9.56
+      },
+      "nutrition_per_serving": {
+        "calories": 55,
+        "proteins": 2.8,
+        "fats": 0.62,
+        "carbs": 9.56
+      },
+      "ingredients": [
+        {
+          "item": "Кальмары",
+          "amount": "250-300 г"
+        },
+        {
+          "item": "Помидор",
+          "amount": "1-2 шт"
+        },
+        {
+          "item": "Сыр",
+          "amount": "100-200 г"
+        },
+        {
+          "item": "Чеснок",
+          "amount": "1 зубчик"
+        },
+        {
+          "item": "Йогурт",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "salads"
+    },
+    {
+      "id": "salad_17",
+      "name": "Салат с курицей",
+      "description": "Салат с куриной грудкой, огурцами и помидорами",
+      "servings": 1,
+      "nutrition": {
+        "calories": 52.9,
+        "proteins": 4.78,
+        "fats": 1.85,
+        "carbs": 2.42
+      },
+      "nutrition_per_serving": {
+        "calories": 52.9,
+        "proteins": 4.78,
+        "fats": 1.85,
+        "carbs": 2.42
+      },
+      "ingredients": [
+        {
+          "item": "Помидор",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Огурец",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Куриное филе",
+          "amount": "200 г"
+        },
+        {
+          "item": "Соевый соус",
+          "amount": "1 ст. л."
+        },
+        {
+          "item": "Листья салата",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Чеснок",
+          "amount": "1 зубчик"
+        },
+        {
+          "item": "Оливковое масло",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Соль, перец",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "salads"
+    },
+    {
+      "id": "salad_18",
+      "name": "Салат с кальмаром и ананасом",
+      "description": "Салат с кальмарами, ананасом и кукурузой",
+      "servings": 1,
+      "nutrition": {
+        "calories": 89.34,
+        "proteins": 13.28,
+        "fats": 2.24,
+        "carbs": 3.87
+      },
+      "nutrition_per_serving": {
+        "calories": 89.34,
+        "proteins": 13.28,
+        "fats": 2.24,
+        "carbs": 3.87
+      },
+      "ingredients": [
+        {
+          "item": "Кальмары",
+          "amount": "1 кг"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "6 шт"
+        },
+        {
+          "item": "Ананас",
+          "amount": "200 г"
+        },
+        {
+          "item": "Кукуруза замороженная",
+          "amount": "150 г"
+        },
+        {
+          "item": "Лимон",
+          "amount": "1/4 шт"
+        }
+      ],
+      "category": "salads"
+    },
+    {
+      "id": "salad_19",
+      "name": "Фитнес-салат",
+      "description": "Салат с куриной грудкой, огурцами и сладким перцем",
+      "servings": 1,
+      "nutrition": {
+        "calories": 88,
+        "proteins": 10,
+        "fats": 0.96,
+        "carbs": 4.1
+      },
+      "nutrition_per_serving": {
+        "calories": 88,
+        "proteins": 10,
+        "fats": 0.96,
+        "carbs": 4.1
+      },
+      "ingredients": [
+        {
+          "item": "Куриное филе",
+          "amount": "280 г"
+        },
+        {
+          "item": "Огурец",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Помидор",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Болгарский перец",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Кукуруза замороженная",
+          "amount": "2-3 ст. л."
+        },
+        {
+          "item": "Йогурт",
+          "amount": "1 ст. л."
+        },
+        {
+          "item": "Соль, перец",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Зелень",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "salads"
+    },
+    {
+      "id": "salad_20",
+      "name": "Салат из брокколи с курицей",
+      "description": "Салат с брокколи, куриной грудкой и сыром",
+      "servings": 1,
+      "nutrition": {
+        "calories": 119.14,
+        "proteins": 19.25,
+        "fats": 4.22,
+        "carbs": 1.49
+      },
+      "nutrition_per_serving": {
+        "calories": 119.14,
+        "proteins": 19.25,
+        "fats": 4.22,
+        "carbs": 1.49
+      },
+      "ingredients": [
+        {
+          "item": "Куриное филе",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Брокколи",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Сыр",
+          "amount": "250 г"
+        },
+        {
+          "item": "Соль",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Сметана",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "salads"
+    },
+    {
+      "id": "salad_21",
+      "name": "Салат с кусочками семги",
+      "description": "Салат с семгой, огурцами и помидорами",
+      "servings": 1,
+      "nutrition": {
+        "calories": 94.72,
+        "proteins": 8.17,
+        "fats": 4.16,
+        "carbs": 5.71
+      },
+      "nutrition_per_serving": {
+        "calories": 94.72,
+        "proteins": 8.17,
+        "fats": 4.16,
+        "carbs": 5.71
+      },
+      "ingredients": [
+        {
+          "item": "Микс салата",
+          "amount": "150 г"
+        },
+        {
+          "item": "Соль",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Перец",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Помидор",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Огурец",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Лосось",
+          "amount": "250 г"
+        },
+        {
+          "item": "Горчица зерновая",
+          "amount": "20 г"
+        },
+        {
+          "item": "Мед",
+          "amount": "20 г"
+        },
+        {
+          "item": "Соевый соус",
+          "amount": "20 г"
+        },
+        {
+          "item": "Оливковое масло",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "salads"
+    },
+    {
+      "id": "salad_22",
+      "name": "Сытный, но легкий салатик",
+      "description": "Салат с куриной грудкой, яблоками и огурцами",
+      "servings": 1,
+      "nutrition": {
+        "calories": 42.9,
+        "proteins": 3.78,
+        "fats": 1.96,
+        "carbs": 3.53
+      },
+      "nutrition_per_serving": {
+        "calories": 42.9,
+        "proteins": 3.78,
+        "fats": 1.96,
+        "carbs": 3.53
+      },
+      "ingredients": [
+        {
+          "item": "Яблоко",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Огурец",
+          "amount": "3-4 шт"
+        },
+        {
+          "item": "Куриное филе",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Маслины",
+          "amount": "5-8 шт"
+        },
+        {
+          "item": "Перец черный",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Йогурт",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Сметана",
+          "amount": "3 ст. л."
+        }
+      ],
+      "category": "salads"
+    },
+    {
+      "id": "desserts_1",
+      "name": "Тирамису",
+      "description": "Классический итальянский десерт из кофейного печенья и сырной массы",
+      "servings": 6,
+      "nutrition": {
+        "calories": 1200,
+        "proteins": 24,
+        "fats": 72,
+        "carbs": 120
+      },
+      "nutrition_per_serving": {
+        "calories": 200,
+        "proteins": 4,
+        "fats": 12,
+        "carbs": 20
+      },
+      "ingredients": [
+        {
+          "item": "Печенье савоярди",
+          "amount": "200 г"
+        },
+        {
+          "item": "Сыр маскарпоне",
+          "amount": "500 г"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "4 шт"
+        },
+        {
+          "item": "Сахар",
+          "amount": "100 г"
+        },
+        {
+          "item": "Кофе эспрессо",
+          "amount": "200 мл"
+        },
+        {
+          "item": "Какао порошок",
+          "amount": "2 ст.л."
+        }
+      ],
+      "category": "desserts"
+    },
+    {
+      "id": "desserts_2",
+      "name": "Чизкейк",
+      "description": "Классический нью-йоркский чизкейк",
+      "servings": 8,
+      "nutrition": {
+        "calories": 2000,
+        "proteins": 40,
+        "fats": 160,
+        "carbs": 120
+      },
+      "nutrition_per_serving": {
+        "calories": 250,
+        "proteins": 5,
+        "fats": 20,
+        "carbs": 15
+      },
+      "ingredients": [
+        {
+          "item": "Сыр филадельфия",
+          "amount": "600 г"
+        },
+        {
+          "item": "Сметана",
+          "amount": "200 г"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "4 шт"
+        },
+        {
+          "item": "Сахар",
+          "amount": "150 г"
+        },
+        {
+          "item": "Печенье песочное",
+          "amount": "200 г"
+        },
+        {
+          "item": "Сливочное масло",
+          "amount": "100 г"
+        },
+        {
+          "item": "Ванильный экстракт",
+          "amount": "1 ч.л."
+        }
+      ],
+      "category": "desserts"
+    },
+    {
+      "id": "desserts_3",
+      "name": "Сырники с яблоком",
+      "description": "Сырники с добавлением яблок и стевии",
+      "servings": 1,
+      "nutrition": {
+        "calories": 125.54,
+        "proteins": 8.24,
+        "fats": 5.12,
+        "carbs": 11.16
+      },
+      "nutrition_per_serving": {
+        "calories": 125.54,
+        "proteins": 8.24,
+        "fats": 5.12,
+        "carbs": 11.16
+      },
+      "ingredients": [
+        {
+          "item": "Творог",
+          "amount": "3 пачки"
+        },
+        {
+          "item": "Яблоко",
+          "amount": "4 шт"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Стевия",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Оливковое масло",
+          "amount": "1 ст. л."
+        }
+      ],
+      "category": "desserts"
+    },
+    {
+      "id": "desserts_4",
+      "name": "Банановые сырники",
+      "description": "Сырники с бананом и цельнозерновой мукой",
+      "servings": 1,
+      "nutrition": {
+        "calories": 114.34,
+        "proteins": 11.22,
+        "fats": 1.72,
+        "carbs": 13.12
+      },
+      "nutrition_per_serving": {
+        "calories": 114.34,
+        "proteins": 11.22,
+        "fats": 1.72,
+        "carbs": 13.12
+      },
+      "ingredients": [
+        {
+          "item": "Творог",
+          "amount": "200 г"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Банан",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Мука цельнозерновая",
+          "amount": "2 ст. л."
+        },
+        {
+          "item": "Стевия",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "desserts"
+    },
+    {
+      "id": "desserts_5",
+      "name": "Морковно-яблочные сырники",
+      "description": "Сырники с морковью, яблоками и корицей",
+      "servings": 1,
+      "nutrition": {
+        "calories": 133,
+        "proteins": 6.8,
+        "fats": 2.9,
+        "carbs": 19.9
+      },
+      "nutrition_per_serving": {
+        "calories": 133,
+        "proteins": 6.8,
+        "fats": 2.9,
+        "carbs": 19.9
+      },
+      "ingredients": [
+        {
+          "item": "Творог",
+          "amount": "1 пачка (250 г)"
+        },
+        {
+          "item": "Стевия",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Морковь",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Яблоко",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Корица",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "desserts"
+    },
+    {
+      "id": "desserts_6",
+      "name": "Морковные панкейки",
+      "description": "Панкейки с морковью и овсяными хлопьями",
+      "servings": 1,
+      "nutrition": {
+        "calories": 203,
+        "proteins": 8.5,
+        "fats": 4.4,
+        "carbs": 32.7
+      },
+      "nutrition_per_serving": {
+        "calories": 203,
+        "proteins": 8.5,
+        "fats": 4.4,
+        "carbs": 32.7
+      },
+      "ingredients": [
+        {
+          "item": "Морковь",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Кефир",
+          "amount": "150 г"
+        },
+        {
+          "item": "Овсяные хлопья",
+          "amount": "250 г"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Сода",
+          "amount": "на кончике ножа"
+        }
+      ],
+      "category": "desserts"
+    },
+    {
+      "id": "desserts_7",
+      "name": "Овсяные вафли",
+      "description": "Вафли из овсяных хлопьев с творогом и апельсиновым соком",
+      "servings": 1,
+      "nutrition": {
+        "calories": 169,
+        "proteins": 11.68,
+        "fats": 6.43,
+        "carbs": 16.79
+      },
+      "nutrition_per_serving": {
+        "calories": 169,
+        "proteins": 11.68,
+        "fats": 6.43,
+        "carbs": 16.79
+      },
+      "ingredients": [
+        {
+          "item": "Творог",
+          "amount": "100 г"
+        },
+        {
+          "item": "Овсяные хлопья",
+          "amount": "100 г"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "4 шт"
+        },
+        {
+          "item": "Сок апельсина",
+          "amount": "3 ст. л."
+        },
+        {
+          "item": "Стевия",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "desserts"
+    },
+    {
+      "id": "desserts_8",
+      "name": "Овсяные панкейки",
+      "description": "Панкейки из овсяных хлопьев с кефиром",
+      "servings": 1,
+      "nutrition": {
+        "calories": 146.02,
+        "proteins": 7.78,
+        "fats": 4.73,
+        "carbs": 18.95
+      },
+      "nutrition_per_serving": {
+        "calories": 146.02,
+        "proteins": 7.78,
+        "fats": 4.73,
+        "carbs": 18.95
+      },
+      "ingredients": [
+        {
+          "item": "Овсяные хлопья",
+          "amount": "50 г"
+        },
+        {
+          "item": "Кефир",
+          "amount": "100 г"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "1 шт"
+        }
+      ],
+      "category": "desserts"
+    },
+    {
+      "id": "desserts_9",
+      "name": "Десерт из запеченной тыквы",
+      "description": "Десерт из тыквы, яблок и творожного сыра",
+      "servings": 1,
+      "nutrition": {
+        "calories": 143.81,
+        "proteins": 3.28,
+        "fats": 7.51,
+        "carbs": 17.15
+      },
+      "nutrition_per_serving": {
+        "calories": 143.81,
+        "proteins": 3.28,
+        "fats": 7.51,
+        "carbs": 17.15
+      },
+      "ingredients": [
+        {
+          "item": "Тыква",
+          "amount": "300 г"
+        },
+        {
+          "item": "Яблоко или груша",
+          "amount": "150 г"
+        },
+        {
+          "item": "Творожный сыр",
+          "amount": "200 г"
+        },
+        {
+          "item": "Орехи",
+          "amount": "50 г"
+        }
+      ],
+      "category": "desserts"
+    },
+    {
+      "id": "desserts_10",
+      "name": "Пирожное картошка из творога",
+      "description": "Пирожное из овсяных хлопьев и творога",
+      "servings": 1,
+      "nutrition": {
+        "calories": 139.01,
+        "proteins": 10.11,
+        "fats": 2.2,
+        "carbs": 19.89
+      },
+      "nutrition_per_serving": {
+        "calories": 139.01,
+        "proteins": 10.11,
+        "fats": 2.2,
+        "carbs": 19.89
+      },
+      "ingredients": [
+        {
+          "item": "Овсяные хлопья",
+          "amount": "80 г"
+        },
+        {
+          "item": "Фруктовое пюре",
+          "amount": "60 г"
+        },
+        {
+          "item": "Корица",
+          "amount": "щепотка"
+        },
+        {
+          "item": "Творог",
+          "amount": "150 г"
+        },
+        {
+          "item": "Какао",
+          "amount": "20 г"
+        }
+      ],
+      "category": "desserts"
+    },
+    {
+      "id": "desserts_11",
+      "name": "ПП-тирамису",
+      "description": "Десерт с творожным кремом и кофейной пропиткой",
+      "servings": 1,
+      "nutrition": {
+        "calories": 109.36,
+        "proteins": 9.5,
+        "fats": 2.19,
+        "carbs": 12.75
+      },
+      "nutrition_per_serving": {
+        "calories": 109.36,
+        "proteins": 9.5,
+        "fats": 2.19,
+        "carbs": 12.75
+      },
+      "ingredients": [
+        {
+          "item": "Творог",
+          "amount": "200 г"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Разрыхлитель",
+          "amount": "1/2 ч. л."
+        },
+        {
+          "item": "Какао",
+          "amount": "1 ст. л."
+        },
+        {
+          "item": "Мука цельнозерновая",
+          "amount": "2 ст. л."
+        },
+        {
+          "item": "Кефир",
+          "amount": "2 ст. л."
+        },
+        {
+          "item": "Стевия",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Кофе",
+          "amount": "1 чашка"
+        }
+      ],
+      "category": "desserts"
+    },
+    {
+      "id": "desserts_12",
+      "name": "Пудинг",
+      "description": "Пудинг из яиц и кефира",
+      "servings": 1,
+      "nutrition": {
+        "calories": 102.42,
+        "proteins": 5.8,
+        "fats": 4.37,
+        "carbs": 9.84
+      },
+      "nutrition_per_serving": {
+        "calories": 102.42,
+        "proteins": 5.8,
+        "fats": 4.37,
+        "carbs": 9.84
+      },
+      "ingredients": [
+        {
+          "item": "Яйцо",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Кефир",
+          "amount": "250 мл"
+        },
+        {
+          "item": "Стевия",
+          "amount": "6 г"
+        }
+      ],
+      "category": "desserts"
+    },
+    {
+      "id": "desserts_13",
+      "name": "Кефирно-банановый десерт",
+      "description": "Десерт из кефира и банана с желатином",
+      "servings": 1,
+      "nutrition": {
+        "calories": 77,
+        "proteins": 2.2,
+        "fats": 0.1,
+        "carbs": 16.4
+      },
+      "nutrition_per_serving": {
+        "calories": 77,
+        "proteins": 2.2,
+        "fats": 0.1,
+        "carbs": 16.4
+      },
+      "ingredients": [
+        {
+          "item": "Кефир",
+          "amount": "300 г"
+        },
+        {
+          "item": "Банан",
+          "amount": "2 шт"
+        },
+        {
+          "item": "Желатин",
+          "amount": "5 г"
+        }
+      ],
+      "category": "desserts"
+    },
+    {
+      "id": "desserts_14",
+      "name": "Лёгкий шоколадный торт с кремом из чернослива",
+      "description": "Торт с шоколадным бисквитом и творожным кремом",
+      "servings": 1,
+      "nutrition": {
+        "calories": 187.93,
+        "proteins": 10.85,
+        "fats": 5.58,
+        "carbs": 24.58
+      },
+      "nutrition_per_serving": {
+        "calories": 187.93,
+        "proteins": 10.85,
+        "fats": 5.58,
+        "carbs": 24.58
+      },
+      "ingredients": [
+        {
+          "item": "Яйцо",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Кефир",
+          "amount": "100 г"
+        },
+        {
+          "item": "Мука цельнозерновая",
+          "amount": "40 г"
+        },
+        {
+          "item": "Какао",
+          "amount": "1 ст. л."
+        },
+        {
+          "item": "Кокосовая стружка",
+          "amount": "20 г"
+        },
+        {
+          "item": "Разрыхлитель",
+          "amount": "1/2 ч. л."
+        },
+        {
+          "item": "Чернослив",
+          "amount": "8 шт"
+        },
+        {
+          "item": "Творог",
+          "amount": "150 г"
+        }
+      ],
+      "category": "desserts"
+    },
+    {
+      "id": "desserts_15",
+      "name": "Мармелад из вишни",
+      "description": "Мармелад из вишни с желатином",
+      "servings": 1,
+      "nutrition": {
+        "calories": 62,
+        "proteins": 3.9,
+        "fats": 0.5,
+        "carbs": 10.6
+      },
+      "nutrition_per_serving": {
+        "calories": 62,
+        "proteins": 3.9,
+        "fats": 0.5,
+        "carbs": 10.6
+      },
+      "ingredients": [
+        {
+          "item": "Вишня",
+          "amount": "500 г"
+        },
+        {
+          "item": "Желатин",
+          "amount": "20 г"
+        },
+        {
+          "item": "Сок лимона",
+          "amount": "1 ст. л."
+        },
+        {
+          "item": "Стевия",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "desserts"
+    },
+    {
+      "id": "desserts_16",
+      "name": "Нежный протеиновый кекс",
+      "description": "Кекс с протеином и творожным кремом",
+      "servings": 1,
+      "nutrition": {
+        "calories": 185,
+        "proteins": 24,
+        "fats": 5.3,
+        "carbs": 8.2
+      },
+      "nutrition_per_serving": {
+        "calories": 185,
+        "proteins": 24,
+        "fats": 5.3,
+        "carbs": 8.2
+      },
+      "ingredients": [
+        {
+          "item": "Яйцо",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Протеин",
+          "amount": "10 г"
+        },
+        {
+          "item": "Мука цельнозерновая",
+          "amount": "5 г"
+        },
+        {
+          "item": "Какао",
+          "amount": "5 г"
+        },
+        {
+          "item": "Разрыхлитель",
+          "amount": "2 г"
+        },
+        {
+          "item": "Стевия",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Творог",
+          "amount": "100 г"
+        },
+        {
+          "item": "Шоколадная крошка",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "desserts"
+    },
+    {
+      "id": "desserts_17",
+      "name": "Конфеты из чернослива",
+      "description": "Конфеты из чернослива с грецкими орехами и шоколадом",
+      "servings": 1,
+      "nutrition": {
+        "calories": 0,
+        "proteins": 0,
+        "fats": 0,
+        "carbs": 0
+      },
+      "nutrition_per_serving": {
+        "calories": 0,
+        "proteins": 0,
+        "fats": 0,
+        "carbs": 0
+      },
+      "ingredients": [
+        {
+          "item": "Чернослив",
+          "amount": "250 г"
+        },
+        {
+          "item": "Грецкий орех",
+          "amount": "40 г"
+        },
+        {
+          "item": "Кунжут",
+          "amount": "2 ст. л."
+        },
+        {
+          "item": "Шоколад горький",
+          "amount": "50 г"
+        }
+      ],
+      "category": "desserts"
+    },
+    {
+      "id": "desserts_18",
+      "name": "Лёгкий шоколадно-творожный десерт",
+      "description": "Десерт из творога с какао и желатином",
+      "servings": 1,
+      "nutrition": {
+        "calories": 83,
+        "proteins": 0,
+        "fats": 0,
+        "carbs": 0
+      },
+      "nutrition_per_serving": {
+        "calories": 83,
+        "proteins": 0,
+        "fats": 0,
+        "carbs": 0
+      },
+      "ingredients": [
+        {
+          "item": "Творог",
+          "amount": "400 г"
+        },
+        {
+          "item": "Молоко",
+          "amount": "100 мл"
+        },
+        {
+          "item": "Какао",
+          "amount": "20-40 г"
+        },
+        {
+          "item": "Стевия",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Желатин",
+          "amount": "20-25 г"
+        }
+      ],
+      "category": "desserts"
+    },
+    {
+      "id": "desserts_19",
+      "name": "Творожно-банановый мусс",
+      "description": "Мусс из творога и банана с какао",
+      "servings": 1,
+      "nutrition": {
+        "calories": 146.16,
+        "proteins": 12.26,
+        "fats": 5.45,
+        "carbs": 12.35
+      },
+      "nutrition_per_serving": {
+        "calories": 146.16,
+        "proteins": 12.26,
+        "fats": 5.45,
+        "carbs": 12.35
+      },
+      "ingredients": [
+        {
+          "item": "Творог",
+          "amount": "100 г"
+        },
+        {
+          "item": "Банан",
+          "amount": "1/2 шт"
+        },
+        {
+          "item": "Какао",
+          "amount": "1 ч. л."
+        },
+        {
+          "item": "Орехи, сухофрукты",
+          "amount": "10 г"
+        }
+      ],
+      "category": "desserts"
+    },
+    {
+      "id": "desserts_20",
+      "name": "Шоколадные маффины",
+      "description": "Маффины с творогом и какао",
+      "servings": 1,
+      "nutrition": {
+        "calories": 163,
+        "proteins": 13,
+        "fats": 7,
+        "carbs": 11
+      },
+      "nutrition_per_serving": {
+        "calories": 163,
+        "proteins": 13,
+        "fats": 7,
+        "carbs": 11
+      },
+      "ingredients": [
+        {
+          "item": "Творог",
+          "amount": "2 ст. л."
+        },
+        {
+          "item": "Яйцо",
+          "amount": "3 шт"
+        },
+        {
+          "item": "Овсяные отруби",
+          "amount": "4 ст. л."
+        },
+        {
+          "item": "Пшеничные отруби",
+          "amount": "2 ст. л."
+        },
+        {
+          "item": "Какао",
+          "amount": "1 ст. л."
+        },
+        {
+          "item": "Ванилин",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Разрыхлитель",
+          "amount": "1 ч. л."
+        },
+        {
+          "item": "Стевия",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "desserts"
+    },
+    {
+      "id": "desserts_21",
+      "name": "Пицца на творожной основе",
+      "description": "Пицца с основой из творога и яиц",
+      "servings": 1,
+      "nutrition": {
+        "calories": 0,
+        "proteins": 0,
+        "fats": 0,
+        "carbs": 0
+      },
+      "nutrition_per_serving": {
+        "calories": 0,
+        "proteins": 0,
+        "fats": 0,
+        "carbs": 0
+      },
+      "ingredients": [
+        {
+          "item": "Творог",
+          "amount": "200 г"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Соль",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Травы прованские",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Мука цельнозерновая",
+          "amount": "100 г"
+        },
+        {
+          "item": "Оливковое масло",
+          "amount": "1-2 ст. л."
+        },
+        {
+          "item": "Томатная паста",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Куриное филе",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Помидор",
+          "amount": "по вкусу"
+        },
+        {
+          "item": "Сыр сулугуни",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "desserts"
+    },
+    {
+      "id": "desserts_22",
+      "name": "Блинчики на кефире",
+      "description": "Блинчики из кефира с цельнозерновой мукой",
+      "servings": 1,
+      "nutrition": {
+        "calories": 132,
+        "proteins": 0,
+        "fats": 0,
+        "carbs": 0
+      },
+      "nutrition_per_serving": {
+        "calories": 132,
+        "proteins": 0,
+        "fats": 0,
+        "carbs": 0
+      },
+      "ingredients": [
+        {
+          "item": "Кефир",
+          "amount": "1 стакан"
+        },
+        {
+          "item": "Яйцо",
+          "amount": "1 шт"
+        },
+        {
+          "item": "Мука цельнозерновая",
+          "amount": "4 ст. л."
+        },
+        {
+          "item": "Сода",
+          "amount": "по вкусу"
+        }
+      ],
+      "category": "desserts"
+    }
+  ]
+}
