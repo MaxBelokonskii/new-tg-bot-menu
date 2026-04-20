@@ -12,6 +12,12 @@ const db = new sqlite3.Database(dbPath, (err) => {
   }
 });
 
+// SQLite отключает проверку внешних ключей по умолчанию — включаем явно
+// в каждом соединении, чтобы CASCADE и foreign_key_check работали корректно.
+db.run('PRAGMA foreign_keys = ON', (err) => {
+  if (err) console.error('Error enabling foreign keys:', err.message);
+});
+
 const initDb = () => {
   db.serialize(() => {
     // 1. users
