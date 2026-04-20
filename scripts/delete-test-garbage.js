@@ -2,7 +2,7 @@
 /**
  * One-off cleanup of known garbage seeded during early development:
  *   - meal_categories row "Test" (id arbitrary) and its three recipes "Test Recipe"
- *   - daily_menu rows dated 2020-01-01 (clearly historic test fixtures)
+ *   - daily_menu row dated 2020-01-01 (the single historic test fixture)
  *
  * Idempotent: re-running on a clean DB does nothing. Runs inside a single
  * transaction with --dry-run support so it can be previewed on production.
@@ -56,16 +56,24 @@ const STEPS = [
     delete: `DELETE FROM meal_categories WHERE name = 'Test'`
   },
   {
-    label: 'daily_menu_items under historic daily_menu (date < 2023-01-01)',
+    label: 'daily_menu_items under daily_menu 2020-01-01',
     count:  `SELECT COUNT(*) AS c FROM daily_menu_items
-             WHERE daily_menu_id IN (SELECT id FROM daily_menu WHERE date < '2023-01-01')`,
+             WHERE daily_menu_id IN (SELECT id FROM daily_menu WHERE date = '2020-01-01')`,
     delete: `DELETE FROM daily_menu_items
-             WHERE daily_menu_id IN (SELECT id FROM daily_menu WHERE date < '2023-01-01')`
+             WHERE daily_menu_id IN (SELECT id FROM daily_menu WHERE date = '2020-01-01')`
   },
   {
-    label: 'daily_menu with date < 2023-01-01 (stale test fixtures)',
-    count:  `SELECT COUNT(*) AS c FROM daily_menu WHERE date < '2023-01-01'`,
-    delete: `DELETE FROM daily_menu WHERE date < '2023-01-01'`
+    // weekly_menu_days сейчас пуст, но оставляем шаг для атомарности очистки.
+    label: 'weekly_menu_days referencing daily_menu 2020-01-01',
+    count:  `SELECT COUNT(*) AS c FROM weekly_menu_days
+             WHERE daily_menu_id IN (SELECT id FROM daily_menu WHERE date = '2020-01-01')`,
+    delete: `DELETE FROM weekly_menu_days
+             WHERE daily_menu_id IN (SELECT id FROM daily_menu WHERE date = '2020-01-01')`
+  },
+  {
+    label: 'daily_menu dated 2020-01-01 (stale test fixture)',
+    count:  `SELECT COUNT(*) AS c FROM daily_menu WHERE date = '2020-01-01'`,
+    delete: `DELETE FROM daily_menu WHERE date = '2020-01-01'`
   }
 ];
 
