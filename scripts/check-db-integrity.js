@@ -48,11 +48,13 @@ async function main() {
     console.log(`  ${t.padEnd(22)} ${c}`);
   }
 
-  db.close();
-  process.exit(fkOn && violations.length === 0 ? 0 : 1);
+  return fkOn && violations.length === 0 ? 0 : 1;
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(2);
-});
+main()
+  .then((code) => { process.exitCode = code; })
+  .catch((err) => {
+    console.error(err);
+    process.exitCode = 2;
+  })
+  .finally(() => db.close());

@@ -63,6 +63,14 @@ const STEPS = [
              WHERE recipe_id NOT IN (SELECT id FROM recipes)`
   },
   {
+    // Порядок важен: сначала удаляем shopping_lists без юзера, затем — висящие items.
+    // Иначе items у удалённых списков не попадут под условие первого шага.
+    label: 'shopping_lists with missing user',
+    count:  `SELECT COUNT(*) AS c FROM shopping_lists
+             WHERE user_id NOT IN (SELECT id FROM users)`,
+    delete: `DELETE FROM shopping_lists WHERE user_id NOT IN (SELECT id FROM users)`
+  },
+  {
     label: 'shopping_list_items with missing shopping_list',
     count:  `SELECT COUNT(*) AS c FROM shopping_list_items
              WHERE shopping_list_id NOT IN (SELECT id FROM shopping_lists)`,
@@ -77,10 +85,11 @@ const STEPS = [
              WHERE ingredient_id NOT IN (SELECT id FROM ingredients)`
   },
   {
-    label: 'shopping_lists with missing user',
-    count:  `SELECT COUNT(*) AS c FROM shopping_lists
+    // Сначала удаляем weekly_menu без юзера, затем hanging weekly_menu_days.
+    label: 'weekly_menu with missing user',
+    count:  `SELECT COUNT(*) AS c FROM weekly_menu
              WHERE user_id NOT IN (SELECT id FROM users)`,
-    delete: `DELETE FROM shopping_lists WHERE user_id NOT IN (SELECT id FROM users)`
+    delete: `DELETE FROM weekly_menu WHERE user_id NOT IN (SELECT id FROM users)`
   },
   {
     label: 'weekly_menu_days with missing weekly_menu',
@@ -95,12 +104,6 @@ const STEPS = [
              WHERE daily_menu_id NOT IN (SELECT id FROM daily_menu)`,
     delete: `DELETE FROM weekly_menu_days
              WHERE daily_menu_id NOT IN (SELECT id FROM daily_menu)`
-  },
-  {
-    label: 'weekly_menu with missing user',
-    count:  `SELECT COUNT(*) AS c FROM weekly_menu
-             WHERE user_id NOT IN (SELECT id FROM users)`,
-    delete: `DELETE FROM weekly_menu WHERE user_id NOT IN (SELECT id FROM users)`
   },
   {
     label: 'recipe_ingredients with missing recipe',
@@ -159,11 +162,11 @@ async function main() {
     await run('ROLLBACK').catch(() => {});
     throw err;
   }
-
-  db.close();
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+main()
+  .catch((err) => {
+    console.error(err);
+    process.exitCode = 1;
+  })
+  .finally(() => db.close());
