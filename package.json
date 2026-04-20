@@ -8,7 +8,9 @@
     "dev": "nodemon src/index.js",
     "db:check": "node scripts/check-db-integrity.js",
     "db:cleanup": "node scripts/cleanup-dangling-refs.js",
-    "db:cleanup:dry": "node scripts/cleanup-dangling-refs.js --dry-run"
+    "db:cleanup:dry": "node scripts/cleanup-dangling-refs.js --dry-run",
+    "db:cleanup:garbage": "node scripts/delete-test-garbage.js",
+    "db:cleanup:garbage:dry": "node scripts/delete-test-garbage.js --dry-run"
   },
   "keywords": [
     "telegram",
