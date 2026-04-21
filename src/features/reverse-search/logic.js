@@ -150,7 +150,11 @@ async function findRecipesByInventory(canonicalInventory, userTargets) {
 
   const matches = [];
   for (const row of rows) {
-    const ingNames = row.ingredients ? row.ingredients.split('|') : [];
+    // [RU] COALESCE(GROUP_CONCAT,'') для рецепта без связей выдаёт '', и
+    // ''.split('|') вернул бы [''] — ложный «недостающий» ингредиент. Отсекаем.
+    // [EN] COALESCE(GROUP_CONCAT,'') for a recipe with no links yields '',
+    // and ''.split('|') would return [''] — a phantom "missing" entry. Drop it.
+    const ingNames = row.ingredients ? row.ingredients.split('|').filter(Boolean) : [];
     if (ingNames.length === 0) continue;
     const missing = ingNames.filter(name => !inventorySet.has(name));
     if (missing.length > MAX_MISSING) continue;

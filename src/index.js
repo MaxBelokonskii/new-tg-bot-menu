@@ -440,7 +440,11 @@ bot.action(/^reverse_show_(\d+)$/, async (ctx) => {
       .map(i => i.name)
       .filter(name => !inventorySet.has(name));
     const card = buildReverseRecipeCard(recipe, ingredients, missing);
-    await ctx.editMessageText(card.text, { parse_mode: 'HTML', ...card.keyboard });
+    await ctx.editMessageText(card.text, { parse_mode: 'HTML', ...card.keyboard })
+      .catch(err => {
+        if (err.description && err.description.includes('message is not modified')) return;
+        throw err;
+      });
   } catch (error) {
     logger.error('Error showing reverse-search recipe card:', error);
     await ctx.reply(texts.errors.general);
@@ -458,9 +462,17 @@ bot.action('reverse_back_to_list', async (ctx) => {
     const recipes = await findRecipesByInventory(inventory, targets);
     const payload = buildResultsMessage(recipes, []);
     if (!payload) {
-      return ctx.editMessageText(texts.reverseSearch.noResults);
+      return ctx.editMessageText(texts.reverseSearch.noResults)
+        .catch(err => {
+          if (err.description && err.description.includes('message is not modified')) return;
+          throw err;
+        });
     }
-    await ctx.editMessageText(payload.text, { parse_mode: 'HTML', ...payload.keyboard });
+    await ctx.editMessageText(payload.text, { parse_mode: 'HTML', ...payload.keyboard })
+      .catch(err => {
+        if (err.description && err.description.includes('message is not modified')) return;
+        throw err;
+      });
   } catch (error) {
     logger.error('Error restoring reverse-search list:', error);
     await ctx.reply(texts.errors.general);
