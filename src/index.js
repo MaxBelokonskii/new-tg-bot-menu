@@ -6,6 +6,17 @@ const texts = require('./bot/texts');
 const { sendMainMenu } = require('./interface/main-menu');
 const { sendProfileMenu } = require('./interface/profile');
 const { profileScene, SCENE_ID: PROFILE_SCENE_ID } = require('./features/profile/scene');
+const { reverseSearchScene, SCENE_ID: REVERSE_SCENE_ID } = require('./features/reverse-search/scene');
+const {
+  findRecipesByInventory,
+  getUserTargets,
+  getRecipeById
+} = require('./features/reverse-search/logic');
+const { getRecipeIngredients } = require('./features/meal-suggestions/logic');
+const {
+  buildResultsMessage,
+  buildRecipeCard: buildReverseRecipeCard
+} = require('./interface/reverse-search');
 const { getUserProfile } = require('./features/profile/logic');
 const {
   sendCategorySelection,
@@ -61,7 +72,7 @@ initDb();
 // [EN] Session + Stage back the multi-step profile survey. Default
 // in-memory store is enough — survey state is short-lived. Must be
 // registered before stage.middleware() so Stage can read ctx.session.
-const stage = new Scenes.Stage([profileScene]);
+const stage = new Scenes.Stage([profileScene, reverseSearchScene]);
 bot.use(session());
 bot.use(stage.middleware());
 
@@ -389,6 +400,82 @@ bot.action('cancel_clear_shopping', async (ctx) => {
     });
   } catch (error) {
     logger.error('Error restoring shopping list after cancel:', error);
+  }
+});
+
+bot.hears(texts.mainMenu.buttons.reverseSearch, async (ctx) => {
+  try {
+    await ctx.scene.enter(REVERSE_SCENE_ID);
+  } catch (error) {
+    logger.error('Error entering reverse-search scene:', error);
+    await ctx.reply(texts.errors.general);
+  }
+});
+
+bot.action('reverse_retry', async (ctx) => {
+  await ctx.answerCbQuery();
+  try {
+    await ctx.scene.enter(REVERSE_SCENE_ID);
+  } catch (error) {
+    logger.error('Error re-entering reverse-search scene:', error);
+    await ctx.reply(texts.errors.general);
+  }
+});
+
+bot.action(/^reverse_show_(\d+)$/, async (ctx) => {
+  const recipeId = parseInt(ctx.match[1], 10);
+  await ctx.answerCbQuery();
+  try {
+    const inventory = ctx.session?.reverseInventory;
+    if (!Array.isArray(inventory) || inventory.length === 0) {
+      return ctx.reply(texts.reverseSearch.sessionExpired);
+    }
+    const recipe = await getRecipeById(recipeId);
+    if (!recipe) {
+      return ctx.reply(texts.errors.general);
+    }
+    const ingredients = await getRecipeIngredients(recipeId);
+    const inventorySet = new Set(inventory);
+    const missing = ingredients
+      .map(i => i.name)
+      .filter(name => !inventorySet.has(name));
+    const card = buildReverseRecipeCard(recipe, ingredients, missing);
+    await ctx.editMessageText(card.text, { parse_mode: 'HTML', ...card.keyboard })
+      .catch(err => {
+        if (err.description && err.description.includes('message is not modified')) return;
+        throw err;
+      });
+  } catch (error) {
+    logger.error('Error showing reverse-search recipe card:', error);
+    await ctx.reply(texts.errors.general);
+  }
+});
+
+bot.action('reverse_back_to_list', async (ctx) => {
+  await ctx.answerCbQuery();
+  try {
+    const inventory = ctx.session?.reverseInventory;
+    if (!Array.isArray(inventory) || inventory.length === 0) {
+      return ctx.reply(texts.reverseSearch.sessionExpired);
+    }
+    const targets = await getUserTargets(ctx.from.id);
+    const recipes = await findRecipesByInventory(inventory, targets);
+    const payload = buildResultsMessage(recipes, []);
+    if (!payload) {
+      return ctx.editMessageText(texts.reverseSearch.noResults)
+        .catch(err => {
+          if (err.description && err.description.includes('message is not modified')) return;
+          throw err;
+        });
+    }
+    await ctx.editMessageText(payload.text, { parse_mode: 'HTML', ...payload.keyboard })
+      .catch(err => {
+        if (err.description && err.description.includes('message is not modified')) return;
+        throw err;
+      });
+  } catch (error) {
+    logger.error('Error restoring reverse-search list:', error);
+    await ctx.reply(texts.errors.general);
   }
 });
 
