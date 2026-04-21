@@ -70,15 +70,46 @@ async function saveShoppingList(telegramId, ingredients) {
             VALUES (?, ?, ?, ?)
           `;
 
+          // [RU] Один и тот же ингредиент может встретиться с разными единицами
+          // (например, «лук» как `300 г` в одном рецепте и `2 шт` в другом).
+          // PK таблицы — (shopping_list_id, ingredient_id), поэтому две строки
+          // на один ингредиент нарушают UNIQUE. Склеиваем единицы в одну строку,
+          // суммарно amount берём у первой — в UI отображается целиком через unit.
+          // [EN] Same ingredient may arrive with multiple units. PK is
+          // (shopping_list_id, ingredient_id), so two rows for one ingredient
+          // would violate UNIQUE. Merge units into a single display string;
+          // first amount is kept as-is since unit already carries the total.
+          const merged = new Map();
+          for (const item of ingredients) {
+            const existing = merged.get(item.id);
+            const part = `${item.total_amount} ${item.unit}`;
+            if (existing) {
+              existing.parts.push(part);
+            } else {
+              merged.set(item.id, {
+                id: item.id,
+                total_amount: item.total_amount,
+                unit: item.unit,
+                parts: [part]
+              });
+            }
+          }
+
           const stmt = db.prepare(insertItemsQuery);
-          ingredients.forEach(item => {
-            stmt.run(listId, item.id, item.total_amount, item.unit);
-          });
+          let stmtError = null;
+          for (const item of merged.values()) {
+            const unit = item.parts.length > 1 ? item.parts.join(' + ') : item.unit;
+            const amount = item.parts.length > 1 ? 0 : item.total_amount;
+            stmt.run(listId, item.id, amount, unit, (runErr) => {
+              if (runErr && !stmtError) stmtError = runErr;
+            });
+          }
 
           stmt.finalize((err) => {
-            if (err) {
+            const finalErr = err || stmtError;
+            if (finalErr) {
               db.run('ROLLBACK');
-              return reject(err);
+              return reject(finalErr);
             }
             db.run('COMMIT', (err) => {
               if (err) reject(err);
