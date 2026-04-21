@@ -115,13 +115,21 @@ bot.action(/^confirm_clear_day_(.+)$/, async (ctx) => {
 
 bot.action(/^do_clear_day_(.+)$/, async (ctx) => {
   const date = ctx.match[1];
+  const clearedMsg = texts.weeklyPlan.cleared.replace('{date}', date);
   try {
     await clearDailyPlan(ctx.from.id, date);
-    await ctx.answerCbQuery(texts.weeklyPlan.cleared.replace('{date}', date));
-    await ctx.editMessageText(texts.weeklyPlan.cleared.replace('{date}', date));
+    // [RU] editMessageText до answerCbQuery: иначе второй answer в catch
+    // попадёт на уже закрытый query и вызовет unhandled rejection.
+    // [EN] Edit before answerCbQuery — otherwise a fallback answer inside
+    // catch would hit an already-answered query and throw.
+    await ctx.editMessageText(clearedMsg).catch(err => {
+      if (err.description && err.description.includes('message is not modified')) return;
+      throw err;
+    });
+    await ctx.answerCbQuery(clearedMsg);
   } catch (error) {
     logger.error('Error clearing daily plan:', error);
-    await ctx.answerCbQuery('Ошибка при очистке плана.');
+    await ctx.answerCbQuery(texts.weeklyPlan.errorClear).catch(() => {});
   }
 });
 
@@ -197,17 +205,19 @@ bot.action('confirm_clear_shopping', async (ctx) => {
 bot.action('do_clear_shopping', async (ctx) => {
   try {
     await clearShoppingLists(ctx.from.id);
-    await ctx.answerCbQuery('Список очищен! 🗑️');
+    // [RU] Editим раньше answerCbQuery, чтобы catch мог безопасно ответить
+    // об ошибке, если edit упал уже после закрытого query.
+    // [EN] Edit before answerCbQuery so the error-path answer can't hit
+    // an already-answered query.
     await ctx.editMessageText(texts.shoppingList.empty, getShoppingListKeyboard())
       .catch(err => {
-        if (err.description && err.description.includes('message is not modified')) {
-          return;
-        }
+        if (err.description && err.description.includes('message is not modified')) return;
         throw err;
       });
+    await ctx.answerCbQuery(texts.shoppingList.cleared);
   } catch (error) {
     logger.error('Error clearing shopping list:', error);
-    await ctx.answerCbQuery('Ошибка при очистке списка.');
+    await ctx.answerCbQuery(texts.shoppingList.errorClear).catch(() => {});
   }
 });
 
