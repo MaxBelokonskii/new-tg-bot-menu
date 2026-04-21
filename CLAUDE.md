@@ -13,8 +13,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ✅ работает, 🟡 частично, 🔴 не реализовано. Подробности — в roadmap (раздел 2).
 
 - 🟡 Рандом блюда по категории → карточка рецепта → добавление в рацион на сегодня (`interface/dish-selection.js` + `features/weekly-planner/logic.js:saveSelectedDish`). Известный дефект: `slot` считается как `count+1`, а не из категории.
-- 🟡 Просмотр текущего рациона (`bot.action('view_weekly_plan')` в `src/index.js`). Окно по неделе не ограничено — показывает все `daily_menu`.
-- 🟡 Список покупок с группировкой по типам (`features/shopping-list/logic.js`, `interface/shopping-list.js`). SQL-окно некорректное (берёт прошлую неделю), все ингредиенты сейчас с `type='general'`.
+- 🟡 Просмотр текущего рациона (`bot.action('view_weekly_plan')` в `src/index.js`). Ограничен текущей календарной неделей Пн..Вс.
+- 🟡 Список покупок с группировкой по типам (`features/shopping-list/logic.js`, `interface/shopping-list.js`). Берётся текущая неделя; все ингредиенты сейчас с `type='general'`.
 - 🔴 Автогенерация недельного рациона — заглушка, `generateWeeklyPlan` пустая.
 - 🔴 Редактирование конкретного приёма пищи — не реализовано.
 - 🔴 Подтверждение при очистке (сейчас `clear_day_*` и `clear_shopping_list` чистят сразу).
@@ -50,7 +50,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `src/interface/` — UI-слой: сборка клавиатур (`Markup.inlineKeyboard`, `Markup.keyboard`), форматирование HTML-сообщений. Один файл на экран: `main-menu.js`, `dish-selection.js`, `weekly-plan.js`, `shopping-list.js`.
 - `src/features/<feature>/logic.js` — бизнес-логика и работа с БД. Фичи: `meal-suggestions/`, `weekly-planner/`, `shopping-list/`. Опционально рядом кладётся `api.js` (внешние интеграции).
 - `src/database/` — подключение к sqlite3 (`db.js`) и скрипт миграции из JSON (`migrate.js`). Схема БД создаётся в `initDb()` идемпотентно через `CREATE TABLE IF NOT EXISTS` и вызывается из `src/index.js` при старте.
-- `src/utils/` — общие утилиты (сейчас только `logger.js` на базе winston: консоль + `logs/error.log` + `logs/combined.log`).
+- `src/utils/` — общие утилиты: `logger.js` (winston: консоль + `logs/error.log` + `logs/combined.log`) и `date-helpers.js` (`getCurrentWeekBounds()` → `{ start, endExclusive }` для SQL-запросов «на этой неделе»).
 
 ### Поток данных для типового сценария «выбор блюда»
 
@@ -83,7 +83,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Авто-регистрация пользователя** происходит в глобальном middleware `src/index.js:24` через `getOrCreateUser(ctx.from.id, ctx.from.username)` — к моменту любого хэндлера пользователь уже есть в БД.
 - **sqlite3 работает на колбэках**; весь код оборачивает его в `new Promise` вручную (см. `features/weekly-planner/logic.js`). При добавлении новых запросов держите этот стиль, не смешивайте с `await db.all` — такого API здесь нет. Кандидат на вынесение в `utils/db-helpers.js` (в `projectRules.mdc` этот файл предусмотрен, но пока не создан).
-- **`confirm_dish`** всегда пишет в `daily_menu` за **сегодня** (`new Date().toISOString().split('T')[0]`). Явного выбора даты нет — это намеренно для текущего MVP.
+- **`confirm_dish`** всегда пишет в `daily_menu` за **сегодня** через `formatLocalDate(new Date())` из `utils/date-helpers.js` (локальная дата, не UTC — иначе у пользователей в UTC+N рядом с полуночью блюдо уезжало бы на следующие сутки и выпадало из окна `getWeeklyPlan`). Явного выбора даты нет — это намеренно для текущего MVP.
 - **Нутриенты**: в JSON поля называются `proteins`/`fats`, в БД — `protein`/`fat`. `migrate.js` нормализует это при вставке (`nutrition.proteins || nutrition.protein || 0`). Не менять без сверки с JSON-источником.
 - **Рассогласование ключей категорий**: в `recipes.json` `category` приходит как английский ключ (`breakfast`, `main`, `salads`, `desserts`), матчинг рецептов в `features/meal-suggestions/logic.js:getRandomRecipeByCategory` делается через `LOWER(mc.name) = LOWER(?)`. `src/index.js:94` содержит локальный `categoryMap` с русскими подписями — формально это дубликат, который должен уехать в `texts.js`/`utils/formatters.js` (см. roadmap 4.6).
 
@@ -105,8 +105,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Блок Б — логика приложения
 
-- **⚠️ `getIngredientsFromPlan` берёт прошлую неделю, а не текущую (roadmap 4.3).** SQL-окно `DATE('now', 'localtime', 'weekday 1', '-7 days')` … `DATE('now', 'localtime', 'weekday 1')` — это именно **прошлый** пн–вс.
-- **⚠️ `getWeeklyPlan` не ограничен датой (roadmap 4.4).** Запрос без `WHERE` по периоду — по мере накопления истории «недельный план» превратится в архив всех рационов.
+- **✅ SQL-окна дат исправлены (roadmap 4.3 + 4.4).** `getIngredientsFromPlan` и `getWeeklyPlan` принимают границы Пн..Вс текущей недели из `utils/date-helpers.js:getCurrentWeekBounds()`. Семантика недели: ISO (понедельник — начало, воскресенье — конец).
 - **⚠️ `slot` в `daily_menu_items` не связан с категорией (roadmap 4.2).** `saveSelectedDish` пишет `slot = count+1`. Контракт из README «1=завтрак, 2=основное_1, 3=основное_2, 4=салат, 5=десерт» не соблюдается автоматически — его надо вычислять из категории рецепта.
 - **`BOT_TOKEN` placeholder-check не ловит значение из `.env.example` (roadmap 4.7).** `src/index.js:213` сравнивает с `'your_telegram_bot_token'`, а в `.env.example` строка `your_telegram_bot_token_here` — бот попытается стартовать с заглушкой.
 - **Генерация недельного плана не реализована.** `bot.action('generate_weekly_plan')` отвечает заглушкой, `features/weekly-planner/logic.js:generateWeeklyPlan` — пустая функция. Это **не баг, а запланированная фича** (roadmap 2.2) — не «чините» до обсуждения подхода.

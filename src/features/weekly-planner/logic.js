@@ -1,4 +1,6 @@
 const { db } = require('../../database/db');
+const logger = require('../../utils/logger');
+const { getCurrentWeekBounds, formatLocalDate } = require('../../utils/date-helpers');
 
 /**
  * Получает ID пользователя в БД по telegram_id, создавая его если нужно
@@ -37,7 +39,11 @@ async function generateWeeklyPlan(userId, startDate) {
  */
 async function saveSelectedDish(telegramId, recipeId) {
   const userId = await getOrCreateUser(telegramId);
-  const today = new Date().toISOString().split('T')[0];
+  // [RU] Локальная дата, а не UTC: иначе рядом с полуночью «сегодня» уезжает
+  // в следующие сутки и не попадает в окно текущей недели из getWeeklyPlan.
+  // [EN] Local date, not UTC: near midnight a UTC date can land in tomorrow
+  // and slip out of the current-week window produced by getCurrentWeekBounds.
+  const today = formatLocalDate(new Date());
 
   return new Promise((resolve, reject) => {
     db.serialize(() => {
@@ -85,13 +91,14 @@ async function saveSelectedDish(telegramId, recipeId) {
 }
 
 /**
- * Получает выбранные блюда пользователя на текущую неделю
+ * Returns the user's planned dishes for the current ISO week (Mon..Sun).
  * @param {number} telegramId
+ * @returns {Promise<Array<{name: string, category: string, date: string}>>}
  */
 async function getWeeklyPlan(telegramId) {
   const userId = await getOrCreateUser(telegramId);
+  const { start, endExclusive } = getCurrentWeekBounds();
 
-  // Для простоты берем все блюда за последние 7 дней или из текущего daily_menu
   return new Promise((resolve, reject) => {
     const query = `
       SELECT r.name, mc.name as category, dm.date
@@ -100,12 +107,18 @@ async function getWeeklyPlan(telegramId) {
       JOIN recipes r ON dmi.recipe_id = r.id
       JOIN meal_categories mc ON r.category_id = mc.id
       WHERE dm.user_id = ?
-      ORDER BY dm.date DESC, dmi.slot ASC
+        AND dm.date >= ?
+        AND dm.date < ?
+      ORDER BY dm.date ASC, dmi.slot ASC
     `;
 
-    db.all(query, [userId], (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows);
+    db.all(query, [userId, start, endExclusive], (err, rows) => {
+      if (err) {
+        logger.error('Error fetching weekly plan:', err);
+        reject(err);
+      } else {
+        resolve(rows);
+      }
     });
   });
 }

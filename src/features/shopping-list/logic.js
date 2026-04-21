@@ -1,12 +1,15 @@
 const { db } = require('../../database/db');
 const logger = require('../../utils/logger');
+const { getCurrentWeekBounds } = require('../../utils/date-helpers');
 
 /**
- * Получает агрегированный список ингредиентов из текущего плана пользователя
+ * Получает агрегированный список ингредиентов из плана пользователя на текущую
+ * неделю (Пн..Вс, включая сегодня).
  * @param {number} telegramId
  * @returns {Promise<Array>}
  */
 async function getIngredientsFromPlan(telegramId) {
+  const { start, endExclusive } = getCurrentWeekBounds();
   return new Promise((resolve, reject) => {
     const query = `
       SELECT i.id, i.name, i.type, SUM(ri.amount) as total_amount, ri.unit
@@ -15,13 +18,13 @@ async function getIngredientsFromPlan(telegramId) {
       JOIN daily_menu_items dmi ON dm.id = dmi.daily_menu_id
       JOIN recipe_ingredients ri ON dmi.recipe_id = ri.recipe_id
       JOIN ingredients i ON ri.ingredient_id = i.id
-      WHERE u.telegram_id = ? 
-        AND dm.date >= DATE('now', 'localtime', 'weekday 1', '-7 days')
-        AND dm.date < DATE('now', 'localtime', 'weekday 1')
+      WHERE u.telegram_id = ?
+        AND dm.date >= ?
+        AND dm.date < ?
       GROUP BY i.id, ri.unit
     `;
 
-    db.all(query, [telegramId], (err, rows) => {
+    db.all(query, [telegramId, start, endExclusive], (err, rows) => {
       if (err) {
         logger.error('Error fetching ingredients from plan:', err);
         reject(err);
