@@ -10,7 +10,8 @@
     "db:cleanup": "node scripts/cleanup-dangling-refs.js",
     "db:cleanup:dry": "node scripts/cleanup-dangling-refs.js --dry-run",
     "db:cleanup:garbage": "node scripts/delete-test-garbage.js",
-    "db:cleanup:garbage:dry": "node scripts/delete-test-garbage.js --dry-run"
+    "db:cleanup:garbage:dry": "node scripts/delete-test-garbage.js --dry-run",
+    "db:reset": "node scripts/reset-db.js"
   },
   "keywords": [
     "telegram",
