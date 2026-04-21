@@ -156,20 +156,46 @@ async function getLastShoppingList(telegramId) {
  * @param {number} telegramId
  */
 async function clearShoppingLists(telegramId) {
-    return new Promise((resolve, reject) => {
-        const query = `
-            DELETE FROM shopping_lists 
-            WHERE user_id = (SELECT id FROM users WHERE telegram_id = ?)
-        `;
-        db.run(query, [telegramId], function(err) {
-            if (err) {
-                logger.error('Error clearing shopping lists:', err);
-                reject(err);
-            } else {
-                resolve();
-            }
+  // [RU] FK ON: shopping_list_items.shopping_list_id ссылается на shopping_lists(id)
+  // без ON DELETE CASCADE, поэтому сначала удаляем дочерние строки, затем родителей.
+  // Обе операции — в одной транзакции, чтобы при падении на втором шаге первый тоже откатился.
+  // [EN] FK ON: shopping_list_items.shopping_list_id references shopping_lists(id)
+  // without ON DELETE CASCADE. Delete children first, then parents, inside a single
+  // transaction so a failure on step 2 rolls back step 1.
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      db.run('BEGIN TRANSACTION');
+      const childSql = `
+        DELETE FROM shopping_list_items
+        WHERE shopping_list_id IN (
+          SELECT id FROM shopping_lists
+          WHERE user_id = (SELECT id FROM users WHERE telegram_id = ?)
+        )
+      `;
+      const parentSql = `
+        DELETE FROM shopping_lists
+        WHERE user_id = (SELECT id FROM users WHERE telegram_id = ?)
+      `;
+      db.run(childSql, [telegramId], (err) => {
+        if (err) {
+          logger.error('Error clearing shopping list items:', err);
+          db.run('ROLLBACK');
+          return reject(err);
+        }
+        db.run(parentSql, [telegramId], (err) => {
+          if (err) {
+            logger.error('Error clearing shopping lists:', err);
+            db.run('ROLLBACK');
+            return reject(err);
+          }
+          db.run('COMMIT', (commitErr) => {
+            if (commitErr) reject(commitErr);
+            else resolve();
+          });
         });
+      });
     });
+  });
 }
 
 module.exports = {
