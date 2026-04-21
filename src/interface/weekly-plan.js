@@ -31,11 +31,11 @@ async function sendWeeklyPlanMenu(ctx) {
 }
 
 /**
- * Builds the weekly plan message (HTML text + inline keyboard with per-day
- * clear buttons). Used both for the initial render and for restoring the
- * view after a cancelled clear confirmation.
+ * Builds the weekly plan message (HTML text + inline keyboard with per-dish
+ * replace/remove controls and a bulk "clear day" button). Used for the
+ * initial render and for restoring the view after cancelled confirmations.
  *
- * @param {Array<{name: string, category: string, date: string}>} plan
+ * @param {Array<{name: string, category: string, date: string, slot: number}>} plan
  * @returns {{text: string, reply_markup: object}|null} null when plan is empty
  */
 function buildWeeklyPlanMessage(plan) {
@@ -55,6 +55,16 @@ function buildWeeklyPlanMessage(plan) {
       const key = (item.category || '').toLowerCase();
       const categoryName = CATEGORY_LABEL[key] || item.category;
       message += `• [${categoryName}] ${item.name}\n`;
+      buttons.push([
+        {
+          text: `${texts.editSlot.replaceBtn} ${item.name}`,
+          callback_data: `edit_slot_${date}_${item.slot}`
+        },
+        {
+          text: texts.editSlot.removeBtn,
+          callback_data: `confirm_remove_slot_${date}_${item.slot}`
+        }
+      ]);
     });
     message += '\n';
     buttons.push([{
@@ -83,8 +93,24 @@ function buildClearDayConfirmKeyboard(date) {
   };
 }
 
+/**
+ * Builds the Yes/No keyboard for the "remove one slot" confirmation dialog.
+ * @param {string} date - YYYY-MM-DD
+ * @param {number} slot
+ * @returns {object} reply_markup payload
+ */
+function buildRemoveSlotConfirmKeyboard(date, slot) {
+  return {
+    inline_keyboard: [[
+      { text: texts.confirm.yes, callback_data: `do_remove_slot_${date}_${slot}` },
+      { text: texts.confirm.no, callback_data: `cancel_remove_slot_${date}_${slot}` }
+    ]]
+  };
+}
+
 module.exports = {
   sendWeeklyPlanMenu,
   buildWeeklyPlanMessage,
-  buildClearDayConfirmKeyboard
+  buildClearDayConfirmKeyboard,
+  buildRemoveSlotConfirmKeyboard
 };

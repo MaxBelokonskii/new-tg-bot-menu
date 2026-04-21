@@ -4,13 +4,25 @@ const { initDb } = require('./database/db');
 const logger = require('./utils/logger');
 const texts = require('./bot/texts');
 const { sendMainMenu } = require('./interface/main-menu');
-const { sendCategorySelection, showDishSuggestion } = require('./interface/dish-selection');
+const {
+  sendCategorySelection,
+  showDishSuggestion,
+  showReplacementSuggestion
+} = require('./interface/dish-selection');
 const {
   sendWeeklyPlanMenu,
   buildWeeklyPlanMessage,
-  buildClearDayConfirmKeyboard
+  buildClearDayConfirmKeyboard,
+  buildRemoveSlotConfirmKeyboard
 } = require('./interface/weekly-plan');
-const { getOrCreateUser, saveSelectedDish, getWeeklyPlan, clearDailyPlan } = require('./features/weekly-planner/logic');
+const {
+  getOrCreateUser,
+  saveSelectedDish,
+  getWeeklyPlan,
+  clearDailyPlan,
+  removeSlot,
+  replaceInSlot
+} = require('./features/weekly-planner/logic');
 const {
   getIngredientsFromPlan,
   saveShoppingList,
@@ -27,6 +39,29 @@ const bot = new Telegraf(process.env.BOT_TOKEN || 'DUMMY_TOKEN');
 
 // Initialize database
 initDb();
+
+// [RU] Общий рендер «просмотра плана» с editMessageText — используется из cancel-
+// хэндлеров и после успешных replace/remove, чтобы вернуть пользователя
+// к свежему списку в том же сообщении.
+// [EN] Shared "render current plan via editMessageText" — used by cancel
+// handlers and after successful replace/remove to refresh the same message.
+async function rerenderWeeklyPlan(ctx) {
+  const plan = await getWeeklyPlan(ctx.from.id);
+  const payload = buildWeeklyPlanMessage(plan);
+  if (!payload) {
+    return ctx.editMessageText(texts.weeklyPlan.empty).catch(err => {
+      if (err.description && err.description.includes('message is not modified')) return;
+      throw err;
+    });
+  }
+  return ctx.editMessageText(payload.text, {
+    parse_mode: 'HTML',
+    reply_markup: payload.reply_markup
+  }).catch(err => {
+    if (err.description && err.description.includes('message is not modified')) return;
+    throw err;
+  });
+}
 
 // Basic middleware for logging
 bot.use(async (ctx, next) => {
@@ -136,17 +171,80 @@ bot.action(/^do_clear_day_(.+)$/, async (ctx) => {
 bot.action(/^cancel_clear_day_(.+)$/, async (ctx) => {
   await ctx.answerCbQuery(texts.confirm.canceled);
   try {
-    const plan = await getWeeklyPlan(ctx.from.id);
-    const payload = buildWeeklyPlanMessage(plan);
-    if (!payload) {
-      return ctx.editMessageText(texts.weeklyPlan.empty);
-    }
-    await ctx.editMessageText(payload.text, {
-      parse_mode: 'HTML',
-      reply_markup: payload.reply_markup
-    });
+    await rerenderWeeklyPlan(ctx);
   } catch (error) {
     logger.error('Error restoring plan after cancel:', error);
+  }
+});
+
+bot.action(/^edit_slot_(\d{4}-\d{2}-\d{2})_(\d+)$/, async (ctx) => {
+  const date = ctx.match[1];
+  const slot = Number(ctx.match[2]);
+  await ctx.answerCbQuery();
+  await showReplacementSuggestion(ctx, date, slot);
+});
+
+bot.action(/^replace_now_(\d{4}-\d{2}-\d{2})_(\d+)_(\d+)$/, async (ctx) => {
+  const date = ctx.match[1];
+  const slot = Number(ctx.match[2]);
+  const recipeId = Number(ctx.match[3]);
+  try {
+    await replaceInSlot(ctx.from.id, date, slot, recipeId);
+    await ctx.answerCbQuery(texts.dishSelection.replaced);
+    await rerenderWeeklyPlan(ctx);
+  } catch (error) {
+    logger.error('Error replacing slot:', error);
+    await ctx.answerCbQuery(texts.editSlot.errorReplace).catch(() => {});
+  }
+});
+
+bot.action(/^cancel_edit_(\d{4}-\d{2}-\d{2})_(\d+)$/, async (ctx) => {
+  await ctx.answerCbQuery(texts.confirm.canceled);
+  try {
+    await rerenderWeeklyPlan(ctx);
+  } catch (error) {
+    logger.error('Error restoring plan after cancel-edit:', error);
+  }
+});
+
+bot.action(/^confirm_remove_slot_(\d{4}-\d{2}-\d{2})_(\d+)$/, async (ctx) => {
+  const date = ctx.match[1];
+  const slot = Number(ctx.match[2]);
+  await ctx.answerCbQuery();
+  try {
+    const plan = await getWeeklyPlan(ctx.from.id);
+    const item = plan.find(p => p.date === date && p.slot === slot);
+    const dishName = item?.name || '';
+    const prompt = texts.editSlot.confirmRemove
+      .replace('{name}', dishName)
+      .replace('{date}', date);
+    await ctx.editMessageText(prompt, {
+      reply_markup: buildRemoveSlotConfirmKeyboard(date, slot)
+    });
+  } catch (error) {
+    logger.error('Error showing remove-slot confirmation:', error);
+  }
+});
+
+bot.action(/^do_remove_slot_(\d{4}-\d{2}-\d{2})_(\d+)$/, async (ctx) => {
+  const date = ctx.match[1];
+  const slot = Number(ctx.match[2]);
+  try {
+    await removeSlot(ctx.from.id, date, slot);
+    await ctx.answerCbQuery(texts.editSlot.removed);
+    await rerenderWeeklyPlan(ctx);
+  } catch (error) {
+    logger.error('Error removing slot:', error);
+    await ctx.answerCbQuery(texts.editSlot.errorRemove).catch(() => {});
+  }
+});
+
+bot.action(/^cancel_remove_slot_(\d{4}-\d{2}-\d{2})_(\d+)$/, async (ctx) => {
+  await ctx.answerCbQuery(texts.confirm.canceled);
+  try {
+    await rerenderWeeklyPlan(ctx);
+  } catch (error) {
+    logger.error('Error restoring plan after cancel-remove:', error);
   }
 });
 
