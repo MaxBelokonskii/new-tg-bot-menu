@@ -76,17 +76,17 @@ async function resolveSlot(dailyMenuId, category) {
   return slots.find(s => !taken.has(s)) ?? slots[0];
 }
 
-/**
- * Saves the selected dish into the user's plan for today. Slot is derived
- * from the recipe's category (README contract: 1=breakfast, 2/3=main,
- * 4=salad, 5=dessert). Re-adding into an occupied slot replaces the
- * existing recipe for that slot.
- *
- * @param {number} telegramId
- * @param {number} recipeId
- * @returns {Promise<{slot: number, replaced: boolean}>}
- */
-async function saveSelectedDish(telegramId, recipeId) {
+// [RU] JS-мьютекс: node-sqlite3 использует одно соединение и не поддерживает
+// вложенные BEGIN. Конкурентные confirm_dish (двойной тап) без мьютекса могут
+// увидеть слот «свободным» между resolveSlot и UPSERT. Промис-цепочка
+// сериализует вход в критическую секцию на уровне процесса.
+// [EN] JS mutex: node-sqlite3 shares a single connection and does not support
+// nested BEGIN. Concurrent confirm_dish callbacks (double tap) could otherwise
+// observe a stale "free" slot between resolveSlot and the UPSERT. A promise
+// chain serializes entry into the critical section at the process level.
+let saveQueue = Promise.resolve();
+
+async function _saveSelectedDishImpl(telegramId, recipeId) {
   const userId = await getOrCreateUser(telegramId);
   // [RU] Локальная дата, а не UTC: иначе рядом с полуночью «сегодня» уезжает
   // в следующие сутки и не попадает в окно текущей недели из getWeeklyPlan.
@@ -129,7 +129,34 @@ async function saveSelectedDish(telegramId, recipeId) {
     [dailyMenuId, recipeId, slot]
   );
 
-  return { slot, replaced: Boolean(existing) && existing.recipe_id !== recipeId };
+  let status;
+  if (!existing) status = 'added';
+  else if (existing.recipe_id === recipeId) status = 'unchanged';
+  else status = 'replaced';
+  return { slot, status };
+}
+
+/**
+ * Saves the selected dish into the user's plan for today. Slot is derived
+ * from the recipe's category (README contract: 1=breakfast, 2/3=main,
+ * 4=salad, 5=dessert). Re-adding into an occupied slot replaces the
+ * existing recipe for that slot. Concurrent calls are serialized through
+ * a module-level mutex to keep slot resolution consistent.
+ *
+ * @param {number} telegramId
+ * @param {number} recipeId
+ * @returns {Promise<{slot: number, status: 'added'|'replaced'|'unchanged'}>}
+ */
+async function saveSelectedDish(telegramId, recipeId) {
+  const prev = saveQueue;
+  let release;
+  saveQueue = new Promise(resolve => { release = resolve; });
+  try {
+    await prev;
+    return await _saveSelectedDishImpl(telegramId, recipeId);
+  } finally {
+    release();
+  }
 }
 
 /**
@@ -180,5 +207,8 @@ module.exports = {
   generateWeeklyPlan,
   saveSelectedDish,
   getWeeklyPlan,
-  clearDailyPlan
+  clearDailyPlan,
+  // [EN] Exported for Stage 2.1 (generateWeeklyPlan) to reuse slot logic.
+  CATEGORY_TO_SLOTS,
+  resolveSlot
 };
