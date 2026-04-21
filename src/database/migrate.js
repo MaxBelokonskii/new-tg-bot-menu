@@ -2,6 +2,34 @@ const fs = require('fs');
 const path = require('path');
 const { db, initDb } = require('./db');
 
+// [RU] Словари нормализации. Ключ — канонический вариант, значение — список алиасов.
+// [EN] Normalization dictionaries. Keys are canonical forms; values are their aliases.
+const ALIAS_DIR = path.resolve(__dirname, '../../database');
+const ingredientAliases = loadAliasMap(path.join(ALIAS_DIR, 'ingredient-aliases.json'));
+const unitAliases = loadAliasMap(path.join(ALIAS_DIR, 'unit-aliases.json'));
+
+function loadAliasMap(filePath) {
+  const raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  const map = new Map();
+  for (const [canonical, aliases] of Object.entries(raw)) {
+    if (canonical.startsWith('_') || !Array.isArray(aliases)) continue;
+    for (const alias of aliases) map.set(alias, canonical);
+  }
+  return map;
+}
+
+function normalizeIngredient(name) {
+  return ingredientAliases.get(name) || name;
+}
+
+function normalizeUnit(unit) {
+  if (!unit) return unit;
+  // [RU] Убираем уточнение веса в скобках: "шт (150 г)" → "шт".
+  // [EN] Strip parenthetical weight hint: "шт (150 г)" → "шт".
+  const clean = unit.replace(/\s*\(.*\)\s*$/, '').trim();
+  return unitAliases.get(clean) || clean;
+}
+
 /**
  * Parses an ingredient amount string into a numeric amount + unit.
  *
@@ -70,7 +98,7 @@ async function upsertCategories(recipes) {
 
 async function upsertIngredients(recipes) {
   const names = new Set();
-  recipes.forEach(r => r.ingredients.forEach(i => names.add(i.item)));
+  recipes.forEach(r => r.ingredients.forEach(i => names.add(normalizeIngredient(i.item))));
   for (const name of names) {
     await run('INSERT OR IGNORE INTO ingredients (name, type) VALUES (?, ?)', [name, 'general']);
   }
@@ -103,13 +131,14 @@ async function upsertRecipe(recipe) {
 
 async function linkIngredients(recipeId, ingredients) {
   for (const ing of ingredients) {
-    const ingRow = await get('SELECT id FROM ingredients WHERE name = ?', [ing.item]);
-    if (!ingRow) throw new Error(`Ingredient not found: ${ing.item}`);
+    const canonicalName = normalizeIngredient(ing.item);
+    const ingRow = await get('SELECT id FROM ingredients WHERE name = ?', [canonicalName]);
+    if (!ingRow) throw new Error(`Ingredient not found: ${canonicalName}`);
     const { amount, unit } = parseAmount(ing.amount);
     await run(
       `INSERT OR IGNORE INTO recipe_ingredients (recipe_id, ingredient_id, amount, unit)
        VALUES (?, ?, ?, ?)`,
-      [recipeId, ingRow.id, amount, unit]
+      [recipeId, ingRow.id, amount, normalizeUnit(unit)]
     );
   }
 }

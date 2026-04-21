@@ -1,0 +1,11 @@
+{
+  "_doc": "Normalizes unit strings produced by parseAmount() into a compact canonical set. Format: canonical -> list of source aliases. Parenthetical weight suffixes such as 'шт (150 г)' are stripped by migrate.js before lookup. Unmatched units pass through unchanged.",
+  "ст. л.": ["ст. л.", "ст.л."],
+  "ч. л.": ["ч. л.", "ч.л."],
+  "стакан": ["ст.", "стакан", "стакана", "стаканов", "чашка"],
+  "зубчик": ["зубчик", "зубчика"],
+  "пучок": ["пучок", "пучка"],
+  "пачка": ["пачка", "пачки"],
+  "веточка": ["веточка"],
+  "по вкусу": ["по вкусу", "по необходимости"]
+}
