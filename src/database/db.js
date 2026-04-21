@@ -81,6 +81,7 @@ const initDb = () => {
       daily_menu_id INTEGER NOT NULL,
       recipe_id INTEGER NOT NULL,
       slot INTEGER NOT NULL,
+      UNIQUE (daily_menu_id, slot),
       FOREIGN KEY (daily_menu_id) REFERENCES daily_menu(id),
       FOREIGN KEY (recipe_id) REFERENCES recipes(id)
     )`);
@@ -132,6 +133,29 @@ const initDb = () => {
       FOREIGN KEY (shopping_list_id) REFERENCES shopping_lists(id),
       FOREIGN KEY (ingredient_id) REFERENCES ingredients(id)
     )`);
+
+    // [RU] CREATE TABLE IF NOT EXISTS не обновляет схему существующей БД, поэтому
+    // UNIQUE-констрейнт на daily_menu_items может отсутствовать у пользователей,
+    // которые не прогнали `npm run db:reset` после этого изменения.
+    // [EN] CREATE TABLE IF NOT EXISTS does not retrofit schema changes, so the
+    // UNIQUE constraint on daily_menu_items may be missing for users who have
+    // not run `npm run db:reset` since the change.
+    db.get(
+      "SELECT sql FROM sqlite_master WHERE type='table' AND name='daily_menu_items'",
+      (err, row) => {
+        if (err) {
+          console.error('Schema check failed:', err.message);
+          return;
+        }
+        if (!row || !/UNIQUE\s*\(\s*daily_menu_id\s*,\s*slot\s*\)/i.test(row.sql)) {
+          console.error(
+            'daily_menu_items is missing UNIQUE(daily_menu_id, slot). ' +
+            'Run `npm run db:reset` and restart the bot.'
+          );
+          process.exit(1);
+        }
+      }
+    );
   });
 };
 

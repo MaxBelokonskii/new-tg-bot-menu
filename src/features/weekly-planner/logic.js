@@ -2,24 +2,42 @@ const { db } = require('../../database/db');
 const logger = require('../../utils/logger');
 const { getCurrentWeekBounds, formatLocalDate } = require('../../utils/date-helpers');
 
+// [RU] README-контракт: слот определяется категорией блюда, а не порядком добавления.
+// [EN] README contract: slot is determined by the dish category, not insertion order.
+const CATEGORY_TO_SLOTS = {
+  breakfast: [1],
+  main: [2, 3],
+  salads: [4],
+  desserts: [5]
+};
+
+const dbGet = (sql, params = []) => new Promise((resolve, reject) => {
+  db.get(sql, params, (err, row) => (err ? reject(err) : resolve(row)));
+});
+const dbAll = (sql, params = []) => new Promise((resolve, reject) => {
+  db.all(sql, params, (err, rows) => (err ? reject(err) : resolve(rows)));
+});
+const dbRun = (sql, params = []) => new Promise((resolve, reject) => {
+  db.run(sql, params, function (err) {
+    if (err) reject(err);
+    else resolve(this);
+  });
+});
+
 /**
- * Получает ID пользователя в БД по telegram_id, создавая его если нужно
+ * Returns the internal user id for a Telegram user, creating the row if missing.
  * @param {number} telegramId
- * @param {string} username
- * @returns {Promise<number>} User internal ID
+ * @param {string} [username]
+ * @returns {Promise<number>}
  */
 async function getOrCreateUser(telegramId, username) {
-  return new Promise((resolve, reject) => {
-    db.get('SELECT id FROM users WHERE telegram_id = ?', [telegramId], (err, row) => {
-      if (err) return reject(err);
-      if (row) return resolve(row.id);
-
-      db.run('INSERT INTO users (telegram_id, username) VALUES (?, ?)', [telegramId, username], function(err) {
-        if (err) reject(err);
-        else resolve(this.lastID);
-      });
-    });
-  });
+  const row = await dbGet('SELECT id FROM users WHERE telegram_id = ?', [telegramId]);
+  if (row) return row.id;
+  const result = await dbRun(
+    'INSERT INTO users (telegram_id, username) VALUES (?, ?)',
+    [telegramId, username]
+  );
+  return result.lastID;
 }
 
 /**
@@ -33,11 +51,42 @@ async function generateWeeklyPlan(userId, startDate) {
 }
 
 /**
- * Сохраняет выбранное блюдо для пользователя
- * @param {number} telegramId
- * @param {number} recipeId
+ * Picks the slot for a recipe being added to the given daily_menu.
+ * Single-slot categories always return their fixed slot (existing recipe, if
+ * any, will be replaced by the caller's UPSERT). `main` has two slots — if
+ * both are free, returns the first free one; if both are taken, returns the
+ * first slot (last-write-wins replacement).
+ *
+ * @param {number} dailyMenuId
+ * @param {string} category - lowercased mc.name (breakfast|main|salads|desserts)
+ * @returns {Promise<number>}
  */
-async function saveSelectedDish(telegramId, recipeId) {
+async function resolveSlot(dailyMenuId, category) {
+  const slots = CATEGORY_TO_SLOTS[category];
+  if (!slots) throw new Error(`Unknown recipe category: ${category}`);
+  if (slots.length === 1) return slots[0];
+
+  const placeholders = slots.map(() => '?').join(',');
+  const rows = await dbAll(
+    `SELECT slot FROM daily_menu_items
+     WHERE daily_menu_id = ? AND slot IN (${placeholders})`,
+    [dailyMenuId, ...slots]
+  );
+  const taken = new Set(rows.map(r => r.slot));
+  return slots.find(s => !taken.has(s)) ?? slots[0];
+}
+
+// [RU] JS-мьютекс: node-sqlite3 использует одно соединение и не поддерживает
+// вложенные BEGIN. Конкурентные confirm_dish (двойной тап) без мьютекса могут
+// увидеть слот «свободным» между resolveSlot и UPSERT. Промис-цепочка
+// сериализует вход в критическую секцию на уровне процесса.
+// [EN] JS mutex: node-sqlite3 shares a single connection and does not support
+// nested BEGIN. Concurrent confirm_dish callbacks (double tap) could otherwise
+// observe a stale "free" slot between resolveSlot and the UPSERT. A promise
+// chain serializes entry into the critical section at the process level.
+let saveQueue = Promise.resolve();
+
+async function _saveSelectedDishImpl(telegramId, recipeId) {
   const userId = await getOrCreateUser(telegramId);
   // [RU] Локальная дата, а не UTC: иначе рядом с полуночью «сегодня» уезжает
   // в следующие сутки и не попадает в окно текущей недели из getWeeklyPlan.
@@ -45,49 +94,69 @@ async function saveSelectedDish(telegramId, recipeId) {
   // and slip out of the current-week window produced by getCurrentWeekBounds.
   const today = formatLocalDate(new Date());
 
-  return new Promise((resolve, reject) => {
-    db.serialize(() => {
-      // 1. Обеспечиваем наличие daily_menu на сегодня
-      db.run(
-        'INSERT OR IGNORE INTO daily_menu (user_id, date) VALUES (?, ?)',
-        [userId, today],
-        function(err) {
-          if (err) return reject(err);
+  const recipe = await dbGet(
+    `SELECT LOWER(mc.name) AS category
+     FROM recipes r
+     JOIN meal_categories mc ON r.category_id = mc.id
+     WHERE r.id = ?`,
+    [recipeId]
+  );
+  if (!recipe) throw new Error(`Recipe not found: ${recipeId}`);
 
-          // 2. Получаем ID daily_menu (используем get, так как INSERT OR IGNORE мог не создать запись)
-          db.get(
-            'SELECT id FROM daily_menu WHERE user_id = ? AND date = ?',
-            [userId, today],
-            (err, row) => {
-              if (err) return reject(err);
-              if (!row) return reject(new Error('Failed to create/find daily menu'));
+  await dbRun(
+    'INSERT OR IGNORE INTO daily_menu (user_id, date) VALUES (?, ?)',
+    [userId, today]
+  );
+  const menuRow = await dbGet(
+    'SELECT id FROM daily_menu WHERE user_id = ? AND date = ?',
+    [userId, today]
+  );
+  if (!menuRow) throw new Error('Failed to create/find daily menu');
+  const dailyMenuId = menuRow.id;
 
-              const dailyMenuId = row.id;
+  const slot = await resolveSlot(dailyMenuId, recipe.category);
+  const existing = await dbGet(
+    'SELECT recipe_id FROM daily_menu_items WHERE daily_menu_id = ? AND slot = ?',
+    [dailyMenuId, slot]
+  );
 
-              // 3. Добавляем блюдо (slot пока будет просто автоинкрементом или фиксированным)
-              db.get(
-                'SELECT COUNT(*) as count FROM daily_menu_items WHERE daily_menu_id = ?',
-                [dailyMenuId],
-                (err, countRow) => {
-                  if (err) return reject(err);
-                  const slot = (countRow ? countRow.count : 0) + 1;
+  // [RU] UPSERT по UNIQUE(daily_menu_id, slot) — перезапись при повторе в тот же слот.
+  // [EN] UPSERT on UNIQUE(daily_menu_id, slot) — overwrite when the same slot is reused.
+  await dbRun(
+    `INSERT INTO daily_menu_items (daily_menu_id, recipe_id, slot)
+     VALUES (?, ?, ?)
+     ON CONFLICT(daily_menu_id, slot) DO UPDATE SET recipe_id = excluded.recipe_id`,
+    [dailyMenuId, recipeId, slot]
+  );
 
-                  db.run(
-                    'INSERT INTO daily_menu_items (daily_menu_id, recipe_id, slot) VALUES (?, ?, ?)',
-                    [dailyMenuId, recipeId, slot],
-                    (err) => {
-                      if (err) reject(err);
-                      else resolve(true);
-                    }
-                  );
-                }
-              );
-            }
-          );
-        }
-      );
-    });
-  });
+  let status;
+  if (!existing) status = 'added';
+  else if (existing.recipe_id === recipeId) status = 'unchanged';
+  else status = 'replaced';
+  return { slot, status };
+}
+
+/**
+ * Saves the selected dish into the user's plan for today. Slot is derived
+ * from the recipe's category (README contract: 1=breakfast, 2/3=main,
+ * 4=salad, 5=dessert). Re-adding into an occupied slot replaces the
+ * existing recipe for that slot. Concurrent calls are serialized through
+ * a module-level mutex to keep slot resolution consistent.
+ *
+ * @param {number} telegramId
+ * @param {number} recipeId
+ * @returns {Promise<{slot: number, status: 'added'|'replaced'|'unchanged'}>}
+ */
+async function saveSelectedDish(telegramId, recipeId) {
+  const prev = saveQueue;
+  let release;
+  saveQueue = new Promise(resolve => { release = resolve; });
+  try {
+    await prev;
+    return await _saveSelectedDishImpl(telegramId, recipeId);
+  } finally {
+    release();
+  }
 }
 
 /**
@@ -98,50 +167,39 @@ async function saveSelectedDish(telegramId, recipeId) {
 async function getWeeklyPlan(telegramId) {
   const userId = await getOrCreateUser(telegramId);
   const { start, endExclusive } = getCurrentWeekBounds();
-
-  return new Promise((resolve, reject) => {
-    const query = `
-      SELECT r.name, mc.name as category, dm.date
-      FROM daily_menu_items dmi
-      JOIN daily_menu dm ON dmi.daily_menu_id = dm.id
-      JOIN recipes r ON dmi.recipe_id = r.id
-      JOIN meal_categories mc ON r.category_id = mc.id
-      WHERE dm.user_id = ?
-        AND dm.date >= ?
-        AND dm.date < ?
-      ORDER BY dm.date ASC, dmi.slot ASC
-    `;
-
-    db.all(query, [userId, start, endExclusive], (err, rows) => {
-      if (err) {
-        logger.error('Error fetching weekly plan:', err);
-        reject(err);
-      } else {
-        resolve(rows);
-      }
-    });
-  });
+  try {
+    return await dbAll(
+      `SELECT r.name, mc.name AS category, dm.date
+       FROM daily_menu_items dmi
+       JOIN daily_menu dm ON dmi.daily_menu_id = dm.id
+       JOIN recipes r ON dmi.recipe_id = r.id
+       JOIN meal_categories mc ON r.category_id = mc.id
+       WHERE dm.user_id = ?
+         AND dm.date >= ?
+         AND dm.date < ?
+       ORDER BY dm.date ASC, dmi.slot ASC`,
+      [userId, start, endExclusive]
+    );
+  } catch (err) {
+    logger.error('Error fetching weekly plan:', err);
+    throw err;
+  }
 }
 
 /**
- * Очищает план на конкретный день
+ * Clears a specific day in the user's plan.
  * @param {number} telegramId
- * @param {string} date - ГГГГ-ММ-ДД
+ * @param {string} date - YYYY-MM-DD
+ * @returns {Promise<true>}
  */
 async function clearDailyPlan(telegramId, date) {
   const userId = await getOrCreateUser(telegramId);
-
-  return new Promise((resolve, reject) => {
-    db.run(
-      `DELETE FROM daily_menu_items 
-       WHERE daily_menu_id IN (SELECT id FROM daily_menu WHERE user_id = ? AND date = ?)`,
-      [userId, date],
-      (err) => {
-        if (err) return reject(err);
-        resolve(true);
-      }
-    );
-  });
+  await dbRun(
+    `DELETE FROM daily_menu_items
+     WHERE daily_menu_id IN (SELECT id FROM daily_menu WHERE user_id = ? AND date = ?)`,
+    [userId, date]
+  );
+  return true;
 }
 
 module.exports = {
@@ -149,5 +207,8 @@ module.exports = {
   generateWeeklyPlan,
   saveSelectedDish,
   getWeeklyPlan,
-  clearDailyPlan
+  clearDailyPlan,
+  // [EN] Exported for Stage 2.1 (generateWeeklyPlan) to reuse slot logic.
+  CATEGORY_TO_SLOTS,
+  resolveSlot
 };

@@ -56,8 +56,8 @@ bot.action('back_to_categories', async (ctx) => {
 bot.action(/^confirm_dish_(.+)$/, async (ctx) => {
   const recipeId = parseInt(ctx.match[1]);
   try {
-    await saveSelectedDish(ctx.from.id, recipeId);
-    await ctx.answerCbQuery('Блюдо успешно сохранено в ваш план! ✅');
+    const { status } = await saveSelectedDish(ctx.from.id, recipeId);
+    await ctx.answerCbQuery(texts.dishSelection[status] || texts.dishSelection.added);
   } catch (error) {
     logger.error('Error saving dish:', error);
     await ctx.answerCbQuery('Ошибка при сохранении блюда.');
