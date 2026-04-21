@@ -81,6 +81,7 @@ const initDb = () => {
       daily_menu_id INTEGER NOT NULL,
       recipe_id INTEGER NOT NULL,
       slot INTEGER NOT NULL,
+      UNIQUE (daily_menu_id, slot),
       FOREIGN KEY (daily_menu_id) REFERENCES daily_menu(id),
       FOREIGN KEY (recipe_id) REFERENCES recipes(id)
     )`);

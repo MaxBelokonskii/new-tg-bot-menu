@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ✅ работает, 🟡 частично, 🔴 не реализовано. Подробности — в roadmap (раздел 2).
 
-- 🟡 Рандом блюда по категории → карточка рецепта → добавление в рацион на сегодня (`interface/dish-selection.js` + `features/weekly-planner/logic.js:saveSelectedDish`). Известный дефект: `slot` считается как `count+1`, а не из категории.
+- 🟡 Рандом блюда по категории → карточка рецепта → добавление в рацион на сегодня (`interface/dish-selection.js` + `features/weekly-planner/logic.js:saveSelectedDish`). `slot` вычисляется из категории (`breakfast`→1, `main`→2/3, `salads`→4, `desserts`→5). Повторное добавление в занятый слот молча перезаписывает предыдущий рецепт (UX-подтверждение — плановая доработка 2.5).
 - 🟡 Просмотр текущего рациона (`bot.action('view_weekly_plan')` в `src/index.js`). Ограничен текущей календарной неделей Пн..Вс.
 - 🟡 Список покупок с группировкой по типам (`features/shopping-list/logic.js`, `interface/shopping-list.js`). Берётся текущая неделя; все ингредиенты сейчас с `type='general'`.
 - 🔴 Автогенерация недельного рациона — заглушка, `generateWeeklyPlan` пустая.
@@ -56,7 +56,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 1. `bot.hears(texts.mainMenu.buttons.suggestions)` → `interface/dish-selection.js:sendCategorySelection` отрисовывает inline-клавиатуру категорий.
 2. Callback `select_cat_<category>` → `showDishSuggestion` зовёт `features/meal-suggestions/logic.js:getRandomRecipeByCategory` + `getRecipeIngredients`.
-3. Callback `confirm_dish_<recipeId>` → `features/weekly-planner/logic.js:saveSelectedDish` создаёт (или переиспользует) `daily_menu` на сегодня и добавляет запись в `daily_menu_items` со слотом = текущий_count+1.
+3. Callback `confirm_dish_<recipeId>` → `features/weekly-planner/logic.js:saveSelectedDish` создаёт (или переиспользует) `daily_menu` на сегодня и UPSERT'ит `daily_menu_items` со слотом, вычисленным из категории рецепта (`CATEGORY_TO_SLOTS` в том же файле). При повторном добавлении в занятый слот возвращается `{ slot, replaced: true }`, хэндлер показывает соответствующее уведомление.
 
 ### Схема БД (11 таблиц)
 
@@ -106,7 +106,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Блок Б — логика приложения
 
 - **✅ SQL-окна дат исправлены (roadmap 4.3 + 4.4).** `getIngredientsFromPlan` и `getWeeklyPlan` принимают границы Пн..Вс текущей недели из `utils/date-helpers.js:getCurrentWeekBounds()`. Семантика недели: ISO (понедельник — начало, воскресенье — конец).
-- **⚠️ `slot` в `daily_menu_items` не связан с категорией (roadmap 4.2).** `saveSelectedDish` пишет `slot = count+1`. Контракт из README «1=завтрак, 2=основное_1, 3=основное_2, 4=салат, 5=десерт» не соблюдается автоматически — его надо вычислять из категории рецепта.
+- **✅ `slot` теперь вычисляется из категории (roadmap 4.2).** `saveSelectedDish` JOIN'ит `meal_categories`, мапит имя категории на slots (`breakfast`→[1], `main`→[2,3], `salads`→[4], `desserts`→[5]) и делает UPSERT через `ON CONFLICT(daily_menu_id, slot) DO UPDATE SET recipe_id=excluded.recipe_id`. В схеме `daily_menu_items` добавлен `UNIQUE(daily_menu_id, slot)` — требует `npm run db:reset` для существующих БД.
 - **`BOT_TOKEN` placeholder-check не ловит значение из `.env.example` (roadmap 4.7).** `src/index.js:213` сравнивает с `'your_telegram_bot_token'`, а в `.env.example` строка `your_telegram_bot_token_here` — бот попытается стартовать с заглушкой.
 - **Генерация недельного плана не реализована.** `bot.action('generate_weekly_plan')` отвечает заглушкой, `features/weekly-planner/logic.js:generateWeeklyPlan` — пустая функция. Это **не баг, а запланированная фича** (roadmap 2.2) — не «чините» до обсуждения подхода.
 - **Очистка рациона и списка покупок — без подтверждения.** Поведение `clear_day_*` и `clear_shopping_list` удаляет сразу. Двухшаговое подтверждение — плановая доработка (roadmap 2.5), а не ошибка реализации.
