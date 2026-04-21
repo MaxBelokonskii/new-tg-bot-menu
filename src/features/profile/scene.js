@@ -113,9 +113,20 @@ scene.action(/^profile_goal_(loss|maintain|gain)$/, async (ctx) => {
     `${texts.profile.labels.goal}: ${texts.profile.goal[ctx.match[1]]}`
   );
   try {
-    await saveUserProfile(ctx.from.id, ctx.wizard.state);
+    const { bmr, tdee, target, slots } = await saveUserProfile(ctx.from.id, ctx.wizard.state);
+    const enriched = {
+      ...ctx.wizard.state,
+      bmr,
+      tdee,
+      target_calories: target,
+      target_breakfast: slots.breakfast,
+      target_main1: slots.main1,
+      target_main2: slots.main2,
+      target_salad: slots.salad,
+      target_dessert: slots.dessert
+    };
     await ctx.reply(texts.profile.saved);
-    await ctx.reply(buildProfileSummary(ctx.wizard.state), { parse_mode: 'HTML' });
+    await ctx.reply(buildProfileSummary(enriched), { parse_mode: 'HTML' });
   } catch (error) {
     logger.error('Error saving profile:', error);
     await ctx.reply(texts.profile.errorSave);

@@ -101,7 +101,22 @@ module.exports = {
     },
     units: {
       weight: 'кг',
-      height: 'см'
+      height: 'см',
+      kcal: 'ккал'
+    },
+    calories: {
+      header: '<b>Целевая калорийность:</b>',
+      bmr: 'BMR (базовый метаболизм)',
+      tdee: 'TDEE (с учётом активности)',
+      target: 'Цель',
+      slotsHeader: '<b>Разбивка по слотам:</b>',
+      slots: {
+        breakfast: 'Завтрак',
+        main1: 'Основное №1',
+        main2: 'Основное №2',
+        salad: 'Салат',
+        dessert: 'Десерт'
+      }
     }
   },
   shoppingList: {

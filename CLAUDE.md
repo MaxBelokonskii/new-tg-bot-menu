@@ -18,8 +18,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 🔴 Автогенерация недельного рациона — заглушка, `generateWeeklyPlan` пустая.
 - 🔴 Редактирование конкретного приёма пищи — не реализовано.
 - ✅ Подтверждение при очистке: кнопки очистки ведут на `confirm_clear_day_*` / `confirm_clear_shopping` с Yes/No-диалогом; отмена восстанавливает предыдущий экран.
-- 🟡 Профиль пользователя: анкета (вес/рост/возраст/пол/активность/цель) собирается через `Scenes.WizardScene` в `features/profile/scene.js`, хранится в `user_preferences`. Per-slot ккал ещё не считаются — это Stage 2.4.
-- 🔴 Расчёт КБЖУ по формуле Миффлина-Сан Жеора — отложено (Stage 2.4). Поля `target_breakfast/main1/main2/salad/dessert` в `user_preferences` уже добавлены, заполняются `null` до 2.4.
+- ✅ Профиль пользователя: анкета (вес/рост/возраст/пол/активность/цель) через `Scenes.WizardScene`, ккал считаются по Миффлину-Сан Жеору (`utils/calculations.js`), разбивка по слотам 25/30/25/10/10 сохраняется в `user_preferences.target_*`.
+- ✅ Расчёт КБЖУ: `calculateTargetCalories` + `splitCaloriesBySlots` в `src/utils/calculations.js`. BMR/TDEE не хранятся — пересчитываются в `getUserProfile` при чтении.
 - 🔴 Обратный поиск «что приготовить из моих продуктов» — отложено (нормализация ингредиентов уже на месте, осталась классификация по типам и матчинг user-inventory).
 - 🔴 Уровни пользователей / подписки — отложено.
 
