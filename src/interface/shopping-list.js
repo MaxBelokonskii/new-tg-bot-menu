@@ -27,7 +27,10 @@ function formatShoppingList(items) {
     if (grouped[type]) {
       message += `<b>${texts.shoppingList.types[type]}</b>\n`;
       grouped[type].forEach(item => {
-        message += `• ${item.name}: ${item.total_amount} ${item.unit}\n`;
+        // [RU] Если amount = 0, значит несколько единиц слиты в unit (см. saveShoppingList).
+        // [EN] amount = 0 signals "unit already contains full breakdown" (see saveShoppingList).
+        const qty = item.total_amount > 0 ? `${item.total_amount} ${item.unit}` : item.unit;
+        message += `• ${item.name}: ${qty}\n`;
       });
       message += '\n';
       handledTypes.add(type);
@@ -39,7 +42,10 @@ function formatShoppingList(items) {
     if (!handledTypes.has(type)) {
       message += `<b>📦 ${type}</b>\n`;
       grouped[type].forEach(item => {
-        message += `• ${item.name}: ${item.total_amount} ${item.unit}\n`;
+        // [RU] Если amount = 0, значит несколько единиц слиты в unit (см. saveShoppingList).
+        // [EN] amount = 0 signals "unit already contains full breakdown" (see saveShoppingList).
+        const qty = item.total_amount > 0 ? `${item.total_amount} ${item.unit}` : item.unit;
+        message += `• ${item.name}: ${qty}\n`;
       });
       message += '\n';
     }
