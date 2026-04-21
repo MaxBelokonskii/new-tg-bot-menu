@@ -8,9 +8,10 @@ const texts = require('../bot/texts');
  */
 function buildProfileSummary(profile) {
   const L = texts.profile.labels;
+  const U = texts.profile.units;
   return `${texts.profile.summaryHeader}\n` +
-    `• ${L.weight}: ${profile.weight} кг\n` +
-    `• ${L.height}: ${profile.height} см\n` +
+    `• ${L.weight}: ${profile.weight} ${U.weight}\n` +
+    `• ${L.height}: ${profile.height} ${U.height}\n` +
     `• ${L.age}: ${profile.age}\n` +
     `• ${L.sex}: ${texts.profile.sex[profile.sex] || profile.sex}\n` +
     `• ${L.activity}: ${texts.profile.activity[profile.activity_level] || profile.activity_level}\n` +

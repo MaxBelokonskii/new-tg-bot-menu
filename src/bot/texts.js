@@ -98,6 +98,10 @@ module.exports = {
       sex: 'Пол',
       activity: 'Активность',
       goal: 'Цель'
+    },
+    units: {
+      weight: 'кг',
+      height: 'см'
     }
   },
   shoppingList: {
