@@ -14,13 +14,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - 🟡 Рандом блюда по категории → карточка рецепта → добавление в рацион на сегодня (`interface/dish-selection.js` + `features/weekly-planner/logic.js:saveSelectedDish`). `slot` вычисляется из категории (`breakfast`→1, `main`→2/3, `salads`→4, `desserts`→5). Повторное добавление в занятый слот молча перезаписывает предыдущий рецепт (UX-подтверждение — плановая доработка 2.5).
 - 🟡 Просмотр текущего рациона (`bot.action('view_weekly_plan')` в `src/index.js`). Ограничен текущей календарной неделей Пн..Вс.
-- 🟡 Список покупок с группировкой по типам (`features/shopping-list/logic.js`, `interface/shopping-list.js`). Берётся текущая неделя; все ингредиенты сейчас с `type='general'`.
-- 🔴 Автогенерация недельного рациона — заглушка, `generateWeeklyPlan` пустая.
+- ✅ Список покупок с группировкой по типам (`features/shopping-list/logic.js`, `interface/shopping-list.js`). Берётся текущая неделя; ингредиенты классифицированы по 11 типам через `database/ingredient-types.json`.
+- ✅ Автогенерация недельного рациона: `generateWeeklyPlan` в `features/weekly-planner/logic.js` собирает Пн..Вс текущей ISO-недели greedy-подбором по близости к `user_preferences.target_<slot>`, учитывает `exclude_ingredients`, main1≠main2, идемпотентно перезаписывает неделю. Хэндлер `generate_weekly_plan` рендерит свежий план.
 - 🔴 Редактирование конкретного приёма пищи — не реализовано.
 - ✅ Подтверждение при очистке: кнопки очистки ведут на `confirm_clear_day_*` / `confirm_clear_shopping` с Yes/No-диалогом; отмена восстанавливает предыдущий экран.
 - ✅ Профиль пользователя: анкета (вес/рост/возраст/пол/активность/цель) через `Scenes.WizardScene`, ккал считаются по Миффлину-Сан Жеору (`utils/calculations.js`), разбивка по слотам 25/30/25/10/10 сохраняется в `user_preferences.target_*`.
 - ✅ Расчёт КБЖУ: `calculateTargetCalories` + `splitCaloriesBySlots` в `src/utils/calculations.js`. BMR/TDEE не хранятся — пересчитываются в `getUserProfile` при чтении.
-- 🔴 Обратный поиск «что приготовить из моих продуктов» — отложено (нормализация ингредиентов уже на месте, осталась классификация по типам и матчинг user-inventory).
+- 🔴 Обратный поиск «что приготовить из моих продуктов» — отложено (нормализация ингредиентов и классификация по типам на месте, остался матчинг user-inventory).
 - 🔴 Уровни пользователей / подписки — отложено.
 
 ## Команды
@@ -103,7 +103,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **✅ `parseAmount` держит диапазоны (roadmap 4.12).** `"2-3 шт"` → `{amount: 2, unit: "шт"}`. Покрыт smoke-тестом (13 кейсов, включая `–`, `—`, `1/2`, скобки).
 - **✅ Хаос в `unit` — нормализован словарём (roadmap 4.13).** `database/unit-aliases.json` + `normalizeUnit` в `migrate.js` сворачивают `ст.л.`/`ст. л.`, `стакан`/`стаканов`/`чашка`, срезают суффикс `(150 г)` и т.п.
 - **✅ Задвоение ингредиентов в справочнике — нормализовано словарём (roadmap 4.1).** `database/ingredient-aliases.json` + `normalizeIngredient` (13 канонических групп).
-- **⚠️ Типы ингредиентов = `'general'` (roadmap 4.5).** После реимпорта все 170 ингредиентов имеют `type='general'` — классификация по типам (Овощи, Молочные и т.д.) ещё не решена. Нужен отдельный словарь/эвристика. Пока `interface/shopping-list.js:formatShoppingList` грузит их под рубрикой `📦 general`.
+- **✅ Типы ингредиентов классифицированы (roadmap 4.5).** Все 170 канонических ингредиентов размечены в `database/ingredient-types.json` по 11 типам из `texts.shoppingList.types` (Овощи, Молочные продукты, Мясо и птица, …, Другое). `migrate.js` грузит словарь через `loadTypeMap()` и пишет тип в `ingredients.type` с `ON CONFLICT(name) DO UPDATE SET type = excluded.type` — можно добавлять записи в JSON и перезапускать `migrate.js` без `db:reset`. Неизвестные имена падают в `Другое` с warn-логом.
 
 ### Блок Б — логика приложения
 
