@@ -50,9 +50,13 @@ const run = (sql, params = []) => new Promise((resolve, reject) => {
 const get = (sql, params = []) => new Promise((resolve, reject) => {
   db.get(sql, params, (err, row) => (err ? reject(err) : resolve(row)));
 });
+// [RU] initDb() ставит CREATE TABLE в serialize-очередь sqlite3; очередь FIFO,
+// поэтому `SELECT 1` с колбэком надёжно сигналит, что CREATE TABLE уже выполнены.
+// Если initDb когда-нибудь станет действительно асинхронным — переделать здесь.
+// [EN] initDb() queues CREATE TABLE into sqlite3's serialize FIFO; SELECT 1 with a
+// callback reliably signals completion. Revisit if initDb ever becomes async proper.
 const initDbAsync = () => new Promise((resolve) => {
   initDb();
-  // initDb() ставит CREATE TABLE в serialize-очередь; следующий run сработает после.
   db.run('SELECT 1', () => resolve());
 });
 
@@ -138,20 +142,20 @@ async function migrate() {
       if ((i + 1) % 50 === 0) console.log(`Processed ${i + 1} recipes...`);
     }
 
+    // [RU] Проверяем количество до COMMIT, чтобы при расхождении ROLLBACK откатил вставки.
+    // [EN] Verify count before COMMIT so that a mismatch triggers ROLLBACK via catch.
+    const { c: dbCount } = await get('SELECT COUNT(*) AS c FROM recipes');
+    if (dbCount < recipes.length) {
+      throw new Error(`Recipe count mismatch: JSON=${recipes.length}, DB=${dbCount}`);
+    }
+
     await run('COMMIT');
     console.log(`Recipes: ${inserted} inserted, ${skipped} already existed.`);
+    console.log(`Migration completed successfully! DB recipes: ${dbCount}.`);
   } catch (err) {
     await run('ROLLBACK').catch(() => {});
     throw err;
   }
-
-  // [RU] Финальный assert: в БД должно быть минимум столько же рецептов, сколько в JSON.
-  // [EN] Final assert: the DB must contain at least as many recipes as the JSON.
-  const { c: dbCount } = await get('SELECT COUNT(*) AS c FROM recipes');
-  if (dbCount < recipes.length) {
-    throw new Error(`Recipe count mismatch: JSON=${recipes.length}, DB=${dbCount}`);
-  }
-  console.log(`Migration completed successfully! DB recipes: ${dbCount}.`);
 }
 
 migrate()
