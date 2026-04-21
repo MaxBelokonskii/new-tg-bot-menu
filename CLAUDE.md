@@ -20,7 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - ✅ Подтверждение при очистке: кнопки очистки ведут на `confirm_clear_day_*` / `confirm_clear_shopping` с Yes/No-диалогом; отмена восстанавливает предыдущий экран.
 - ✅ Профиль пользователя: анкета (вес/рост/возраст/пол/активность/цель) через `Scenes.WizardScene`, ккал считаются по Миффлину-Сан Жеору (`utils/calculations.js`), разбивка по слотам 25/30/25/10/10 сохраняется в `user_preferences.target_*`.
 - ✅ Расчёт КБЖУ: `calculateTargetCalories` + `splitCaloriesBySlots` в `src/utils/calculations.js`. BMR/TDEE не хранятся — пересчитываются в `getUserProfile` при чтении.
-- 🔴 Обратный поиск «что приготовить из моих продуктов» — отложено (нормализация ингредиентов и классификация по типам на месте, остался матчинг user-inventory).
+- ✅ Обратный поиск «что приготовить из моих продуктов» (`src/features/reverse-search/` + `src/interface/reverse-search.js`): `Scenes.WizardScene` принимает ингредиенты через запятую, нормализует через lookup на базе `ingredient-aliases.json` + `ingredient-types.json`, ищет рецепты с ≤3 недостающими, сортирует по близости к target-калорийности слота. Инвентарь хранится в `ctx.session.reverseInventory`.
 - 🔴 Уровни пользователей / подписки — отложено.
 
 ## Команды

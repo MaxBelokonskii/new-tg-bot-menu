@@ -8,7 +8,8 @@ const texts = require('../bot/texts');
 function getMainMenuKeyboard() {
   return Markup.keyboard([
     [texts.mainMenu.buttons.suggestions, texts.mainMenu.buttons.weeklyPlan],
-    [texts.mainMenu.buttons.shoppingList, texts.mainMenu.buttons.settings]
+    [texts.mainMenu.buttons.shoppingList, texts.mainMenu.buttons.reverseSearch],
+    [texts.mainMenu.buttons.settings]
   ]).resize();
 }
 
