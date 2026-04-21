@@ -23,8 +23,32 @@ const ALIAS_DIR = path.resolve(__dirname, '../../database');
 const ingredientAliases = loadAliasMap(path.join(ALIAS_DIR, 'ingredient-aliases.json'));
 const unitAliases = loadAliasMap(path.join(ALIAS_DIR, 'unit-aliases.json'));
 
+// [RU] Плоский словарь canonical→type для классификации ингредиентов в UI списка покупок.
+// [EN] Flat canonical→type dictionary for shopping-list UI grouping.
+function loadTypeMap(filePath) {
+  let raw;
+  try {
+    raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch (err) {
+    throw new Error(`Failed to load type map from ${filePath}: ${err.message}`);
+  }
+  const map = new Map();
+  for (const [name, type] of Object.entries(raw)) {
+    if (name.startsWith('_') || typeof type !== 'string') continue;
+    map.set(name, type);
+  }
+  return map;
+}
+
+const ingredientTypes = loadTypeMap(path.join(ALIAS_DIR, 'ingredient-types.json'));
+const FALLBACK_TYPE = 'Другое';
+
 function normalizeIngredient(name) {
   return ingredientAliases.get(name) || name;
+}
+
+function classifyIngredient(canonicalName) {
+  return ingredientTypes.get(canonicalName) || FALLBACK_TYPE;
 }
 
 function normalizeUnit(unit) {
@@ -104,8 +128,22 @@ async function upsertCategories(recipes) {
 async function upsertIngredients(recipes) {
   const names = new Set();
   recipes.forEach(r => r.ingredients.forEach(i => names.add(normalizeIngredient(i.item))));
+  let unclassified = 0;
   for (const name of names) {
-    await run('INSERT OR IGNORE INTO ingredients (name, type) VALUES (?, ?)', [name, 'general']);
+    const type = classifyIngredient(name);
+    if (type === FALLBACK_TYPE && !ingredientTypes.has(name)) unclassified++;
+    // [RU] ON CONFLICT обновляет type для уже существующих строк — полезно при добавлении
+    // новых записей в ingredient-types.json без db:reset.
+    // [EN] ON CONFLICT updates type for existing rows — handy when ingredient-types.json
+    // grows without a full db:reset.
+    await run(
+      `INSERT INTO ingredients (name, type) VALUES (?, ?)
+       ON CONFLICT(name) DO UPDATE SET type = excluded.type`,
+      [name, type]
+    );
+  }
+  if (unclassified > 0) {
+    console.warn(`Warning: ${unclassified} ingredient(s) fell back to "${FALLBACK_TYPE}" — consider adding them to ingredient-types.json.`);
   }
   return names.size;
 }
