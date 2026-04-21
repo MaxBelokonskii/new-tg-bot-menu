@@ -111,8 +111,52 @@ const initDb = () => {
       user_id INTEGER PRIMARY KEY,
       exclude_ingredients TEXT,
       target_calories INTEGER,
+      weight REAL,
+      height REAL,
+      age INTEGER,
+      sex TEXT,
+      activity_level TEXT,
+      goal TEXT,
+      target_breakfast INTEGER,
+      target_main1 INTEGER,
+      target_main2 INTEGER,
+      target_salad INTEGER,
+      target_dessert INTEGER,
       FOREIGN KEY (user_id) REFERENCES users(id)
     )`);
+
+    // [RU] CREATE TABLE IF NOT EXISTS не обновляет схему существующей БД.
+    // Для существующих инсталляций добавляем недостающие колонки через
+    // ALTER TABLE ADD COLUMN — идемпотентно благодаря проверке через PRAGMA.
+    // [EN] CREATE TABLE IF NOT EXISTS does not retrofit schema changes.
+    // For existing installations, add missing columns via ALTER TABLE —
+    // made idempotent by checking PRAGMA first.
+    db.all("PRAGMA table_info(user_preferences)", (err, rows) => {
+      if (err) {
+        console.error('Failed to inspect user_preferences schema:', err.message);
+        return;
+      }
+      const existing = new Set((rows || []).map(r => r.name));
+      const columns = [
+        ['weight', 'REAL'],
+        ['height', 'REAL'],
+        ['age', 'INTEGER'],
+        ['sex', 'TEXT'],
+        ['activity_level', 'TEXT'],
+        ['goal', 'TEXT'],
+        ['target_breakfast', 'INTEGER'],
+        ['target_main1', 'INTEGER'],
+        ['target_main2', 'INTEGER'],
+        ['target_salad', 'INTEGER'],
+        ['target_dessert', 'INTEGER']
+      ];
+      for (const [name, type] of columns) {
+        if (existing.has(name)) continue;
+        db.run(`ALTER TABLE user_preferences ADD COLUMN ${name} ${type}`, (alterErr) => {
+          if (alterErr) console.error(`Failed to add column ${name}:`, alterErr.message);
+        });
+      }
+    });
 
     // 11. shopping_lists
     db.run(`CREATE TABLE IF NOT EXISTS shopping_lists (
