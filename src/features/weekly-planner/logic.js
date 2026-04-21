@@ -74,18 +74,23 @@ const SLOT_PLAN = Object.freeze([
 ]);
 
 /**
- * Loads all recipes for a category, joined with a comma-separated list of
+ * Loads all recipes for a category, joined with a pipe-separated list of
  * ingredient names for the exclusion filter. The set of candidate recipes
  * fits easily in memory (~30 per category) so greedy picking in JS is
  * cheaper than a complex SQL with correlated subqueries.
  *
- * @param {string} category - lowercased mc.name
+ * Note: SQLite's built-in `LOWER()` is ASCII-only — it doesn't lowercase
+ * Cyrillic. Callers must lowercase in JS (`.toLowerCase()`) where case
+ * folding matters. We keep the raw names here and do the comparison in
+ * `isExcluded`, which also tokenizes the exclude input.
+ *
+ * @param {string} category - mc.name key (`breakfast|main|salads|desserts`)
  * @returns {Promise<Array<{id: number, calories: number, ingredients: string}>>}
  */
 async function loadCandidatesByCategory(category) {
   return dbAll(
     `SELECT r.id, r.calories,
-            COALESCE(GROUP_CONCAT(LOWER(i.name), '|'), '') AS ingredients
+            COALESCE(GROUP_CONCAT(i.name, '|'), '') AS ingredients
      FROM recipes r
      JOIN meal_categories mc ON r.category_id = mc.id
      LEFT JOIN recipe_ingredients ri ON ri.recipe_id = r.id
@@ -112,18 +117,25 @@ function parseExcludeIngredients(raw) {
 
 /**
  * True if any of the recipe's ingredient names contains any token from the
- * exclusion set. Substring match (not word-boundary) so user input "лук"
- * matches "лук репчатый" / "красный лук" without needing perfect normalization.
+ * exclusion set. Substring match is applied per-ingredient (after splitting
+ * the GROUP_CONCAT result by '|'), so "рис" matches "рис бурый" but not the
+ * unrelated "карбонарис" inside a neighbouring ingredient string.
  *
  * @param {{ingredients: string}} candidate
  * @param {Set<string>} excludeSet
  */
 function isExcluded(candidate, excludeSet) {
   if (excludeSet.size === 0) return false;
-  const names = candidate.ingredients; // "лук|томат|..." lowercased
-  if (!names) return false;
+  if (!candidate.ingredients) return false;
+  // [RU] toLowerCase в JS — единственный корректный способ свернуть кириллицу.
+  // SQLite's LOWER() не умеет не-ASCII, поэтому SQL отдаёт исходный регистр.
+  // [EN] JS toLowerCase is the only correct way to fold Cyrillic. SQLite's
+  // LOWER() is ASCII-only, so we receive names in their original casing.
+  const names = candidate.ingredients.toLowerCase().split('|');
   for (const token of excludeSet) {
-    if (names.includes(token)) return true;
+    for (const name of names) {
+      if (name.includes(token)) return true;
+    }
   }
   return false;
 }
@@ -154,7 +166,34 @@ function pickRecipe(candidates, targetKcal, usedIds) {
   return best;
 }
 
-async function _generateWeeklyPlanImpl(telegramId) {
+/**
+ * Error thrown when no recipe candidates remain after applying
+ * `exclude_ingredients`. Carries the internal category key so the UI layer
+ * can map it to a localized label without parsing the message string.
+ */
+class EmptyCategoryError extends Error {
+  constructor(category) {
+    super(`No recipes available for category "${category}" after exclusions`);
+    this.name = 'EmptyCategoryError';
+    this.category = category;
+  }
+}
+
+/**
+ * Generates a weekly plan for the current ISO week (Mon..Sun) using a greedy
+ * kcal-proximity picker. Respects user_preferences.exclude_ingredients and
+ * per-slot target calories. Safe to call repeatedly — UPSERTs by (daily_menu_id, slot).
+ *
+ * Read-heavy preparation (user_preferences fetch, candidate loading, exclusion
+ * filter) runs outside the write mutex — it doesn't mutate anything and must
+ * not block other users' saveSelectedDish. Only the 7-day write loop is
+ * serialized, which is the part that actually races with saveSelectedDish /
+ * replaceInSlot on the same tables.
+ *
+ * @param {number} telegramId
+ * @returns {Promise<{weekStart: string, daysFilled: string[]}>}
+ */
+async function generateWeeklyPlan(telegramId) {
   const userId = await getOrCreateUser(telegramId);
   const { start: weekStart } = getCurrentWeekBounds();
 
@@ -176,84 +215,74 @@ async function _generateWeeklyPlanImpl(telegramId) {
     const rows = await loadCandidatesByCategory(cat);
     candidatesByCategory[cat] = rows.filter(c => !isExcluded(c, excludeSet));
     if (candidatesByCategory[cat].length === 0) {
-      throw new Error(`No recipes available for category "${cat}" after exclusions`);
+      throw new EmptyCategoryError(cat);
     }
   }
 
-  await dbRun(
-    'INSERT OR IGNORE INTO weekly_menu (user_id, week_start) VALUES (?, ?)',
-    [userId, weekStart]
-  );
-  const weeklyMenuRow = await dbGet(
-    'SELECT id FROM weekly_menu WHERE user_id = ? AND week_start = ?',
-    [userId, weekStart]
-  );
-  if (!weeklyMenuRow) throw new Error('Failed to create/find weekly_menu');
-  const weeklyMenuId = weeklyMenuRow.id;
-
-  const [y, m, d] = weekStart.split('-').map(Number);
-  const monday = new Date(y, m - 1, d);
-  const daysFilled = [];
-
-  for (let i = 0; i < 7; i++) {
-    const dayDate = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
-    const date = formatLocalDate(dayDate);
-
-    await dbRun('INSERT OR IGNORE INTO daily_menu (user_id, date) VALUES (?, ?)', [userId, date]);
-    const menuRow = await dbGet(
-      'SELECT id FROM daily_menu WHERE user_id = ? AND date = ?',
-      [userId, date]
+  return serializeWrite(async () => {
+    await dbRun(
+      'INSERT OR IGNORE INTO weekly_menu (user_id, week_start) VALUES (?, ?)',
+      [userId, weekStart]
     );
-    if (!menuRow) throw new Error(`Failed to create/find daily_menu for ${date}`);
-    const dailyMenuId = menuRow.id;
-
-    // [RU] weekly_menu_days — справочная связь «неделя → день». Идемпотентно
-    // проверяем пару (weekly_menu_id, date), чтобы повторная генерация той же
-    // недели не плодила дубликаты (UNIQUE-констрейнта на схеме нет).
-    // [EN] weekly_menu_days is the week-to-day link. Check uniqueness in code
-    // because the schema has no UNIQUE on (weekly_menu_id, date).
-    const existingLink = await dbGet(
-      'SELECT id FROM weekly_menu_days WHERE weekly_menu_id = ? AND date = ?',
-      [weeklyMenuId, date]
+    const weeklyMenuRow = await dbGet(
+      'SELECT id FROM weekly_menu WHERE user_id = ? AND week_start = ?',
+      [userId, weekStart]
     );
-    if (!existingLink) {
-      await dbRun(
-        'INSERT INTO weekly_menu_days (weekly_menu_id, date, daily_menu_id) VALUES (?, ?, ?)',
-        [weeklyMenuId, date, dailyMenuId]
+    if (!weeklyMenuRow) throw new Error('Failed to create/find weekly_menu');
+    const weeklyMenuId = weeklyMenuRow.id;
+
+    const [y, m, d] = weekStart.split('-').map(Number);
+    const monday = new Date(y, m - 1, d);
+    const daysFilled = [];
+
+    for (let i = 0; i < 7; i++) {
+      const dayDate = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+      const date = formatLocalDate(dayDate);
+
+      await dbRun('INSERT OR IGNORE INTO daily_menu (user_id, date) VALUES (?, ?)', [userId, date]);
+      const menuRow = await dbGet(
+        'SELECT id FROM daily_menu WHERE user_id = ? AND date = ?',
+        [userId, date]
       );
+      if (!menuRow) throw new Error(`Failed to create/find daily_menu for ${date}`);
+      const dailyMenuId = menuRow.id;
+
+      // [RU] weekly_menu_days — справочная связь «неделя → день». Идемпотентно
+      // проверяем пару (weekly_menu_id, date), чтобы повторная генерация той же
+      // недели не плодила дубликаты (UNIQUE-констрейнта на схеме нет).
+      // [EN] weekly_menu_days is the week-to-day link. Check uniqueness in code
+      // because the schema has no UNIQUE on (weekly_menu_id, date).
+      const existingLink = await dbGet(
+        'SELECT id FROM weekly_menu_days WHERE weekly_menu_id = ? AND date = ?',
+        [weeklyMenuId, date]
+      );
+      if (!existingLink) {
+        await dbRun(
+          'INSERT INTO weekly_menu_days (weekly_menu_id, date, daily_menu_id) VALUES (?, ?, ?)',
+          [weeklyMenuId, date, dailyMenuId]
+        );
+      }
+
+      const usedMainIds = new Set();
+      for (const { slot, category, targetKey } of SLOT_PLAN) {
+        const target = prefs[targetKey] || null;
+        const used = category === 'main' ? usedMainIds : new Set();
+        const candidate = pickRecipe(candidatesByCategory[category], target, used);
+        if (!candidate) continue;
+        if (category === 'main') usedMainIds.add(candidate.id);
+
+        await dbRun(
+          `INSERT INTO daily_menu_items (daily_menu_id, recipe_id, slot)
+           VALUES (?, ?, ?)
+           ON CONFLICT(daily_menu_id, slot) DO UPDATE SET recipe_id = excluded.recipe_id`,
+          [dailyMenuId, candidate.id, slot]
+        );
+      }
+      daysFilled.push(date);
     }
 
-    const usedMainIds = new Set();
-    for (const { slot, category, targetKey } of SLOT_PLAN) {
-      const target = prefs[targetKey] || null;
-      const used = category === 'main' ? usedMainIds : new Set();
-      const candidate = pickRecipe(candidatesByCategory[category], target, used);
-      if (!candidate) continue;
-      if (category === 'main') usedMainIds.add(candidate.id);
-
-      await dbRun(
-        `INSERT INTO daily_menu_items (daily_menu_id, recipe_id, slot)
-         VALUES (?, ?, ?)
-         ON CONFLICT(daily_menu_id, slot) DO UPDATE SET recipe_id = excluded.recipe_id`,
-        [dailyMenuId, candidate.id, slot]
-      );
-    }
-    daysFilled.push(date);
-  }
-
-  return { weekStart, daysFilled };
-}
-
-/**
- * Generates a weekly plan for the current ISO week (Mon..Sun) using a greedy
- * kcal-proximity picker. Respects user_preferences.exclude_ingredients and
- * per-slot target calories. Safe to call repeatedly — UPSERTs by (daily_menu_id, slot).
- *
- * @param {number} telegramId
- * @returns {Promise<{weekStart: string, daysFilled: string[]}>}
- */
-async function generateWeeklyPlan(telegramId) {
-  return serializeWrite(() => _generateWeeklyPlanImpl(telegramId));
+    return { weekStart, daysFilled };
+  });
 }
 
 /**
@@ -492,6 +521,7 @@ async function replaceInSlot(telegramId, date, slot, newRecipeId) {
 module.exports = {
   getOrCreateUser,
   generateWeeklyPlan,
+  EmptyCategoryError,
   saveSelectedDish,
   getWeeklyPlan,
   clearDailyPlan,

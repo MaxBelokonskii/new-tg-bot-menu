@@ -25,8 +25,18 @@ const {
   clearDailyPlan,
   removeSlot,
   replaceInSlot,
-  generateWeeklyPlan
+  generateWeeklyPlan,
+  EmptyCategoryError
 } = require('./features/weekly-planner/logic');
+
+// [RU] Английские ключи категорий из БД → локализованные подписи для UI.
+// [EN] DB category keys (en) → localized labels for UI.
+const CATEGORY_LABEL = {
+  breakfast: texts.categories.breakfast,
+  main: texts.categories.main,
+  salads: texts.categories.salad,
+  desserts: texts.categories.dessert
+};
 const {
   getIngredientsFromPlan,
   saveShoppingList,
@@ -151,10 +161,10 @@ bot.action('generate_weekly_plan', async (ctx) => {
     logger.error('Error generating weekly plan:', error);
     // [RU] Специализированная подсказка при «пустой категории после исключений».
     // [EN] Specialized hint for the "no recipes after exclusions" case.
-    const match = (error.message || '').match(/No recipes available for category "([^"]+)"/);
-    if (match) {
+    if (error instanceof EmptyCategoryError) {
+      const label = CATEGORY_LABEL[error.category] || error.category;
       return ctx.reply(
-        texts.weeklyPlan.noRecipesForCategory.replace('{category}', match[1])
+        texts.weeklyPlan.noRecipesForCategory.replace('{category}', label)
       );
     }
     await ctx.reply(texts.weeklyPlan.errorGenerate);
