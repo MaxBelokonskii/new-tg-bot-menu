@@ -14,7 +14,9 @@ function deriveMode(periodStart, periodEnd) {
   const start = new Date(periodStart);
   const end = new Date(periodEnd);
   const diffDays = Math.round((end - start) / (1000 * 60 * 60 * 24));
-  return diffDays <= 1 ? 'day' : 'week';
+  // [RU] Строгое равенство: 0/отрицательные разницы — повреждённые данные, не маскируем их как «день».
+  // [EN] Strict equality: 0/negative spans indicate corrupted data — do not silently label them 'day'.
+  return diffDays === 1 ? 'day' : 'week';
 }
 
 /**
