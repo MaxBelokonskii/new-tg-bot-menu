@@ -1,15 +1,14 @@
 const { db } = require('../../database/db');
 const logger = require('../../utils/logger');
-const { getCurrentWeekBounds } = require('../../utils/date-helpers');
 
 /**
- * Получает агрегированный список ингредиентов из плана пользователя на текущую
- * неделю (Пн..Вс, включая сегодня).
+ * Aggregates ingredients from the user's daily_menu within the given period.
  * @param {number} telegramId
+ * @param {{ start: string, endExclusive: string }} bounds — half-open YYYY-MM-DD range
  * @returns {Promise<Array>}
  */
-async function getIngredientsFromPlan(telegramId) {
-  const { start, endExclusive } = getCurrentWeekBounds();
+async function getIngredientsFromPlan(telegramId, bounds) {
+  const { start, endExclusive } = bounds;
   return new Promise((resolve, reject) => {
     const query = `
       SELECT i.id, i.name, i.type, SUM(ri.amount) as total_amount, ri.unit
@@ -36,12 +35,14 @@ async function getIngredientsFromPlan(telegramId) {
 }
 
 /**
- * Сохраняет сформированный список покупок в БД
+ * Persists the aggregated shopping list for the given period.
  * @param {number} telegramId
  * @param {Array} ingredients
+ * @param {{ start: string, endExclusive: string }} bounds — period_start/period_end
  * @returns {Promise<number>} Shopping list ID
  */
-async function saveShoppingList(telegramId, ingredients) {
+async function saveShoppingList(telegramId, ingredients, bounds) {
+  const { start, endExclusive } = bounds;
   return new Promise((resolve, reject) => {
     db.serialize(() => {
       db.run('BEGIN TRANSACTION');
@@ -55,10 +56,10 @@ async function saveShoppingList(telegramId, ingredients) {
 
         const insertListQuery = `
           INSERT INTO shopping_lists (user_id, period_start, period_end)
-          VALUES (?, DATE('now'), DATE('now', '+7 days'))
+          VALUES (?, ?, ?)
         `;
 
-        db.run(insertListQuery, [user.id], function(err) {
+        db.run(insertListQuery, [user.id, start, endExclusive], function(err) {
           if (err) {
             db.run('ROLLBACK');
             return reject(err);
@@ -123,14 +124,14 @@ async function saveShoppingList(telegramId, ingredients) {
 }
 
 /**
- * Получает последний список покупок пользователя
+ * Returns the user's latest shopping list together with its period.
  * @param {number} telegramId
- * @returns {Promise<Array>}
+ * @returns {Promise<{ items: Array, periodStart: string|null, periodEnd: string|null }>}
  */
 async function getLastShoppingList(telegramId) {
   return new Promise((resolve, reject) => {
     const query = `
-      SELECT i.name, i.type, sli.total_amount, sli.unit
+      SELECT sl.period_start, sl.period_end, i.name, i.type, sli.total_amount, sli.unit
       FROM users u
       JOIN shopping_lists sl ON u.id = sl.user_id
       JOIN shopping_list_items sli ON sl.id = sli.shopping_list_id
@@ -143,10 +144,16 @@ async function getLastShoppingList(telegramId) {
     db.all(query, [telegramId], (err, rows) => {
       if (err) {
         logger.error('Error fetching last shopping list:', err);
-        reject(err);
-      } else {
-        resolve(rows);
+        return reject(err);
       }
+      if (!rows || rows.length === 0) {
+        return resolve({ items: [], periodStart: null, periodEnd: null });
+      }
+      const { period_start: periodStart, period_end: periodEnd } = rows[0];
+      const items = rows.map(({ name, type, total_amount, unit }) => ({
+        name, type, total_amount, unit
+      }));
+      resolve({ items, periodStart, periodEnd });
     });
   });
 }

@@ -33,7 +33,24 @@ function getCurrentWeekBounds(now = new Date()) {
   };
 }
 
+/**
+ * Returns half-open local-date bounds for the day containing `now`:
+ * { start: today, endExclusive: tomorrow }. Same shape as getCurrentWeekBounds.
+ *
+ * @param {Date} [now=new Date()]
+ * @returns {{ start: string, endExclusive: string }}
+ */
+function getCurrentDayBounds(now = new Date()) {
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  return {
+    start: formatLocalDate(today),
+    endExclusive: formatLocalDate(tomorrow)
+  };
+}
+
 module.exports = {
   formatLocalDate,
-  getCurrentWeekBounds
+  getCurrentWeekBounds,
+  getCurrentDayBounds
 };

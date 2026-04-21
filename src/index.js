@@ -59,6 +59,7 @@ const {
   getShoppingListKeyboard,
   buildClearShoppingConfirmKeyboard
 } = require('./interface/shopping-list');
+const { getCurrentWeekBounds, getCurrentDayBounds } = require('./utils/date-helpers');
 
 const bot = new Telegraf(process.env.BOT_TOKEN || 'DUMMY_TOKEN');
 
@@ -327,32 +328,36 @@ bot.hears(texts.mainMenu.buttons.shoppingList, async (ctx) => {
   }
 });
 
-bot.action('generate_shopping_list', async (ctx) => {
+async function regenerateShoppingList(ctx, mode) {
+  const bounds = mode === 'day' ? getCurrentDayBounds() : getCurrentWeekBounds();
   try {
-    const ingredients = await getIngredientsFromPlan(ctx.from.id);
+    const ingredients = await getIngredientsFromPlan(ctx.from.id, bounds);
     if (ingredients.length === 0) {
-      return ctx.answerCbQuery(texts.shoppingList.empty, { show_alert: true });
+      return ctx.answerCbQuery(texts.shoppingList.emptyForPeriod[mode], { show_alert: true });
     }
-    
-    await saveShoppingList(ctx.from.id, ingredients);
-    await ctx.answerCbQuery('Список успешно обновлен! ✨');
-    
+
+    await saveShoppingList(ctx.from.id, ingredients, bounds);
+    await ctx.answerCbQuery(
+      mode === 'day' ? texts.shoppingList.generatedDay : texts.shoppingList.generatedWeek
+    );
+
     const list = await getLastShoppingList(ctx.from.id);
     const message = formatShoppingList(list);
     await ctx.editMessageText(message, {
       parse_mode: 'HTML',
       ...getShoppingListKeyboard()
     }).catch(err => {
-      if (err.description && err.description.includes('message is not modified')) {
-        return; // Игнорируем ошибку, если содержимое не изменилось
-      }
+      if (err.description && err.description.includes('message is not modified')) return;
       throw err;
     });
   } catch (error) {
-    logger.error('Error generating shopping list:', error);
-    await ctx.answerCbQuery('Ошибка при генерации списка.');
+    logger.error(`Error generating shopping list (${mode}):`, error);
+    await ctx.answerCbQuery(texts.shoppingList.errorGenerate).catch(() => {});
   }
-});
+}
+
+bot.action('generate_shopping_list_day', (ctx) => regenerateShoppingList(ctx, 'day'));
+bot.action('generate_shopping_list_week', (ctx) => regenerateShoppingList(ctx, 'week'));
 
 bot.action('confirm_clear_shopping', async (ctx) => {
   await ctx.answerCbQuery();
