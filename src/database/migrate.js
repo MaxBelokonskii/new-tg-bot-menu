@@ -4,12 +4,13 @@ const { db, initDb } = require('./db');
 
 // [RU] Словари нормализации. Ключ — канонический вариант, значение — список алиасов.
 // [EN] Normalization dictionaries. Keys are canonical forms; values are their aliases.
-const ALIAS_DIR = path.resolve(__dirname, '../../database');
-const ingredientAliases = loadAliasMap(path.join(ALIAS_DIR, 'ingredient-aliases.json'));
-const unitAliases = loadAliasMap(path.join(ALIAS_DIR, 'unit-aliases.json'));
-
 function loadAliasMap(filePath) {
-  const raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  let raw;
+  try {
+    raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch (err) {
+    throw new Error(`Failed to load alias map from ${filePath}: ${err.message}`);
+  }
   const map = new Map();
   for (const [canonical, aliases] of Object.entries(raw)) {
     if (canonical.startsWith('_') || !Array.isArray(aliases)) continue;
@@ -17,6 +18,10 @@ function loadAliasMap(filePath) {
   }
   return map;
 }
+
+const ALIAS_DIR = path.resolve(__dirname, '../../database');
+const ingredientAliases = loadAliasMap(path.join(ALIAS_DIR, 'ingredient-aliases.json'));
+const unitAliases = loadAliasMap(path.join(ALIAS_DIR, 'unit-aliases.json'));
 
 function normalizeIngredient(name) {
   return ingredientAliases.get(name) || name;
