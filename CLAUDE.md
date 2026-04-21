@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - 🟡 Рандом блюда по категории → карточка рецепта → добавление в рацион на сегодня (`interface/dish-selection.js` + `features/weekly-planner/logic.js:saveSelectedDish`). `slot` вычисляется из категории (`breakfast`→1, `main`→2/3, `salads`→4, `desserts`→5). Повторное добавление в занятый слот молча перезаписывает предыдущий рецепт (UX-подтверждение — плановая доработка 2.5).
 - 🟡 Просмотр текущего рациона (`bot.action('view_weekly_plan')` в `src/index.js`). Ограничен текущей календарной неделей Пн..Вс.
-- ✅ Список покупок с группировкой по типам (`features/shopping-list/logic.js`, `interface/shopping-list.js`). Берётся текущая неделя; ингредиенты классифицированы по 11 типам через `database/ingredient-types.json`.
+- ✅ Список покупок с группировкой по типам (`features/shopping-list/logic.js`, `interface/shopping-list.js`). Переключатель «📅 На сегодня / 🗓 На неделю» в экране списка; границы периода — из `utils/date-helpers.js` (`getCurrentDayBounds`/`getCurrentWeekBounds`), сохраняются в `shopping_lists.period_start/period_end`. Ингредиенты классифицированы по 11 типам через `database/ingredient-types.json`.
 - ✅ Автогенерация недельного рациона: `generateWeeklyPlan` в `features/weekly-planner/logic.js` собирает Пн..Вс текущей ISO-недели greedy-подбором по близости к `user_preferences.target_<slot>`, учитывает `exclude_ingredients`, main1≠main2, идемпотентно перезаписывает неделю. Хэндлер `generate_weekly_plan` рендерит свежий план.
 - 🔴 Редактирование конкретного приёма пищи — не реализовано.
 - ✅ Подтверждение при очистке: кнопки очистки ведут на `confirm_clear_day_*` / `confirm_clear_shopping` с Yes/No-диалогом; отмена восстанавливает предыдущий экран.
