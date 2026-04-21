@@ -17,7 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 🟡 Список покупок с группировкой по типам (`features/shopping-list/logic.js`, `interface/shopping-list.js`). Берётся текущая неделя; все ингредиенты сейчас с `type='general'`.
 - 🔴 Автогенерация недельного рациона — заглушка, `generateWeeklyPlan` пустая.
 - 🔴 Редактирование конкретного приёма пищи — не реализовано.
-- 🔴 Подтверждение при очистке (сейчас `clear_day_*` и `clear_shopping_list` чистят сразу).
+- ✅ Подтверждение при очистке: кнопки очистки ведут на `confirm_clear_day_*` / `confirm_clear_shopping` с Yes/No-диалогом; отмена восстанавливает предыдущий экран.
 - 🔴 Профиль пользователя (вес/рост/возраст/цель по ккал) — таблица `user_preferences` есть, UI и логика — нет.
 - 🔴 Расчёт КБЖУ по формуле Миффлина-Сан Жеора — отложено.
 - 🔴 Обратный поиск «что приготовить из моих продуктов» — отложено (нормализация ингредиентов уже на месте, осталась классификация по типам и матчинг user-inventory).
@@ -109,7 +109,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **✅ `slot` теперь вычисляется из категории (roadmap 4.2).** `saveSelectedDish` JOIN'ит `meal_categories`, мапит имя категории на slots (`breakfast`→[1], `main`→[2,3], `salads`→[4], `desserts`→[5]) и делает UPSERT через `ON CONFLICT(daily_menu_id, slot) DO UPDATE SET recipe_id=excluded.recipe_id`. В схеме `daily_menu_items` добавлен `UNIQUE(daily_menu_id, slot)` — требует `npm run db:reset` для существующих БД.
 - **`BOT_TOKEN` placeholder-check не ловит значение из `.env.example` (roadmap 4.7).** `src/index.js:213` сравнивает с `'your_telegram_bot_token'`, а в `.env.example` строка `your_telegram_bot_token_here` — бот попытается стартовать с заглушкой.
 - **Генерация недельного плана не реализована.** `bot.action('generate_weekly_plan')` отвечает заглушкой, `features/weekly-planner/logic.js:generateWeeklyPlan` — пустая функция. Это **не баг, а запланированная фича** (roadmap 2.2) — не «чините» до обсуждения подхода.
-- **Очистка рациона и списка покупок — без подтверждения.** Поведение `clear_day_*` и `clear_shopping_list` удаляет сразу. Двухшаговое подтверждение — плановая доработка (roadmap 2.5), а не ошибка реализации.
+- **✅ Двухшаговое подтверждение очистки реализовано (roadmap 2.5).** Кнопки в планe/списке ведут на `confirm_clear_day_<date>` / `confirm_clear_shopping`; эти хэндлеры меняют сообщение на Yes/No-диалог (`do_clear_*` / `cancel_clear_*`). Отмена восстанавливает предыдущий экран из БД.
 
 ## Рабочие принципы для агента
 

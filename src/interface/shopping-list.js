@@ -55,11 +55,25 @@ function formatShoppingList(items) {
 function getShoppingListKeyboard() {
   return Markup.inlineKeyboard([
     [Markup.button.callback(texts.shoppingList.generate, 'generate_shopping_list')],
-    [Markup.button.callback(texts.shoppingList.clear, 'clear_shopping_list')]
+    [Markup.button.callback(texts.shoppingList.clear, 'confirm_clear_shopping')]
   ]);
+}
+
+/**
+ * Builds the Yes/No keyboard for the "clear shopping list" confirmation dialog.
+ * @returns {object} reply_markup payload
+ */
+function buildClearShoppingConfirmKeyboard() {
+  return {
+    inline_keyboard: [[
+      { text: texts.confirm.yes, callback_data: 'do_clear_shopping' },
+      { text: texts.confirm.no, callback_data: 'cancel_clear_shopping' }
+    ]]
+  };
 }
 
 module.exports = {
   formatShoppingList,
-  getShoppingListKeyboard
+  getShoppingListKeyboard,
+  buildClearShoppingConfirmKeyboard
 };

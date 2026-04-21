@@ -5,15 +5,23 @@ const logger = require('./utils/logger');
 const texts = require('./bot/texts');
 const { sendMainMenu } = require('./interface/main-menu');
 const { sendCategorySelection, showDishSuggestion } = require('./interface/dish-selection');
-const { sendWeeklyPlanMenu } = require('./interface/weekly-plan');
+const {
+  sendWeeklyPlanMenu,
+  buildWeeklyPlanMessage,
+  buildClearDayConfirmKeyboard
+} = require('./interface/weekly-plan');
 const { getOrCreateUser, saveSelectedDish, getWeeklyPlan, clearDailyPlan } = require('./features/weekly-planner/logic');
-const { 
-  getIngredientsFromPlan, 
-  saveShoppingList, 
-  getLastShoppingList, 
-  clearShoppingLists 
+const {
+  getIngredientsFromPlan,
+  saveShoppingList,
+  getLastShoppingList,
+  clearShoppingLists
 } = require('./features/shopping-list/logic');
-const { formatShoppingList, getShoppingListKeyboard } = require('./interface/shopping-list');
+const {
+  formatShoppingList,
+  getShoppingListKeyboard,
+  buildClearShoppingConfirmKeyboard
+} = require('./interface/shopping-list');
 
 const bot = new Telegraf(process.env.BOT_TOKEN || 'DUMMY_TOKEN');
 
@@ -78,46 +86,13 @@ bot.action('view_weekly_plan', async (ctx) => {
   await ctx.answerCbQuery();
   try {
     const plan = await getWeeklyPlan(ctx.from.id);
-    if (!plan || plan.length === 0) {
+    const payload = buildWeeklyPlanMessage(plan);
+    if (!payload) {
       return ctx.reply(texts.weeklyPlan.empty);
     }
-
-    let message = `<b>${texts.weeklyPlan.title}</b>\n\n`;
-
-    // Группировка по датам
-    const grouped = plan.reduce((acc, item) => {
-      if (!acc[item.date]) acc[item.date] = [];
-      acc[item.date].push(item);
-      return acc;
-    }, {});
-
-    const categoryMap = {
-      'Breakfast': texts.categories.breakfast,
-      'breakfast': texts.categories.breakfast,
-      'Main': texts.categories.main,
-      'main': texts.categories.main,
-      'Salad': texts.categories.salad,
-      'salad': texts.categories.salad,
-      'salads': texts.categories.salad,
-      'Dessert': texts.categories.dessert,
-      'dessert': texts.categories.dessert,
-      'desserts': texts.categories.dessert
-    };
-
-    const buttons = [];
-    for (const date in grouped) {
-      message += `📅 <b>${date}</b>\n`;
-      grouped[date].forEach(item => {
-        const categoryName = categoryMap[item.category] || item.category;
-        message += `• [${categoryName}] ${item.name}\n`;
-      });
-      message += '\n';
-      buttons.push([ { text: `${texts.weeklyPlan.clearDay} (${date})`, callback_data: `clear_day_${date}` } ]);
-    }
-
-    await ctx.reply(message, { 
+    await ctx.reply(payload.text, {
       parse_mode: 'HTML',
-      reply_markup: { inline_keyboard: buttons }
+      reply_markup: payload.reply_markup
     });
   } catch (error) {
     logger.error('Error viewing plan:', error);
@@ -125,18 +100,45 @@ bot.action('view_weekly_plan', async (ctx) => {
   }
 });
 
-bot.action(/^clear_day_(.+)$/, async (ctx) => {
+bot.action(/^confirm_clear_day_(.+)$/, async (ctx) => {
+  const date = ctx.match[1];
+  await ctx.answerCbQuery();
+  try {
+    await ctx.editMessageText(
+      texts.weeklyPlan.confirmClear.replace('{date}', date),
+      { reply_markup: buildClearDayConfirmKeyboard(date) }
+    );
+  } catch (error) {
+    logger.error('Error showing clear-day confirmation:', error);
+  }
+});
+
+bot.action(/^do_clear_day_(.+)$/, async (ctx) => {
   const date = ctx.match[1];
   try {
     await clearDailyPlan(ctx.from.id, date);
     await ctx.answerCbQuery(texts.weeklyPlan.cleared.replace('{date}', date));
-    // Обновляем список или просто удаляем сообщение/отправляем новое
-    // Для простоты здесь просто уведомление и можно нажать "Посмотреть" заново
-    await ctx.editMessageText(`${texts.weeklyPlan.cleared.replace('{date}', date)}`);
-    setTimeout(() => sendWeeklyPlanMenu(ctx), 1500);
+    await ctx.editMessageText(texts.weeklyPlan.cleared.replace('{date}', date));
   } catch (error) {
     logger.error('Error clearing daily plan:', error);
     await ctx.answerCbQuery('Ошибка при очистке плана.');
+  }
+});
+
+bot.action(/^cancel_clear_day_(.+)$/, async (ctx) => {
+  await ctx.answerCbQuery(texts.confirm.canceled);
+  try {
+    const plan = await getWeeklyPlan(ctx.from.id);
+    const payload = buildWeeklyPlanMessage(plan);
+    if (!payload) {
+      return ctx.editMessageText(texts.weeklyPlan.empty);
+    }
+    await ctx.editMessageText(payload.text, {
+      parse_mode: 'HTML',
+      reply_markup: payload.reply_markup
+    });
+  } catch (error) {
+    logger.error('Error restoring plan after cancel:', error);
   }
 });
 
@@ -181,7 +183,18 @@ bot.action('generate_shopping_list', async (ctx) => {
   }
 });
 
-bot.action('clear_shopping_list', async (ctx) => {
+bot.action('confirm_clear_shopping', async (ctx) => {
+  await ctx.answerCbQuery();
+  try {
+    await ctx.editMessageText(texts.shoppingList.confirmClear, {
+      reply_markup: buildClearShoppingConfirmKeyboard()
+    });
+  } catch (error) {
+    logger.error('Error showing clear-shopping confirmation:', error);
+  }
+});
+
+bot.action('do_clear_shopping', async (ctx) => {
   try {
     await clearShoppingLists(ctx.from.id);
     await ctx.answerCbQuery('Список очищен! 🗑️');
@@ -195,6 +208,25 @@ bot.action('clear_shopping_list', async (ctx) => {
   } catch (error) {
     logger.error('Error clearing shopping list:', error);
     await ctx.answerCbQuery('Ошибка при очистке списка.');
+  }
+});
+
+bot.action('cancel_clear_shopping', async (ctx) => {
+  await ctx.answerCbQuery(texts.confirm.canceled);
+  try {
+    const list = await getLastShoppingList(ctx.from.id);
+    const message = formatShoppingList(list);
+    await ctx.editMessageText(message, {
+      parse_mode: 'HTML',
+      ...getShoppingListKeyboard()
+    }).catch(err => {
+      if (err.description && err.description.includes('message is not modified')) {
+        return;
+      }
+      throw err;
+    });
+  } catch (error) {
+    logger.error('Error restoring shopping list after cancel:', error);
   }
 });
 
