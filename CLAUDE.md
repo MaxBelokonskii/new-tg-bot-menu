@@ -18,8 +18,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 🔴 Автогенерация недельного рациона — заглушка, `generateWeeklyPlan` пустая.
 - 🔴 Редактирование конкретного приёма пищи — не реализовано.
 - ✅ Подтверждение при очистке: кнопки очистки ведут на `confirm_clear_day_*` / `confirm_clear_shopping` с Yes/No-диалогом; отмена восстанавливает предыдущий экран.
-- 🔴 Профиль пользователя (вес/рост/возраст/цель по ккал) — таблица `user_preferences` есть, UI и логика — нет.
-- 🔴 Расчёт КБЖУ по формуле Миффлина-Сан Жеора — отложено.
+- 🟡 Профиль пользователя: анкета (вес/рост/возраст/пол/активность/цель) собирается через `Scenes.WizardScene` в `features/profile/scene.js`, хранится в `user_preferences`. Per-slot ккал ещё не считаются — это Stage 2.4.
+- 🔴 Расчёт КБЖУ по формуле Миффлина-Сан Жеора — отложено (Stage 2.4). Поля `target_breakfast/main1/main2/salad/dessert` в `user_preferences` уже добавлены, заполняются `null` до 2.4.
 - 🔴 Обратный поиск «что приготовить из моих продуктов» — отложено (нормализация ингредиентов уже на месте, осталась классификация по типам и матчинг user-inventory).
 - 🔴 Уровни пользователей / подписки — отложено.
 
@@ -86,6 +86,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **`confirm_dish`** всегда пишет в `daily_menu` за **сегодня** через `formatLocalDate(new Date())` из `utils/date-helpers.js` (локальная дата, не UTC — иначе у пользователей в UTC+N рядом с полуночью блюдо уезжало бы на следующие сутки и выпадало из окна `getWeeklyPlan`). Явного выбора даты нет — это намеренно для текущего MVP.
 - **Нутриенты**: в JSON поля называются `proteins`/`fats`, в БД — `protein`/`fat`. `migrate.js` нормализует это при вставке (`nutrition.proteins || nutrition.protein || 0`). Не менять без сверки с JSON-источником.
 - **Рассогласование ключей категорий**: в `recipes.json` `category` приходит как английский ключ (`breakfast`, `main`, `salads`, `desserts`), матчинг рецептов в `features/meal-suggestions/logic.js:getRandomRecipeByCategory` делается через `LOWER(mc.name) = LOWER(?)`. `src/index.js:94` содержит локальный `categoryMap` с русскими подписями — формально это дубликат, который должен уехать в `texts.js`/`utils/formatters.js` (см. roadmap 4.6).
+- **Сессия и Scenes**: `src/index.js` регистрирует `session()` (in-memory) + `Scenes.Stage([profileScene])` — нужно для многошагового WizardScene анкеты профиля. Стор памяти достаточно: состояние анкеты короткоживущее, при рестарте пользователь просто начнёт заново. Если понадобится персистентность — адаптеры из `@telegraf/session` (см. roadmap 2.6).
+- **Миграция схемы через ALTER TABLE**: `CREATE TABLE IF NOT EXISTS` не ретрофитит изменения. В `src/database/db.js:initDb` для новых колонок `user_preferences` используется `PRAGMA table_info` + `ALTER TABLE ADD COLUMN` — идемпотентно, без нужды в `npm run db:reset`. При добавлении новых столбцов в существующие таблицы держите этот паттерн.
 
 ## Известные проблемы (⚠️ читать перед правками)
 

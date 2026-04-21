@@ -1,9 +1,12 @@
-const { Telegraf } = require('telegraf');
+const { Telegraf, Scenes, session } = require('telegraf');
 require('dotenv').config();
 const { initDb } = require('./database/db');
 const logger = require('./utils/logger');
 const texts = require('./bot/texts');
 const { sendMainMenu } = require('./interface/main-menu');
+const { sendProfileMenu } = require('./interface/profile');
+const { profileScene, SCENE_ID: PROFILE_SCENE_ID } = require('./features/profile/scene');
+const { getUserProfile } = require('./features/profile/logic');
 const {
   sendCategorySelection,
   showDishSuggestion,
@@ -39,6 +42,17 @@ const bot = new Telegraf(process.env.BOT_TOKEN || 'DUMMY_TOKEN');
 
 // Initialize database
 initDb();
+
+// [RU] Session + Stage нужны для многошагового ввода анкеты профиля.
+// Стор по умолчанию — in-memory: состояние анкеты живёт минуту и не
+// нуждается в персистентности. Подключаем до stage.middleware(), иначе
+// у ctx не будет ctx.session, куда Stage кладёт свои данные.
+// [EN] Session + Stage back the multi-step profile survey. Default
+// in-memory store is enough — survey state is short-lived. Must be
+// registered before stage.middleware() so Stage can read ctx.session.
+const stage = new Scenes.Stage([profileScene]);
+bot.use(session());
+bot.use(stage.middleware());
 
 // [RU] Общий рендер «просмотра плана» с editMessageText — используется из cancel-
 // хэндлеров и после успешных replace/remove, чтобы вернуть пользователя
@@ -345,7 +359,18 @@ bot.action('cancel_clear_shopping', async (ctx) => {
 });
 
 bot.hears(texts.mainMenu.buttons.settings, async (ctx) => {
-  await ctx.reply('Настройки в разработке...');
+  try {
+    const profile = await getUserProfile(ctx.from.id);
+    await sendProfileMenu(ctx, profile);
+  } catch (error) {
+    logger.error('Error loading profile:', error);
+    await ctx.reply(texts.errors.general);
+  }
+});
+
+bot.action('profile_start', async (ctx) => {
+  await ctx.answerCbQuery();
+  await ctx.scene.enter(PROFILE_SCENE_ID);
 });
 
 bot.help((ctx) => ctx.reply('Send /start to begin.'));
