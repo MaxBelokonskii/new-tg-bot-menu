@@ -59,14 +59,201 @@ async function getOrCreateUser(telegramId, username) {
   return result.lastID;
 }
 
+// [RU] Порядок слотов, в котором greedy-подбор обходит день. Важно, чтобы
+// main1 шёл раньше main2 — тогда main2 может исключить рецепт, уже взятый
+// в main1, и мы гарантируем два разных основных блюда на день.
+// [EN] Order in which greedy fills a day. main1 must precede main2 so that
+// main2 can exclude the recipe already taken by main1, guaranteeing two
+// distinct mains per day.
+const SLOT_PLAN = Object.freeze([
+  { slot: 1, category: 'breakfast', targetKey: 'target_breakfast' },
+  { slot: 2, category: 'main',      targetKey: 'target_main1' },
+  { slot: 3, category: 'main',      targetKey: 'target_main2' },
+  { slot: 4, category: 'salads',    targetKey: 'target_salad' },
+  { slot: 5, category: 'desserts',  targetKey: 'target_dessert' }
+]);
+
 /**
- * Генерирует план на неделю
- * @param {number} userId
- * @param {string} startDate - ГГГГ-ММ-ДД
+ * Loads all recipes for a category, joined with a comma-separated list of
+ * ingredient names for the exclusion filter. The set of candidate recipes
+ * fits easily in memory (~30 per category) so greedy picking in JS is
+ * cheaper than a complex SQL with correlated subqueries.
+ *
+ * @param {string} category - lowercased mc.name
+ * @returns {Promise<Array<{id: number, calories: number, ingredients: string}>>}
  */
-async function generateWeeklyPlan(userId, startDate) {
-  // Реализация будет позже
-  return true;
+async function loadCandidatesByCategory(category) {
+  return dbAll(
+    `SELECT r.id, r.calories,
+            COALESCE(GROUP_CONCAT(LOWER(i.name), '|'), '') AS ingredients
+     FROM recipes r
+     JOIN meal_categories mc ON r.category_id = mc.id
+     LEFT JOIN recipe_ingredients ri ON ri.recipe_id = r.id
+     LEFT JOIN ingredients i ON ri.ingredient_id = i.id
+     WHERE LOWER(mc.name) = LOWER(?)
+     GROUP BY r.id`,
+    [category]
+  );
+}
+
+/**
+ * Parses the free-form exclude_ingredients string into a lower-cased token set.
+ * @param {string|null} raw
+ * @returns {Set<string>}
+ */
+function parseExcludeIngredients(raw) {
+  if (!raw) return new Set();
+  return new Set(
+    raw.split(/[,;\n]/)
+      .map(s => s.trim().toLowerCase())
+      .filter(Boolean)
+  );
+}
+
+/**
+ * True if any of the recipe's ingredient names contains any token from the
+ * exclusion set. Substring match (not word-boundary) so user input "лук"
+ * matches "лук репчатый" / "красный лук" without needing perfect normalization.
+ *
+ * @param {{ingredients: string}} candidate
+ * @param {Set<string>} excludeSet
+ */
+function isExcluded(candidate, excludeSet) {
+  if (excludeSet.size === 0) return false;
+  const names = candidate.ingredients; // "лук|томат|..." lowercased
+  if (!names) return false;
+  for (const token of excludeSet) {
+    if (names.includes(token)) return true;
+  }
+  return false;
+}
+
+// [RU] ⚠️ TODO (после MVP): greedy по близости ккал — «тупой» baseline.
+// Когда накопим жалобы на скучные планы — заменить на knapsack/ILP или
+// ranking с учётом разнообразия, сезонности и ранее выбранных блюд.
+// [EN] ⚠️ TODO (post-MVP): greedy-by-kcal is a naive baseline. Replace with
+// knapsack/ILP or ranking that accounts for variety, seasonality and user
+// history once we have complaints about boring plans.
+function pickRecipe(candidates, targetKcal, usedIds) {
+  const pool = candidates.filter(c => !usedIds.has(c.id));
+  if (pool.length === 0) return null;
+  if (!targetKcal) {
+    // [RU] Без цели — просто случайный, чтобы план не был детерминированным.
+    // [EN] No target — pick at random so plans aren't deterministic.
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+  let best = pool[0];
+  let bestDelta = Math.abs(best.calories - targetKcal);
+  for (let i = 1; i < pool.length; i++) {
+    const delta = Math.abs(pool[i].calories - targetKcal);
+    if (delta < bestDelta) {
+      best = pool[i];
+      bestDelta = delta;
+    }
+  }
+  return best;
+}
+
+async function _generateWeeklyPlanImpl(telegramId) {
+  const userId = await getOrCreateUser(telegramId);
+  const { start: weekStart } = getCurrentWeekBounds();
+
+  const prefs = await dbGet(
+    `SELECT exclude_ingredients, target_breakfast, target_main1,
+            target_main2, target_salad, target_dessert
+     FROM user_preferences WHERE user_id = ?`,
+    [userId]
+  ) || {};
+  const excludeSet = parseExcludeIngredients(prefs.exclude_ingredients);
+
+  // [RU] Кандидаты грузим по одному разу на категорию и переиспользуем на
+  // все 7 дней. Для main фильтр исключений одинаков — отдельный список не нужен.
+  // [EN] Load candidates once per category and reuse across 7 days. Mains
+  // share the exclusion filter — no per-slot split needed.
+  const categories = ['breakfast', 'main', 'salads', 'desserts'];
+  const candidatesByCategory = {};
+  for (const cat of categories) {
+    const rows = await loadCandidatesByCategory(cat);
+    candidatesByCategory[cat] = rows.filter(c => !isExcluded(c, excludeSet));
+    if (candidatesByCategory[cat].length === 0) {
+      throw new Error(`No recipes available for category "${cat}" after exclusions`);
+    }
+  }
+
+  await dbRun(
+    'INSERT OR IGNORE INTO weekly_menu (user_id, week_start) VALUES (?, ?)',
+    [userId, weekStart]
+  );
+  const weeklyMenuRow = await dbGet(
+    'SELECT id FROM weekly_menu WHERE user_id = ? AND week_start = ?',
+    [userId, weekStart]
+  );
+  if (!weeklyMenuRow) throw new Error('Failed to create/find weekly_menu');
+  const weeklyMenuId = weeklyMenuRow.id;
+
+  const [y, m, d] = weekStart.split('-').map(Number);
+  const monday = new Date(y, m - 1, d);
+  const daysFilled = [];
+
+  for (let i = 0; i < 7; i++) {
+    const dayDate = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+    const date = formatLocalDate(dayDate);
+
+    await dbRun('INSERT OR IGNORE INTO daily_menu (user_id, date) VALUES (?, ?)', [userId, date]);
+    const menuRow = await dbGet(
+      'SELECT id FROM daily_menu WHERE user_id = ? AND date = ?',
+      [userId, date]
+    );
+    if (!menuRow) throw new Error(`Failed to create/find daily_menu for ${date}`);
+    const dailyMenuId = menuRow.id;
+
+    // [RU] weekly_menu_days — справочная связь «неделя → день». Идемпотентно
+    // проверяем пару (weekly_menu_id, date), чтобы повторная генерация той же
+    // недели не плодила дубликаты (UNIQUE-констрейнта на схеме нет).
+    // [EN] weekly_menu_days is the week-to-day link. Check uniqueness in code
+    // because the schema has no UNIQUE on (weekly_menu_id, date).
+    const existingLink = await dbGet(
+      'SELECT id FROM weekly_menu_days WHERE weekly_menu_id = ? AND date = ?',
+      [weeklyMenuId, date]
+    );
+    if (!existingLink) {
+      await dbRun(
+        'INSERT INTO weekly_menu_days (weekly_menu_id, date, daily_menu_id) VALUES (?, ?, ?)',
+        [weeklyMenuId, date, dailyMenuId]
+      );
+    }
+
+    const usedMainIds = new Set();
+    for (const { slot, category, targetKey } of SLOT_PLAN) {
+      const target = prefs[targetKey] || null;
+      const used = category === 'main' ? usedMainIds : new Set();
+      const candidate = pickRecipe(candidatesByCategory[category], target, used);
+      if (!candidate) continue;
+      if (category === 'main') usedMainIds.add(candidate.id);
+
+      await dbRun(
+        `INSERT INTO daily_menu_items (daily_menu_id, recipe_id, slot)
+         VALUES (?, ?, ?)
+         ON CONFLICT(daily_menu_id, slot) DO UPDATE SET recipe_id = excluded.recipe_id`,
+        [dailyMenuId, candidate.id, slot]
+      );
+    }
+    daysFilled.push(date);
+  }
+
+  return { weekStart, daysFilled };
+}
+
+/**
+ * Generates a weekly plan for the current ISO week (Mon..Sun) using a greedy
+ * kcal-proximity picker. Respects user_preferences.exclude_ingredients and
+ * per-slot target calories. Safe to call repeatedly — UPSERTs by (daily_menu_id, slot).
+ *
+ * @param {number} telegramId
+ * @returns {Promise<{weekStart: string, daysFilled: string[]}>}
+ */
+async function generateWeeklyPlan(telegramId) {
+  return serializeWrite(() => _generateWeeklyPlanImpl(telegramId));
 }
 
 /**

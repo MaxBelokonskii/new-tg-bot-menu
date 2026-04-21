@@ -24,7 +24,8 @@ const {
   getWeeklyPlan,
   clearDailyPlan,
   removeSlot,
-  replaceInSlot
+  replaceInSlot,
+  generateWeeklyPlan
 } = require('./features/weekly-planner/logic');
 const {
   getIngredientsFromPlan,
@@ -133,8 +134,31 @@ bot.hears(texts.mainMenu.buttons.weeklyPlan, async (ctx) => {
 });
 
 bot.action('generate_weekly_plan', async (ctx) => {
-  await ctx.answerCbQuery('Генерация плана...');
-  await ctx.reply('Генерация плана в разработке (логика подбора блюд)');
+  await ctx.answerCbQuery(texts.weeklyPlan.generating);
+  try {
+    await generateWeeklyPlan(ctx.from.id);
+    const plan = await getWeeklyPlan(ctx.from.id);
+    const payload = buildWeeklyPlanMessage(plan);
+    if (!payload) {
+      return ctx.reply(texts.weeklyPlan.generated);
+    }
+    await ctx.reply(texts.weeklyPlan.generated);
+    await ctx.reply(payload.text, {
+      parse_mode: 'HTML',
+      reply_markup: payload.reply_markup
+    });
+  } catch (error) {
+    logger.error('Error generating weekly plan:', error);
+    // [RU] Специализированная подсказка при «пустой категории после исключений».
+    // [EN] Specialized hint for the "no recipes after exclusions" case.
+    const match = (error.message || '').match(/No recipes available for category "([^"]+)"/);
+    if (match) {
+      return ctx.reply(
+        texts.weeklyPlan.noRecipesForCategory.replace('{category}', match[1])
+      );
+    }
+    await ctx.reply(texts.weeklyPlan.errorGenerate);
+  }
 });
 
 bot.action('view_weekly_plan', async (ctx) => {
