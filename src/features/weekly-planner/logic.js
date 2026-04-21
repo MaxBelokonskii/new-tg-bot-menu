@@ -1,4 +1,5 @@
 const { db } = require('../../database/db');
+const { getCurrentWeekBounds } = require('../../utils/date-helpers');
 
 /**
  * Получает ID пользователя в БД по telegram_id, создавая его если нужно
@@ -85,13 +86,13 @@ async function saveSelectedDish(telegramId, recipeId) {
 }
 
 /**
- * Получает выбранные блюда пользователя на текущую неделю
+ * Получает выбранные блюда пользователя на текущую календарную неделю (Пн..Вс).
  * @param {number} telegramId
  */
 async function getWeeklyPlan(telegramId) {
   const userId = await getOrCreateUser(telegramId);
+  const { start, endExclusive } = getCurrentWeekBounds();
 
-  // Для простоты берем все блюда за последние 7 дней или из текущего daily_menu
   return new Promise((resolve, reject) => {
     const query = `
       SELECT r.name, mc.name as category, dm.date
@@ -100,10 +101,12 @@ async function getWeeklyPlan(telegramId) {
       JOIN recipes r ON dmi.recipe_id = r.id
       JOIN meal_categories mc ON r.category_id = mc.id
       WHERE dm.user_id = ?
-      ORDER BY dm.date DESC, dmi.slot ASC
+        AND dm.date >= ?
+        AND dm.date < ?
+      ORDER BY dm.date ASC, dmi.slot ASC
     `;
 
-    db.all(query, [userId], (err, rows) => {
+    db.all(query, [userId, start, endExclusive], (err, rows) => {
       if (err) reject(err);
       else resolve(rows);
     });
