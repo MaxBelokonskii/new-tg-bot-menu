@@ -37,7 +37,7 @@ const initDb = () => {
     // 3. recipes
     db.run(`CREATE TABLE IF NOT EXISTS recipes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
+      name TEXT NOT NULL UNIQUE,
       category_id INTEGER NOT NULL,
       description TEXT,
       calories INTEGER NOT NULL,
