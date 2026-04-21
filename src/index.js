@@ -49,7 +49,13 @@ async function rerenderWeeklyPlan(ctx) {
   const plan = await getWeeklyPlan(ctx.from.id);
   const payload = buildWeeklyPlanMessage(plan);
   if (!payload) {
-    return ctx.editMessageText(texts.weeklyPlan.empty).catch(err => {
+    // [RU] Явно обнуляем reply_markup: без этого Telegram оставит прежнюю
+    // клавиатуру с edit/remove-кнопками от последнего просмотра плана.
+    // [EN] Explicit empty reply_markup — otherwise Telegram keeps the prior
+    // edit/remove keyboard from the last plan render.
+    return ctx.editMessageText(texts.weeklyPlan.empty, {
+      reply_markup: { inline_keyboard: [] }
+    }).catch(err => {
       if (err.description && err.description.includes('message is not modified')) return;
       throw err;
     });
