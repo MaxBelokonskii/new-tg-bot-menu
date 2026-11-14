@@ -134,10 +134,13 @@ function buildDayScreen({ date, today, oldest, entries, totals, targets }) {
   else lines.push(...entries.map(formatEntry));
   lines.push('', T.totalsHeader, ...formatTotals(totals, targets));
 
-  const rows = [[
-    Markup.button.callback(date === today ? T.buttons.fromPlanToday : T.buttons.fromPlanDay, `fl_plan_${date}`),
-    Markup.button.callback(T.buttons.search, `fl_search_${date}`)
-  ]];
+  const rows = [
+    [Markup.button.callback(date === today ? T.buttons.fromPlanToday : T.buttons.fromPlanDay, `fl_plan_${date}`)],
+    [
+      Markup.button.callback(T.buttons.search, `fl_search_${date}`),
+      Markup.button.callback(T.buttons.fromFavorites, `fl_fav_${date}_0`)
+    ]
+  ];
   entries.forEach((entry, i) => rows.push([Markup.button.callback(
     T.buttons.entry.replace('{n}', i + 1).replace('{name}', truncate(entry.name)),
     `fl_entry_${entry.id}`

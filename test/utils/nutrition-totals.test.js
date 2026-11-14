@@ -79,7 +79,7 @@ test('buildDayScreen with targets shows entries, totals vs norms and buttons', (
   assert.ok(text.includes(`${T.nutrients.fat}: 45 / 40 г · ${T.over.replace('{value}', 5)}`));
   assert.ok(!text.includes(T.noProfileHint));
   assert.deepEqual(callbackData(extra), [
-    'fl_plan_2026-11-14', 'fl_search_2026-11-14', 'fl_entry_7', 'wte_show_0', 'fl_day_2026-11-13'
+    'fl_plan_2026-11-14', 'fl_search_2026-11-14', 'fl_fav_2026-11-14_0', 'fl_entry_7', 'wte_show_0', 'fl_day_2026-11-13'
   ]);
 });
 
@@ -93,6 +93,6 @@ test('buildDayScreen without targets shows eaten totals and the profile hint', (
   assert.ok(!text.includes('🟩') && !text.includes('⬜'));
   // самый старый день: «назад» нет, «вперёд» ведёт на следующий день
   assert.deepEqual(callbackData(extra), [
-    'fl_plan_2026-11-07', 'fl_search_2026-11-07', 'fl_day_2026-11-08'
+    'fl_plan_2026-11-07', 'fl_search_2026-11-07', 'fl_fav_2026-11-07_0', 'fl_day_2026-11-08'
   ]);
 });

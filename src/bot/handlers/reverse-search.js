@@ -9,6 +9,7 @@ const {
 } = require('../../features/reverse-search/logic');
 const { getRecipeIngredients } = require('../../features/meal-suggestions/logic');
 const { getPrefsByTelegramId } = require('../../features/ingredient-prefs/logic');
+const { isFavorite } = require('../../features/favorite-recipes/logic');
 const { buildResultsMessage, buildRecipeCard } = require('../../interface/reverse-search');
 
 /**
@@ -55,7 +56,8 @@ function register(bot) {
       const ingredients = await getRecipeIngredients(recipeId);
       const inventorySet = new Set(inventory);
       const missing = ingredients.map(i => i.name).filter(name => !inventorySet.has(name));
-      const card = buildRecipeCard(recipe, ingredients, missing);
+      const favorite = await isFavorite(ctx.from.id, recipeId);
+      const card = buildRecipeCard(recipe, ingredients, missing, { favorite });
       await safeEdit(ctx, card.text, { parse_mode: 'HTML', ...card.keyboard });
     } catch (error) {
       logger.error('Error showing reverse-search recipe card:', error);

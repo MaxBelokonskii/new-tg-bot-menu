@@ -2,6 +2,7 @@ const { Markup } = require('telegraf');
 const texts = require('../bot/texts');
 const { formatDayLabel, formatPortion, fillNutrition, truncate } = require('./food-log');
 const { scaleNutrition } = require('../utils/nutrition-totals');
+const { buildPageRow, recipeButton } = require('./favorite-recipes');
 
 const T = texts.foodLog;
 const PORTION_HALVES = [1, 2, 3, 4];
@@ -50,6 +51,26 @@ function buildSearchResults(date, recipes, total) {
   )]);
   rows.push([Markup.button.callback(T.buttons.searchAgain, `fl_search_${date}`), backToDay(date)]);
   return { text: lines.join('\n'), extra: { parse_mode: 'HTML', ...Markup.inlineKeyboard(rows) } };
+}
+
+/**
+ * Builds the "eaten from favorites" picker: one button per favorite recipe
+ * (leads to the portion picker, no plan slot), paging and "back to diary".
+ *
+ * @param {string} date - diary date the picked recipe will be logged to
+ * @param {string} today - YYYY-MM-DD
+ * @param {{recipes: Array<{id: number, name: string, calories: number}>,
+ *   page: number, pages: number}} list - recipes non-empty
+ * @returns {{text: string, extra: object}}
+ */
+function buildFavoritesPicker(date, today, { recipes, page, pages }) {
+  const lines = [T.favorites.title.replace('{day}', formatDayLabel(date, today))];
+  if (pages > 1) lines.push(T.favorites.pageInfo.replace('{page}', page + 1).replace('{pages}', pages));
+  const rows = recipes.map(recipe => [recipeButton(recipe, `fl_pick_${date}_${recipe.id}_0`)]);
+  const pageRow = buildPageRow(page, pages, p => `fl_fav_${date}_${p}`);
+  if (pageRow.length) rows.push(pageRow);
+  rows.push([backToDay(date)]);
+  return { text: lines.join('\n'), extra: Markup.inlineKeyboard(rows) };
 }
 
 /**
@@ -110,6 +131,7 @@ function buildEntryEditor(entry) {
 module.exports = {
   buildPlanPicker,
   buildSearchResults,
+  buildFavoritesPicker,
   buildPortionPicker,
   buildEntryEditor
 };

@@ -4,8 +4,10 @@ const logger = require('../utils/logger');
 const { getRandomRecipeByCategory, getRecipeIngredients } = require('../features/meal-suggestions/logic');
 const { categoryForSlot } = require('../features/weekly-planner/logic');
 const { getPrefsByTelegramId } = require('../features/ingredient-prefs/logic');
+const { isFavorite } = require('../features/favorite-recipes/logic');
 const { formatNutrition, formatIngredientsHeader, slotLabel } = require('../utils/formatters');
 const { formatPlanDate, formatPlanItem } = require('./plan-day');
+const { favoriteButton } = require('./favorite-recipes');
 
 /**
  * Sends (or edits into) the category picker.
@@ -16,7 +18,8 @@ async function sendCategorySelection(ctx) {
     [Markup.button.callback(texts.categories.breakfast, 'select_cat_breakfast')],
     [Markup.button.callback(texts.categories.main, 'select_cat_main')],
     [Markup.button.callback(texts.categories.salad, 'select_cat_salads')],
-    [Markup.button.callback(texts.categories.dessert, 'select_cat_desserts')]
+    [Markup.button.callback(texts.categories.dessert, 'select_cat_desserts')],
+    [Markup.button.callback(texts.favoriteRecipes.openBtn, 'fav_list_0')]
   ]);
 
   const text = texts.dishSelection.title;
@@ -36,6 +39,28 @@ async function _buildRecipeCard(recipe) {
     `${formatNutrition(recipe)}\n\n` +
     `<b>${formatIngredientsHeader(recipe.servings)}</b>\n${ingredientText}\n\n` +
     `<b>${texts.recipeCard.recipeLabel}</b>\n${recipe.description || texts.recipeCard.noDescription}`;
+}
+
+/**
+ * Builds a recipe card for the "pick a dish" flows (random dish, opened from
+ * favorites): ✅ select, 🍽 ate it, ⭐ favorite toggle and a back button.
+ *
+ * @param {object} recipe - recipe row with description, servings and per-serving nutrition
+ * @param {{favorite?: boolean, nextCallback?: string|null, back: object}} options
+ *   nextCallback — "🎲 another option" callback (random card only);
+ *   back — the bottom navigation button
+ * @returns {Promise<{text: string, keyboard: object}>}
+ */
+async function buildDishCard(recipe, { favorite = false, nextCallback = null, back }) {
+  const text = await _buildRecipeCard(recipe);
+  const rows = [];
+  if (nextCallback) rows.push([Markup.button.callback(texts.dishSelection.nextOption, nextCallback)]);
+  rows.push(
+    [Markup.button.callback(texts.dishSelection.select, `confirm_dish_${recipe.id}`)],
+    [Markup.button.callback(texts.foodLog.ateBtn, `fl_eat_${recipe.id}`), favoriteButton(recipe.id, favorite)],
+    [back]
+  );
+  return { text, keyboard: Markup.inlineKeyboard(rows) };
 }
 
 async function _sendOrEditCard(ctx, message, keyboard) {
@@ -59,14 +84,12 @@ async function showDishSuggestion(ctx, category) {
     if (!recipe) {
       return ctx.reply(texts.editSlot.noRecipesInCategory);
     }
-    const message = await _buildRecipeCard(recipe);
-    const keyboard = Markup.inlineKeyboard([
-      [Markup.button.callback(texts.dishSelection.nextOption, `select_cat_${category}`)],
-      [Markup.button.callback(texts.dishSelection.select, `confirm_dish_${recipe.id}`)],
-      [Markup.button.callback(texts.foodLog.ateBtn, `fl_eat_${recipe.id}`)],
-      [Markup.button.callback(texts.dishSelection.back, 'back_to_categories')]
-    ]);
-    await _sendOrEditCard(ctx, message, keyboard);
+    const { text, keyboard } = await buildDishCard(recipe, {
+      favorite: await isFavorite(ctx.from.id, recipe.id),
+      nextCallback: `select_cat_${category}`,
+      back: Markup.button.callback(texts.dishSelection.back, 'back_to_categories')
+    });
+    await _sendOrEditCard(ctx, text, keyboard);
   } catch (error) {
     logger.error('Error showing dish suggestion:', error);
     await ctx.reply(texts.errors.general);
@@ -162,6 +185,7 @@ function buildTodaySummary({ statusText, date, items, targetCalories }) {
 }
 
 module.exports = {
+  buildDishCard,
   buildReplaceQuestion,
   buildTodaySummary,
   sendCategorySelection,

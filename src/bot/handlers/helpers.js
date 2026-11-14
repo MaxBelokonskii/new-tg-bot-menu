@@ -7,12 +7,27 @@
  * @returns {Promise<void>}
  */
 async function safeEdit(ctx, text, extra) {
+  await ignoreNotModified(() => ctx.editMessageText(text, extra));
+}
+
+/**
+ * Replaces only the inline keyboard of the callback message, ignoring the
+ * "message is not modified" error.
+ * @param {import('telegraf').Context} ctx
+ * @param {{inline_keyboard: Array<Array<object>>}} markup
+ * @returns {Promise<void>}
+ */
+async function safeEditMarkup(ctx, markup) {
+  await ignoreNotModified(() => ctx.editMessageReplyMarkup(markup));
+}
+
+async function ignoreNotModified(edit) {
   try {
-    await ctx.editMessageText(text, extra);
+    await edit();
   } catch (err) {
     if (err.description && err.description.includes('message is not modified')) return;
     throw err;
   }
 }
 
-module.exports = { safeEdit };
+module.exports = { safeEdit, safeEditMarkup };

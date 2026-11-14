@@ -17,9 +17,12 @@ const {
   getDayLog,
   getPlanDishes
 } = require('../../features/food-log/logic');
+const { listFavorites } = require('../../features/favorite-recipes/logic');
 const { SCENE_ID } = require('../../features/food-log/search-scene');
 const { buildDayScreen } = require('../../interface/food-log');
-const { buildPlanPicker, buildPortionPicker, buildEntryEditor } = require('../../interface/food-log-pickers');
+const {
+  buildPlanPicker, buildFavoritesPicker, buildPortionPicker, buildEntryEditor
+} = require('../../interface/food-log-pickers');
 
 const T = texts.foodLog;
 const DATE = '(\\d{4}-\\d{2}-\\d{2})';
@@ -83,8 +86,8 @@ async function ensureDiaryDate(ctx, date) {
 
 /**
  * Registers food diary handlers: day screen, day navigation, add from plan,
- * recipe search, portion choice, entry portion editing and deletion, and
- * "🍽 Съел" from recipe cards.
+ * from ⭐ favorites, recipe search, portion choice, entry portion editing and
+ * deletion, and "🍽 Съел" from recipe cards.
  * @param {import('telegraf').Telegraf} bot
  */
 function register(bot) {
@@ -108,6 +111,19 @@ function register(bot) {
     }
     await ctx.answerCbQuery();
     const { text, extra } = buildPlanPicker(date, today(), dishes);
+    await safeEdit(ctx, text, extra);
+  }));
+
+  bot.action(new RegExp(`^fl_fav_${DATE}_(\\d+)$`), guarded('showing favorites picker', async (ctx) => {
+    const [, date, page] = ctx.match;
+    if (!(await ensureDiaryDate(ctx, date))) return;
+    const list = await listFavorites(ctx.from.id, Number(page));
+    if (list.total === 0) {
+      await ctx.answerCbQuery(T.favorites.empty, { show_alert: true });
+      return;
+    }
+    await ctx.answerCbQuery();
+    const { text, extra } = buildFavoritesPicker(date, today(), list);
     await safeEdit(ctx, text, extra);
   }));
 

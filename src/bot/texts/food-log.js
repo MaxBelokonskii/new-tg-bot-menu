@@ -32,6 +32,7 @@ module.exports = {
     fromPlanToday: '➕ Из плана на сегодня',
     fromPlanDay: '➕ Из плана на этот день',
     search: '🔍 Найти рецепт',
+    fromFavorites: '⭐ Из избранного',
     entry: '✏️ {n}. {name}',
     deleteEntry: '🗑 Удалить',
     prevYesterday: '◀️ Вчера',
@@ -47,6 +48,11 @@ module.exports = {
     loggedMark: '✅ ',
     item: '{slot}: {name}',
     empty: 'В плане на этот день нет блюд — найдите рецепт поиском.'
+  },
+  favorites: {
+    title: 'Что из избранного вы съели ({day})?',
+    pageInfo: 'Страница {page} из {pages}.',
+    empty: 'В избранном пока нет рецептов. Откройте рецепт в «🎲 Выбор блюд» и нажмите «⭐ В избранное».'
   },
   portion: {
     perServing: 'На 1 порцию: {kcal} ккал · Б {protein} · Ж {fat} · У {carbs}',

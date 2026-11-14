@@ -8,7 +8,8 @@ const { createBot } = require('../../src/bot/create-bot');
  *
  * @param {number} userId - Telegram user id (also used as private chat id)
  * @returns {{bot: import('telegraf').Telegraf, calls: Array<{method: string, payload: object}>,
- *            sendText: (text: string) => Promise<void>, sendCallback: (data: string) => Promise<void>,
+ *            sendText: (text: string) => Promise<void>,
+ *            sendCallback: (data: string, options?: {replyMarkup?: object}) => Promise<void>,
  *            methods: () => string[], reset: () => void}}
  */
 function createFakeBot(userId) {
@@ -37,11 +38,16 @@ function createFakeBot(userId) {
       ...(text.startsWith('/') ? { entities: [{ type: 'bot_command', offset: 0, length: text.length }] } : {}) }
   });
 
-  const sendCallback = (data) => bot.handleUpdate({
+  // [RU] replyMarkup — клавиатура сообщения, на котором нажата кнопка (Telegram
+  // присылает её в callback_query.message).
+  // [EN] replyMarkup — keyboard of the message whose button was tapped
+  // (Telegram sends it in callback_query.message).
+  const sendCallback = (data, { replyMarkup } = {}) => bot.handleUpdate({
     update_id: ++updateId,
     callback_query: {
       id: String(updateId), from: user, chat_instance: '1', data,
-      message: { message_id: 1, date: 0, chat, from: bot.botInfo, text: 'prev' }
+      message: { message_id: 1, date: 0, chat, from: bot.botInfo, text: 'prev',
+        ...(replyMarkup ? { reply_markup: replyMarkup } : {}) }
     }
   });
 
