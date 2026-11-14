@@ -24,6 +24,8 @@ async function sendCategorySelection(ctx) {
 
   const text = texts.dishSelection.title;
   if (ctx.updateType === 'callback_query') {
+    // Без ответа на callback кнопка крутит индикатор загрузки до таймаута
+    await ctx.answerCbQuery();
     await ctx.editMessageText(text, keyboard);
   } else {
     await ctx.reply(text, keyboard);
