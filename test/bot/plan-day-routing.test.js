@@ -56,6 +56,7 @@ test('view shows today with weekday name, kcal per dish, totals and day navigati
   const items = await getDayPlan(TELEGRAM_ID, TODAY);
   const kcal = Math.round(items.reduce((s, i) => s + i.calories, 0));
   assert.ok(text.includes(`${kcal} ккал`), 'day total kcal');
+  assert.ok(text.includes(T.day.weekHeader.replace('{days}', 7)), 'week summary: all 7 days planned');
 
   const data = callbackData(calls[1].payload);
   assert.equal(data.filter(d => d.startsWith('edit_slot_')).length, 5);
@@ -97,6 +98,7 @@ test('with a profile the totals are compared with the norms', async () => {
   assert.ok(!text.includes(T.day.noProfileHint));
   assert.match(text, new RegExp(`${texts.macroTargets.labels.calories}: \\d+ / ${target} ккал · \\d+%`));
   assert.match(text, new RegExp(`${texts.macroTargets.labels.protein}: \\d+ / \\d+ г`));
+  assert.match(text, /В среднем в день: \d+ ккал \(\d+%\) · Б \d+ г \(\d+%\)/, 'week average vs norms');
 });
 
 test('remove / clear / cancel return to the same day', async () => {
