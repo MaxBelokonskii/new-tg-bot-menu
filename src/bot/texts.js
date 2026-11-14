@@ -8,6 +8,7 @@ module.exports = {
       weeklyPlan: '📅 План на неделю',
       shoppingList: '🛒 Список покупок',
       reverseSearch: '🔍 Из моих продуктов',
+      foodLog: '📝 Дневник',
       settings: '⚙️ Настройки'
     }
   },
@@ -255,5 +256,6 @@ module.exports = {
       'Орехи и семена': '🥜 Орехи/Семена',
       'Другое': '📦 Прочее'
     }
-  }
+  },
+  foodLog: require('./texts/food-log')
 };

@@ -144,7 +144,23 @@ const TABLES = [
     PRIMARY KEY (user_id, ingredient_id),
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (ingredient_id) REFERENCES ingredients(id)
-  )`
+  )`,
+
+  // 13. food_log — дневник питания: факт «что съел» (план — отдельно в daily_menu).
+  // КБЖУ не копируется: считается JOIN-ом на recipes × portion. slot — только
+  // для записей, сделанных из плана.
+  `CREATE TABLE IF NOT EXISTS food_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    date TEXT NOT NULL,
+    recipe_id INTEGER NOT NULL,
+    portion REAL NOT NULL DEFAULT 1,
+    slot INTEGER NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (recipe_id) REFERENCES recipes(id)
+  )`,
+  'CREATE INDEX IF NOT EXISTS idx_food_log_user_date ON food_log(user_id, date)'
 ];
 
 // [RU] Колонки, добавленные в user_preferences после первой версии схемы.

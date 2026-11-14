@@ -87,6 +87,7 @@ function buildRecipeCard(recipe, ingredients, missingNames) {
 
   const keyboard = Markup.inlineKeyboard([
     [Markup.button.callback(texts.reverseSearch.addBtn, `confirm_dish_${recipe.id}`)],
+    [Markup.button.callback(texts.foodLog.ateBtn, `fl_eat_${recipe.id}`)],
     [Markup.button.callback(texts.reverseSearch.backToList, 'reverse_back_to_list')]
   ]);
 

@@ -49,8 +49,23 @@ function getCurrentDayBounds(now = new Date()) {
   };
 }
 
+/**
+ * Shifts a local YYYY-MM-DD date string by a number of days.
+ * Calendar overflow is normalised (2026-02-31 + 0 → 2026-03-03), so
+ * `addDays(d, 0) === d` doubles as a validity check.
+ *
+ * @param {string} date - YYYY-MM-DD
+ * @param {number} days - may be negative
+ * @returns {string} YYYY-MM-DD
+ */
+function addDays(date, days) {
+  const [y, m, d] = date.split('-').map(Number);
+  return formatLocalDate(new Date(y, m - 1, d + days));
+}
+
 module.exports = {
   formatLocalDate,
+  addDays,
   getCurrentWeekBounds,
   getCurrentDayBounds
 };

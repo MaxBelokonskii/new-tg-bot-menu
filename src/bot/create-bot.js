@@ -4,6 +4,7 @@ const { profileScene } = require('../features/profile/scene');
 const { reverseSearchScene } = require('../features/reverse-search/scene');
 const { macroTargetScene } = require('../features/profile/targets-scene');
 const { ingredientPrefsScene } = require('../features/ingredient-prefs/scene');
+const { foodLogSearchScene } = require('../features/food-log/search-scene');
 const common = require('./handlers/common');
 const dishSelection = require('./handlers/dish-selection');
 const weeklyPlan = require('./handlers/weekly-plan');
@@ -12,6 +13,7 @@ const reverseSearch = require('./handlers/reverse-search');
 const profile = require('./handlers/profile');
 const macroTargets = require('./handlers/macro-targets');
 const ingredientPrefs = require('./handlers/ingredient-prefs');
+const foodLog = require('./handlers/food-log');
 
 // [RU] Формат токена BotFather: `<bot id>:<секрет из 35 символов>`. Проверка
 // формата ловит любые заглушки (`your_telegram_bot_token_here` и т.п.).
@@ -48,12 +50,12 @@ function createBot(token) {
   // [EN] In-memory session: survey/reverse-search/target-edit state is short-lived.
   bot.use(session());
   bot.use(new Scenes.Stage([
-    profileScene, reverseSearchScene, macroTargetScene, ingredientPrefsScene
+    profileScene, reverseSearchScene, macroTargetScene, ingredientPrefsScene, foodLogSearchScene
   ]).middleware());
 
   const features = [
     common, dishSelection, weeklyPlan, shoppingList, reverseSearch, profile, macroTargets,
-    ingredientPrefs
+    ingredientPrefs, foodLog
   ];
   for (const feature of features) {
     feature.register(bot);

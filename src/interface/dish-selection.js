@@ -62,6 +62,7 @@ async function showDishSuggestion(ctx, category) {
     const keyboard = Markup.inlineKeyboard([
       [Markup.button.callback(texts.dishSelection.nextOption, `select_cat_${category}`)],
       [Markup.button.callback(texts.dishSelection.select, `confirm_dish_${recipe.id}`)],
+      [Markup.button.callback(texts.foodLog.ateBtn, `fl_eat_${recipe.id}`)],
       [Markup.button.callback(texts.dishSelection.back, 'back_to_categories')]
     ]);
     await _sendOrEditCard(ctx, message, keyboard);
