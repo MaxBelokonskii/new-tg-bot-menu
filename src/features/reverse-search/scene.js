@@ -5,6 +5,7 @@ const { findRecipesByInventory, getUserTargets } = require('./logic');
 const { parseIngredientList } = require('../../utils/ingredient-lookup');
 const { getPrefsByTelegramId } = require('../ingredient-prefs/logic');
 const { buildResultsMessage } = require('../../interface/reverse-search');
+const { escapable } = require('../../bot/scene-escape');
 
 const SCENE_ID = 'reverse_search';
 
@@ -16,7 +17,8 @@ const scene = new Scenes.WizardScene(
     return ctx.wizard.next();
   },
   // Step 1: receive comma-separated text, normalize, render results, leave.
-  async (ctx) => {
+  // Кнопки (главного меню и inline) и команды выводят из сцены — bot/scene-escape.js.
+  escapable(async (ctx) => {
     const text = ctx.message?.text;
     if (!text || typeof text !== 'string') {
       await ctx.reply(texts.reverseSearch.invalidInput);
@@ -49,7 +51,7 @@ const scene = new Scenes.WizardScene(
       await ctx.reply(texts.errors.general);
     }
     return ctx.scene.leave();
-  }
+  })
 );
 
 scene.command('cancel', async (ctx) => {

@@ -132,7 +132,7 @@ async function findRecipesByInventory(canonicalInventory, userTargets, prefs = E
 async function getRecipeById(recipeId) {
   return dbGet(
     `SELECT r.id, r.name, r.description, r.calories, r.protein, r.fat, r.carbs,
-            mc.name AS category
+            r.servings, mc.name AS category
      FROM recipes r
      JOIN meal_categories mc ON r.category_id = mc.id
      WHERE r.id = ?`,

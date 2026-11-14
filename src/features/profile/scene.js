@@ -3,6 +3,7 @@ const texts = require('../../bot/texts');
 const logger = require('../../utils/logger');
 const { saveUserProfile, hasManualTargets } = require('./logic');
 const { buildProfileSummary } = require('../../interface/profile');
+const { escapable } = require('../../bot/scene-escape');
 
 const SCENE_ID = 'profile_survey';
 
@@ -17,6 +18,13 @@ const STEP = Object.freeze({
   GOAL: 6,
   OVERWRITE: 7
 });
+
+// [RU] Кнопки самой анкеты (пол/активность/цель/перезапись) — часть сценария;
+// кнопки главного меню, команды и чужие inline-кнопки выводят из сцены.
+// [EN] The survey's own buttons belong to the flow; main-menu buttons,
+// commands and foreign inline buttons leave the scene.
+const OWN_CALLBACK = /^profile_(sex|act|goal|overwrite)_/;
+const step = (fn) => escapable(fn, { ownCallback: OWN_CALLBACK });
 
 const parseNumber = (text) => parseFloat(String(text || '').replace(',', '.').trim());
 const isValidWeight = (w) => Number.isFinite(w) && w >= 30 && w <= 300;
@@ -88,7 +96,7 @@ const scene = new Scenes.WizardScene(
     return ctx.wizard.next();
   },
   // Step 1: вес → рост
-  async (ctx) => {
+  step(async (ctx) => {
     const w = parseNumber(ctx.message?.text);
     if (!isValidWeight(w)) {
       return ctx.reply(texts.profile.invalidWeight);
@@ -96,9 +104,9 @@ const scene = new Scenes.WizardScene(
     ctx.wizard.state.weight = w;
     await ctx.reply(texts.profile.askHeight);
     return ctx.wizard.next();
-  },
+  }),
   // Step 2: рост → возраст
-  async (ctx) => {
+  step(async (ctx) => {
     const h = parseNumber(ctx.message?.text);
     if (!isValidHeight(h)) {
       return ctx.reply(texts.profile.invalidHeight);
@@ -106,9 +114,9 @@ const scene = new Scenes.WizardScene(
     ctx.wizard.state.height = h;
     await ctx.reply(texts.profile.askAge);
     return ctx.wizard.next();
-  },
+  }),
   // Step 3: возраст → пол
-  async (ctx) => {
+  step(async (ctx) => {
     const a = parseInt(ctx.message?.text, 10);
     if (!isValidAge(a)) {
       return ctx.reply(texts.profile.invalidAge);
@@ -116,14 +124,14 @@ const scene = new Scenes.WizardScene(
     ctx.wizard.state.age = a;
     await ctx.reply(texts.profile.askSex, sexKeyboard);
     return ctx.wizard.next();
-  },
+  }),
   // Steps 4..6: ответ приходит через callback-кнопки; текстовый ввод мягко
   // напоминаем кликнуть по кнопке.
-  async (ctx) => { if (ctx.message?.text) await ctx.reply(texts.profile.askSex); },
-  async (ctx) => { if (ctx.message?.text) await ctx.reply(texts.profile.askActivity); },
-  async (ctx) => { if (ctx.message?.text) await ctx.reply(texts.profile.askGoal); },
+  step(async (ctx) => { if (ctx.message?.text) await ctx.reply(texts.profile.askSex); }),
+  step(async (ctx) => { if (ctx.message?.text) await ctx.reply(texts.profile.askActivity); }),
+  step(async (ctx) => { if (ctx.message?.text) await ctx.reply(texts.profile.askGoal); }),
   // Step 7: только если есть ручные нормы — ждём «перезаписать?» кнопкой
-  async (ctx) => { if (ctx.message?.text) await ctx.reply(texts.profile.askOverwriteManual); }
+  step(async (ctx) => { if (ctx.message?.text) await ctx.reply(texts.profile.askOverwriteManual); })
 );
 
 scene.action(/^profile_sex_(male|female)$/, async (ctx) => {

@@ -44,7 +44,7 @@ test('generate → view → edit slot → cancel flow is routed', async () => {
 
   reset();
   await sendCallback('view_weekly_plan');
-  assert.deepEqual(methods(), ['answerCallbackQuery', 'sendMessage']);
+  assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText']);
 
   const today = formatLocalDate(new Date());
   reset();

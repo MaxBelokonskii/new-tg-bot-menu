@@ -4,22 +4,10 @@ const logger = require('../../utils/logger');
 const { formatLocalDate } = require('../../utils/date-helpers');
 const { isDiaryDate, isSearchQuery, searchRecipes } = require('./logic');
 const { buildSearchResults } = require('../../interface/food-log-pickers');
+const { escapable } = require('../../bot/scene-escape');
 
 const SCENE_ID = 'food_log_search';
 const T = texts.foodLog.search;
-const MAIN_MENU_LABELS = new Set(Object.values(texts.mainMenu.buttons));
-
-/**
- * True when the update should leave the search and be routed by the regular
- * handlers: any button press, a main-menu button or a command other than /cancel.
- * @param {import('telegraf').Context} ctx
- * @returns {boolean}
- */
-function isEscapeUpdate(ctx) {
-  if (ctx.callbackQuery) return true;
-  const text = ctx.message?.text;
-  return typeof text === 'string' && (MAIN_MENU_LABELS.has(text) || text.startsWith('/'));
-}
 
 /**
  * Runs the search for the typed query. Stays in the scene when nothing is
@@ -52,14 +40,10 @@ async function handleQuery(ctx) {
 }
 
 // [RU] Дата дневника приходит в initial state (`ctx.scene.enter(SCENE_ID, { date })`).
-// Нажатие любой кнопки или кнопки главного меню во время ожидания выводит из
-// сцены и передаёт апдейт обычным хэндлерам (next) — иначе сцена «глотала» бы
-// навигацию. Повторного входа по кругу нет: при входе сцена прогоняет callback
-// только через шаг 0.
-// [EN] The diary date comes via initial state. Any button press or main-menu
-// button while waiting leaves the scene and passes the update on (next) —
-// otherwise the scene would swallow navigation. No re-entry loop: on enter
-// the scene runs the entering callback through step 0 only.
+// Любая inline-кнопка, кнопка главного меню или команда во время ожидания
+// выводит из сцены и уходит обычным хэндлерам (bot/scene-escape.js).
+// [EN] The diary date comes via initial state. Any inline button, main-menu
+// button or command while waiting leaves the scene (bot/scene-escape.js).
 const scene = new Scenes.WizardScene(
   SCENE_ID,
   async (ctx) => {
@@ -67,13 +51,7 @@ const scene = new Scenes.WizardScene(
     await ctx.reply(T.ask);
     return ctx.wizard.next();
   },
-  async (ctx, next) => {
-    if (isEscapeUpdate(ctx)) {
-      await ctx.scene.leave();
-      return next();
-    }
-    return handleQuery(ctx);
-  }
+  escapable(handleQuery)
 );
 
 scene.command('cancel', async (ctx) => {

@@ -1,6 +1,6 @@
 const { Markup } = require('telegraf');
 const texts = require('../bot/texts');
-const { formatNutrition } = require('../utils/formatters');
+const { formatNutrition, formatIngredientsHeader } = require('../utils/formatters');
 
 /**
  * Builds the HTML message + inline keyboard with numbered recipe buttons
@@ -53,7 +53,8 @@ function buildResultsMessage(recipes, unknownTokens) {
  * missing from their typed inventory. "✅ В рацион" button reuses the
  * existing confirm_dish_<id> handler from the dish-selection flow.
  *
- * @param {object} recipe - full recipe row with description/nutrition
+ * @param {object} recipe - full recipe row with description, per-serving
+ *   nutrition and servings
  * @param {Array<{name:string,amount:number,unit:string}>} ingredients
  * @param {string[]} missingNames - canonical names missing from inventory
  * @returns {{text: string, keyboard: object}}
@@ -78,7 +79,7 @@ function buildRecipeCard(recipe, ingredients, missingNames) {
     '',
     missingSummary,
     '',
-    `<b>${texts.recipeCard.ingredientsLabel}</b>`,
+    `<b>${formatIngredientsHeader(recipe.servings)}</b>`,
     ingredientLines,
     '',
     `<b>${texts.recipeCard.recipeLabel}</b>`,

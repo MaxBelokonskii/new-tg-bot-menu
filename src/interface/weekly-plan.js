@@ -1,17 +1,6 @@
 const { Markup } = require('telegraf');
 const texts = require('../bot/texts');
 
-// [RU] Мапа английских ключей категорий из БД на локализованные подписи.
-// [EN] Maps DB category keys (en) to localized labels.
-const CATEGORY_LABEL = {
-  breakfast: texts.categories.breakfast,
-  main: texts.categories.main,
-  salad: texts.categories.salad,
-  salads: texts.categories.salad,
-  dessert: texts.categories.dessert,
-  desserts: texts.categories.dessert
-};
-
 /**
  * Shows the weekly plan menu (view / generate).
  * @param {object} ctx
@@ -28,55 +17,6 @@ async function sendWeeklyPlanMenu(ctx) {
   } else {
     await ctx.reply(text, keyboard);
   }
-}
-
-/**
- * Builds the weekly plan message (HTML text + inline keyboard with per-dish
- * replace/remove controls and a bulk "clear day" button). Used for the
- * initial render and for restoring the view after cancelled confirmations.
- *
- * @param {Array<{name: string, category: string, date: string, slot: number}>} plan
- * @returns {{text: string, reply_markup: object}|null} null when plan is empty
- */
-function buildWeeklyPlanMessage(plan) {
-  if (!plan || plan.length === 0) return null;
-
-  const grouped = plan.reduce((acc, item) => {
-    if (!acc[item.date]) acc[item.date] = [];
-    acc[item.date].push(item);
-    return acc;
-  }, {});
-
-  let message = `<b>${texts.weeklyPlan.title}</b>\n\n`;
-  const buttons = [];
-  for (const date of Object.keys(grouped)) {
-    message += `📅 <b>${date}</b>\n`;
-    grouped[date].forEach(item => {
-      const key = (item.category || '').toLowerCase();
-      const categoryName = CATEGORY_LABEL[key] || item.category;
-      message += `• [${categoryName}] ${item.name}\n`;
-      buttons.push([
-        {
-          text: `${texts.editSlot.replaceBtn} ${item.name}`,
-          callback_data: `edit_slot_${date}_${item.slot}`
-        },
-        {
-          text: texts.editSlot.removeBtn,
-          callback_data: `confirm_remove_slot_${date}_${item.slot}`
-        }
-      ]);
-    });
-    message += '\n';
-    buttons.push([{
-      text: `${texts.weeklyPlan.clearDay} (${date})`,
-      callback_data: `confirm_clear_day_${date}`
-    }]);
-  }
-
-  return {
-    text: message,
-    reply_markup: { inline_keyboard: buttons }
-  };
 }
 
 /**
@@ -126,7 +66,6 @@ function buildRegenerateChoiceKeyboard() {
 module.exports = {
   sendWeeklyPlanMenu,
   buildRegenerateChoiceKeyboard,
-  buildWeeklyPlanMessage,
   buildClearDayConfirmKeyboard,
   buildRemoveSlotConfirmKeyboard
 };

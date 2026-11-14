@@ -4,7 +4,8 @@ const logger = require('../utils/logger');
 const { getRandomRecipeByCategory, getRecipeIngredients } = require('../features/meal-suggestions/logic');
 const { categoryForSlot } = require('../features/weekly-planner/logic');
 const { getPrefsByTelegramId } = require('../features/ingredient-prefs/logic');
-const { formatNutrition } = require('../utils/formatters');
+const { formatNutrition, formatIngredientsHeader, slotLabel } = require('../utils/formatters');
+const { formatPlanDate, formatPlanItem } = require('./plan-day');
 
 /**
  * Sends (or edits into) the category picker.
@@ -33,7 +34,7 @@ async function _buildRecipeCard(recipe) {
     .join('\n');
   return `<b>${recipe.name}</b>\n\n` +
     `${formatNutrition(recipe)}\n\n` +
-    `<b>${texts.recipeCard.ingredientsLabel}</b>\n${ingredientText}\n\n` +
+    `<b>${formatIngredientsHeader(recipe.servings)}</b>\n${ingredientText}\n\n` +
     `<b>${texts.recipeCard.recipeLabel}</b>\n${recipe.description || texts.recipeCard.noDescription}`;
 }
 
@@ -90,7 +91,7 @@ async function showReplacementSuggestion(ctx, date, slot) {
       return ctx.reply(texts.editSlot.noRecipesInCategory);
     }
     const card = await _buildRecipeCard(recipe);
-    const hint = texts.editSlot.replaceHint.replace('{date}', date);
+    const hint = texts.editSlot.replaceHint.replace('{date}', formatPlanDate(date));
     const message = `<i>${hint}</i>\n\n${card}`;
     const keyboard = Markup.inlineKeyboard([
       [Markup.button.callback(texts.dishSelection.nextOption, `edit_slot_${date}_${slot}`)],
@@ -104,7 +105,65 @@ async function showReplacementSuggestion(ctx, date, slot) {
   }
 }
 
+/**
+ * Builds the "slot is taken — replace?" question shown before overwriting
+ * a dish in today's plan. One occupied slot → Yes/No; both main slots taken
+ * → one "instead of X" button per slot plus No.
+ *
+ * @param {{recipe: {id: number, name: string},
+ *   occupied: Array<{slot: number, name: string}>}} placement - non-empty occupied
+ * @param {string} date - YYYY-MM-DD the question is about (today)
+ * @returns {{text: string, extra: object}}
+ */
+function buildReplaceQuestion({ recipe, occupied }, date) {
+  const T = texts.dishSelection;
+  const swap = (slot) => `dish_swap_${date}_${slot}_${recipe.id}`;
+  let text;
+  let rows;
+  if (occupied.length === 1) {
+    const [current] = occupied;
+    text = T.replaceAsk
+      .replace('{slot}', slotLabel(current.slot))
+      .replace('{old}', current.name)
+      .replace('{new}', recipe.name);
+    rows = [[Markup.button.callback(T.replaceYes, swap(current.slot))]];
+  } else {
+    text = T.replaceAskMain.replace('{new}', recipe.name);
+    rows = occupied.map(item => [
+      Markup.button.callback(T.replaceOption.replace('{name}', item.name), swap(item.slot))
+    ]);
+  }
+  rows.push([Markup.button.callback(T.keepBtn, 'dish_keep')]);
+  return { text, extra: Markup.inlineKeyboard(rows) };
+}
+
+/**
+ * Builds the short "today's plan" summary shown after a dish is added:
+ * status line, today's dishes with kcal and the day total (vs the calorie
+ * target when the profile is filled).
+ *
+ * @param {{statusText: string, date: string,
+ *   items: Array<{slot: number, name: string, calories: number}>,
+ *   targetCalories: number|null}} view
+ * @returns {{text: string, extra: object}}
+ */
+function buildTodaySummary({ statusText, date, items, targetCalories }) {
+  const T = texts.dishSelection;
+  const kcal = Math.round(items.reduce((sum, item) => sum + (Number(item.calories) || 0), 0));
+  const total = targetCalories
+    ? T.summaryTotalTarget.replace('{kcal}', kcal).replace('{target}', targetCalories)
+    : T.summaryTotal.replace('{kcal}', kcal);
+  const lines = [statusText, '', T.summaryTitle, ...items.map(item => `• ${formatPlanItem(item)}`), total];
+  const keyboard = Markup.inlineKeyboard([[
+    Markup.button.callback(T.moreBtn, 'back_to_categories'),
+    Markup.button.callback(T.openDayBtn, `wp_day_${date}`)
+  ]]);
+  return { text: lines.join('\n'), extra: { parse_mode: 'HTML', ...keyboard } };
+}
+
 module.exports = {
+  buildReplaceQuestion,
+  buildTodaySummary,
   sendCategorySelection,
   showDishSuggestion,
   showReplacementSuggestion
