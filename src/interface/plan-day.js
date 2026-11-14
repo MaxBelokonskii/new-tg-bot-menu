@@ -192,6 +192,7 @@ module.exports = {
   weekdayIndex,
   formatPlanDate,
   formatPlanItem,
+  formatNutrientRow,
   formatDayTotals,
   formatWeekSummary,
   buildPlanDayScreen

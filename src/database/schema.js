@@ -7,6 +7,7 @@ const TABLES = [
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     telegram_id INTEGER NOT NULL UNIQUE,
     username TEXT,
+    utc_offset_minutes INTEGER NOT NULL DEFAULT 180,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`,
 
@@ -173,6 +174,20 @@ const TABLES = [
     PRIMARY KEY (user_id, recipe_id),
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (recipe_id) REFERENCES recipes(id)
+  )`,
+
+  // 15. reminders — настройки напоминаний (по строке на тип). Время и дата —
+  // локальные для пользователя (users.utc_offset_minutes). weekday — 0=Пн..6=Вс,
+  // только у weekly. last_sent_date — локальная дата последней отправки (дедуп).
+  `CREATE TABLE IF NOT EXISTS reminders (
+    user_id INTEGER NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('morning', 'evening', 'weekly')),
+    enabled INTEGER NOT NULL DEFAULT 0,
+    time_minutes INTEGER NOT NULL,
+    weekday INTEGER NULL,
+    last_sent_date TEXT NULL,
+    PRIMARY KEY (user_id, type),
+    FOREIGN KEY (user_id) REFERENCES users(id)
   )`
 ];
 
@@ -192,6 +207,10 @@ const CATALOG_ADDED_COLUMNS = {
     ['is_bought', 'INTEGER NOT NULL DEFAULT 0']
   ]
 };
+
+// [RU] Часовой пояс напоминаний: смещение от UTC в минутах, по умолчанию Москва.
+// [EN] Reminder time zone: UTC offset in minutes, Moscow by default.
+const USERS_ADDED_COLUMNS = [['utc_offset_minutes', 'INTEGER NOT NULL DEFAULT 180']];
 
 const USER_PREFERENCES_ADDED_COLUMNS = [
   ['weight', 'REAL'],
@@ -261,6 +280,7 @@ async function initDb() {
   for (const sql of TABLES) {
     await dbRun(sql);
   }
+  await addMissingColumns('users', USERS_ADDED_COLUMNS);
   await addMissingColumns('user_preferences', USER_PREFERENCES_ADDED_COLUMNS);
   for (const [table, columns] of Object.entries(CATALOG_ADDED_COLUMNS)) {
     await addMissingColumns(table, columns);

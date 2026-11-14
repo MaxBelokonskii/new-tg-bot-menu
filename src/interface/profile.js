@@ -73,8 +73,8 @@ function buildMacrosLines(data) {
 
 /**
  * Builds the profile screen: summary (if filled) or empty-state hint,
- * plus start/edit, (for a filled profile) macro targets and product
- * preference buttons.
+ * plus start/edit, (for a filled profile) macro targets, product
+ * preference and reminder buttons.
  * @param {object|null} profile
  * @returns {{text: string, extra: object}}
  */
@@ -82,7 +82,8 @@ function buildProfileMenu(profile) {
   const P = texts.ingredientPrefs.listBtn;
   const prefsRows = [
     [Markup.button.callback(P.excluded, 'prefs_list_excluded')],
-    [Markup.button.callback(P.favorite, 'prefs_list_favorite')]
+    [Markup.button.callback(P.favorite, 'prefs_list_favorite')],
+    [Markup.button.callback(texts.reminders.openBtn, 'rem_menu')]
   ];
   if (!profile) {
     const keyboard = Markup.inlineKeyboard([
