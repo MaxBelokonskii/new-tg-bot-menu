@@ -123,12 +123,14 @@ const TABLES = [
     FOREIGN KEY (user_id) REFERENCES users(id)
   )`,
 
+  // shopping_list_items — позиции списка; is_bought — отметка «куплено».
   `CREATE TABLE IF NOT EXISTS shopping_list_items (
     shopping_list_id INTEGER NOT NULL,
     ingredient_id INTEGER NOT NULL,
     total_amount REAL NOT NULL,
     unit TEXT NOT NULL,
     to_taste INTEGER NOT NULL DEFAULT 0,
+    is_bought INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (shopping_list_id, ingredient_id),
     FOREIGN KEY (shopping_list_id) REFERENCES shopping_lists(id),
     FOREIGN KEY (ingredient_id) REFERENCES ingredients(id)
@@ -172,7 +174,12 @@ const TABLES = [
 const CATALOG_ADDED_COLUMNS = {
   recipes: [['servings', 'INTEGER NOT NULL DEFAULT 1']],
   recipe_ingredients: [['amount_base', 'REAL'], ['base_unit', 'TEXT']],
-  shopping_list_items: [['to_taste', 'INTEGER NOT NULL DEFAULT 0']]
+  shopping_list_items: [
+    ['to_taste', 'INTEGER NOT NULL DEFAULT 0'],
+    // [RU] Отметка «куплено» в списке покупок (чек-лист).
+    // [EN] "Bought" mark of the shopping list checklist.
+    ['is_bought', 'INTEGER NOT NULL DEFAULT 0']
+  ]
 };
 
 const USER_PREFERENCES_ADDED_COLUMNS = [

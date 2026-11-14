@@ -9,6 +9,7 @@ const common = require('./handlers/common');
 const dishSelection = require('./handlers/dish-selection');
 const weeklyPlan = require('./handlers/weekly-plan');
 const shoppingList = require('./handlers/shopping-list');
+const shoppingChecklist = require('./handlers/shopping-checklist');
 const reverseSearch = require('./handlers/reverse-search');
 const profile = require('./handlers/profile');
 const macroTargets = require('./handlers/macro-targets');
@@ -55,8 +56,8 @@ function createBot(token) {
   ]).middleware());
 
   const features = [
-    common, dishSelection, weeklyPlan, shoppingList, reverseSearch, profile, macroTargets,
-    ingredientPrefs, foodLog, whatToEat
+    common, dishSelection, weeklyPlan, shoppingList, shoppingChecklist, reverseSearch, profile,
+    macroTargets, ingredientPrefs, foodLog, whatToEat
   ];
   for (const feature of features) {
     feature.register(bot);

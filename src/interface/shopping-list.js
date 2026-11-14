@@ -22,18 +22,66 @@ function deriveMode(periodStart, periodEnd) {
 }
 
 /**
+ * Groups list items by ingredient type in display order: the known types in
+ * the order of texts.shoppingList.types, then unknown ones; items inside a
+ * group are sorted by name. The text list and the checklist share this order.
+ * @param {Array<{name: string, type: string}>} items
+ * @returns {Array<{header: string, items: Array}>}
+ */
+function groupItemsByType(items) {
+  const grouped = new Map();
+  for (const item of items) {
+    if (!grouped.has(item.type)) grouped.set(item.type, []);
+    grouped.get(item.type).push(item);
+  }
+  const known = Object.keys(texts.shoppingList.types).filter(type => grouped.has(type));
+  const unknown = [...grouped.keys()].filter(type => !(type in texts.shoppingList.types));
+  return [...known, ...unknown].map(type => ({
+    header: texts.shoppingList.types[type] || `📦 ${type}`,
+    items: grouped.get(type).sort((a, b) => a.name.localeCompare(b.name, 'ru'))
+  }));
+}
+
+/**
+ * Flattens list items into the display order of groupItemsByType.
+ * @param {Array} items
+ * @returns {Array}
+ */
+function orderItems(items) {
+  return groupItemsByType(items).flatMap(group => group.items);
+}
+
+/**
+ * Counter line: "Куплено: N из M", "Всё куплено" or '' when nothing is bought.
+ * @param {Array<{is_bought: boolean}>} items
+ * @returns {string}
+ */
+function formatBoughtCounter(items) {
+  const bought = items.filter(item => item.is_bought).length;
+  if (bought === 0) return '';
+  if (bought === items.length) return texts.shoppingList.allBought;
+  return texts.shoppingList.boughtCounter
+    .replace('{bought}', bought)
+    .replace('{total}', items.length);
+}
+
+/**
  * @param {string} header - group title
  * @param {Array} items
- * @returns {string} one type block: header + "• name: qty" lines
+ * @returns {string} one type block: header + "• name: qty" lines, bought ones struck through
  */
 function formatGroup(header, items) {
-  const lines = items.map(item => `• ${item.name}: ${formatShoppingQuantity(item)}`);
+  const lines = items.map((item) => {
+    const line = `${item.name}: ${formatShoppingQuantity(item)}`;
+    return `• ${item.is_bought ? `<s>${line}</s>` : line}`;
+  });
   return `<b>${header}</b>\n${lines.join('\n')}\n\n`;
 }
 
 /**
  * Builds the shopping list message (with period label and grouped items).
- * A list whose period has already ended gets a "rebuild me" note.
+ * A list whose period has already ended gets a "rebuild me" note; bought
+ * items are struck through and counted.
  * @param {{ items: Array, periodStart: string|null, periodEnd: string|null }} list
  * @param {string} [today] - YYYY-MM-DD local date, injectable for tests
  * @returns {string}
@@ -47,32 +95,31 @@ function formatShoppingList(list, today = formatLocalDate(new Date())) {
   const mode = deriveMode(periodStart, periodEnd);
   const suffix = mode ? ` (${texts.shoppingList.periodLabel[mode]})` : '';
 
-  const grouped = items.reduce((acc, item) => {
-    if (!acc[item.type]) acc[item.type] = [];
-    acc[item.type].push(item);
-    return acc;
-  }, {});
-
   let message = `<b>${texts.shoppingList.title}</b>${suffix}\n\n`;
   if (periodEnd && today >= periodEnd) message += `${texts.shoppingList.stale}\n\n`;
+  const counter = formatBoughtCounter(items);
+  if (counter) message += `${counter}\n\n`;
   message += `${texts.shoppingList.itemsTitle}\n\n`;
 
-  for (const type in texts.shoppingList.types) {
-    if (grouped[type]) message += formatGroup(texts.shoppingList.types[type], grouped[type]);
-  }
-  for (const type in grouped) {
-    if (!(type in texts.shoppingList.types)) message += formatGroup(`📦 ${type}`, grouped[type]);
+  for (const group of groupItemsByType(items)) {
+    message += formatGroup(group.header, group.items);
   }
 
   return message;
 }
 
 /**
- * Inline keyboard for the shopping list screen: day/week generate + clear.
+ * Inline keyboard for the shopping list screen: checklist (when there is a
+ * list), day/week generate, clear.
+ * @param {number|null} [listId] - current list id; no checklist button without it
  * @returns {object} reply_markup payload
  */
-function getShoppingListKeyboard() {
+function getShoppingListKeyboard(listId = null) {
+  const checklistRow = listId
+    ? [[Markup.button.callback(texts.shoppingList.checklist.openBtn, `sl_check_${listId}_0`)]]
+    : [];
   return Markup.inlineKeyboard([
+    ...checklistRow,
     [
       Markup.button.callback(texts.shoppingList.generateDay, 'generate_shopping_list_day'),
       Markup.button.callback(texts.shoppingList.generateWeek, 'generate_shopping_list_week')
@@ -95,6 +142,10 @@ function buildClearShoppingConfirmKeyboard() {
 }
 
 module.exports = {
+  deriveMode,
+  groupItemsByType,
+  orderItems,
+  formatBoughtCounter,
   formatShoppingList,
   getShoppingListKeyboard,
   buildClearShoppingConfirmKeyboard

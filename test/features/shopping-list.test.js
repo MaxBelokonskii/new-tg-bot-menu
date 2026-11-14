@@ -49,7 +49,10 @@ test('shopping list round-trip: build, save, read, clear', async () => {
   assert.ok(last.items.every(i => i.total_amount > 0 || i.to_taste), 'no empty quantities');
 
   await clearShoppingLists(telegramId);
-  assert.deepEqual(await getLastShoppingList(telegramId), { items: [], periodStart: null, periodEnd: null });
+  assert.deepEqual(
+    await getLastShoppingList(telegramId),
+    { listId: null, items: [], periodStart: null, periodEnd: null }
+  );
   const leftovers = await dbGet('SELECT COUNT(*) AS c FROM shopping_list_items');
   assert.equal(leftovers.c, 0);
 });

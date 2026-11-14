@@ -1,5 +1,6 @@
 const { dbGet, dbAll, dbRun, withTransaction } = require('../../database/db');
 const logger = require('../../utils/logger');
+const { keepsBoughtMark, loadPreviousMarks } = require('./bought');
 
 /**
  * Aggregates ingredients from the user's daily_menu within the given period.
@@ -85,6 +86,12 @@ async function deleteUserLists(userId) {
 /**
  * Persists the aggregated shopping list for the given period, replacing the
  * user's previous lists (only the latest one is ever shown).
+ *
+ * [RU] При пересборке за тот же период отметки «куплено» переносятся
+ * (см. `keepsBoughtMark`); список за другой период начинается без отметок.
+ * [EN] Rebuilding for the same period carries "bought" marks over (see
+ * `keepsBoughtMark`); a list for another period starts unmarked.
+ *
  * @param {number} telegramId
  * @param {Array} ingredients - rows from getIngredientsFromPlan
  * @param {{ start: string, endExclusive: string }} bounds — period_start/period_end
@@ -96,16 +103,19 @@ async function saveShoppingList(telegramId, ingredients, bounds) {
     const user = await dbGet('SELECT id FROM users WHERE telegram_id = ?', [telegramId]);
     if (!user) throw new Error('User not found');
 
+    const previous = await loadPreviousMarks(user.id, bounds);
     await deleteUserLists(user.id);
     const { lastID: listId } = await dbRun(
       'INSERT INTO shopping_lists (user_id, period_start, period_end) VALUES (?, ?, ?)',
       [user.id, start, endExclusive]
     );
     for (const item of mergeIngredientRows(ingredients)) {
+      const bought = keepsBoughtMark(previous.get(item.id), item);
       await dbRun(
-        `INSERT INTO shopping_list_items (shopping_list_id, ingredient_id, total_amount, unit, to_taste)
-         VALUES (?, ?, ?, ?, ?)`,
-        [listId, item.id, item.total_amount, item.unit, item.to_taste ? 1 : 0]
+        `INSERT INTO shopping_list_items
+           (shopping_list_id, ingredient_id, total_amount, unit, to_taste, is_bought)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [listId, item.id, item.total_amount, item.unit, item.to_taste ? 1 : 0, bought ? 1 : 0]
       );
     }
     return listId;
@@ -113,15 +123,18 @@ async function saveShoppingList(telegramId, ingredients, bounds) {
 }
 
 /**
- * Returns the user's latest shopping list together with its period.
+ * Returns the user's latest shopping list together with its id and period.
  * @param {number} telegramId
- * @returns {Promise<{ items: Array, periodStart: string|null, periodEnd: string|null }>}
+ * @returns {Promise<{ listId: number|null, items: Array<{ingredientId: number, name: string,
+ *   type: string, total_amount: number, unit: string, to_taste: boolean, is_bought: boolean}>,
+ *   periodStart: string|null, periodEnd: string|null }>}
  */
 async function getLastShoppingList(telegramId) {
   let rows;
   try {
     rows = await dbAll(
-      `SELECT sl.period_start, sl.period_end, i.name, i.type, sli.total_amount, sli.unit, sli.to_taste
+      `SELECT sl.id AS list_id, sl.period_start, sl.period_end, i.id AS ingredient_id, i.name, i.type,
+              sli.total_amount, sli.unit, sli.to_taste, sli.is_bought
        FROM users u
        JOIN shopping_lists sl ON u.id = sl.user_id
        JOIN shopping_list_items sli ON sl.id = sli.shopping_list_id
@@ -135,12 +148,18 @@ async function getLastShoppingList(telegramId) {
     logger.error('Error fetching last shopping list:', err);
     throw err;
   }
-  if (rows.length === 0) return { items: [], periodStart: null, periodEnd: null };
-  const { period_start: periodStart, period_end: periodEnd } = rows[0];
-  const items = rows.map(({ name, type, total_amount, unit, to_taste }) => (
-    { name, type, total_amount, unit, to_taste: Boolean(to_taste) }
-  ));
-  return { items, periodStart, periodEnd };
+  if (rows.length === 0) return { listId: null, items: [], periodStart: null, periodEnd: null };
+  const { list_id: listId, period_start: periodStart, period_end: periodEnd } = rows[0];
+  const items = rows.map(row => ({
+    ingredientId: row.ingredient_id,
+    name: row.name,
+    type: row.type,
+    total_amount: row.total_amount,
+    unit: row.unit,
+    to_taste: Boolean(row.to_taste),
+    is_bought: Boolean(row.is_bought)
+  }));
+  return { listId, items, periodStart, periodEnd };
 }
 
 /**
