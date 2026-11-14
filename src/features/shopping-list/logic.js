@@ -69,6 +69,23 @@ function mergeIngredientRows(rows) {
 }
 
 /**
+ * Scales merged list rows to the household: quantities × size, "to taste"
+ * flags unchanged (taste-only rows stay at 0).
+ *
+ * [RU] Запросы и рецепты считаются на одного человека; множитель «готовлю на
+ * N человек» применяется только здесь, при сборке списка покупок.
+ * [EN] Queries and recipes are per person; the "cooking for N people"
+ * multiplier is applied only here, when the shopping list is built.
+ *
+ * @param {Array<{total_amount: number}>} items - rows from mergeIngredientRows
+ * @param {number} householdSize - users.household_size (≥ 1)
+ * @returns {Array} new rows with scaled total_amount
+ */
+function scaleForHousehold(items, householdSize) {
+  return items.map(item => ({ ...item, total_amount: item.total_amount * householdSize }));
+}
+
+/**
  * Deletes every shopping list of a user (children first: no ON DELETE CASCADE).
  * Must run inside a transaction.
  * @param {number} userId - internal users.id
@@ -85,7 +102,8 @@ async function deleteUserLists(userId) {
 
 /**
  * Persists the aggregated shopping list for the given period, replacing the
- * user's previous lists (only the latest one is ever shown).
+ * user's previous lists (only the latest one is ever shown). Quantities are
+ * multiplied by the user's household size, which is stored on the list.
  *
  * [RU] При пересборке за тот же период отметки «куплено» переносятся
  * (см. `keepsBoughtMark`); список за другой период начинается без отметок.
@@ -100,16 +118,16 @@ async function deleteUserLists(userId) {
 async function saveShoppingList(telegramId, ingredients, bounds) {
   const { start, endExclusive } = bounds;
   return withTransaction(async () => {
-    const user = await dbGet('SELECT id FROM users WHERE telegram_id = ?', [telegramId]);
+    const user = await dbGet('SELECT id, household_size FROM users WHERE telegram_id = ?', [telegramId]);
     if (!user) throw new Error('User not found');
 
     const previous = await loadPreviousMarks(user.id, bounds);
     await deleteUserLists(user.id);
     const { lastID: listId } = await dbRun(
-      'INSERT INTO shopping_lists (user_id, period_start, period_end) VALUES (?, ?, ?)',
-      [user.id, start, endExclusive]
+      'INSERT INTO shopping_lists (user_id, period_start, period_end, household_size) VALUES (?, ?, ?, ?)',
+      [user.id, start, endExclusive, user.household_size]
     );
-    for (const item of mergeIngredientRows(ingredients)) {
+    for (const item of scaleForHousehold(mergeIngredientRows(ingredients), user.household_size)) {
       const bought = keepsBoughtMark(previous.get(item.id), item);
       await dbRun(
         `INSERT INTO shopping_list_items
@@ -127,13 +145,15 @@ async function saveShoppingList(telegramId, ingredients, bounds) {
  * @param {number} telegramId
  * @returns {Promise<{ listId: number|null, items: Array<{ingredientId: number, name: string,
  *   type: string, total_amount: number, unit: string, to_taste: boolean, is_bought: boolean}>,
- *   periodStart: string|null, periodEnd: string|null }>}
+ *   periodStart: string|null, periodEnd: string|null, householdSize?: number }>}
+ *   householdSize — the size the list was built for (absent when there is no list)
  */
 async function getLastShoppingList(telegramId) {
   let rows;
   try {
     rows = await dbAll(
-      `SELECT sl.id AS list_id, sl.period_start, sl.period_end, i.id AS ingredient_id, i.name, i.type,
+      `SELECT sl.id AS list_id, sl.period_start, sl.period_end, sl.household_size,
+              i.id AS ingredient_id, i.name, i.type,
               sli.total_amount, sli.unit, sli.to_taste, sli.is_bought
        FROM users u
        JOIN shopping_lists sl ON u.id = sl.user_id
@@ -149,7 +169,9 @@ async function getLastShoppingList(telegramId) {
     throw err;
   }
   if (rows.length === 0) return { listId: null, items: [], periodStart: null, periodEnd: null };
-  const { list_id: listId, period_start: periodStart, period_end: periodEnd } = rows[0];
+  const {
+    list_id: listId, period_start: periodStart, period_end: periodEnd, household_size: householdSize
+  } = rows[0];
   const items = rows.map(row => ({
     ingredientId: row.ingredient_id,
     name: row.name,
@@ -159,7 +181,7 @@ async function getLastShoppingList(telegramId) {
     to_taste: Boolean(row.to_taste),
     is_bought: Boolean(row.is_bought)
   }));
-  return { listId, items, periodStart, periodEnd };
+  return { listId, items, periodStart, periodEnd, householdSize };
 }
 
 /**
@@ -182,6 +204,7 @@ async function clearShoppingLists(telegramId) {
 module.exports = {
   getIngredientsFromPlan,
   mergeIngredientRows,
+  scaleForHousehold,
   saveShoppingList,
   getLastShoppingList,
   clearShoppingLists

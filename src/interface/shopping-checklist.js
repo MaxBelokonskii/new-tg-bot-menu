@@ -42,7 +42,8 @@ function itemLabel(item) {
  * [EN] callback_data carries the list id so a button of an old (rebuilt)
  * list is recognised as stale by the handler and changes nothing.
  *
- * @param {{ listId: number, items: Array, periodStart: string|null, periodEnd: string|null }} list
+ * @param {{ listId: number, items: Array, periodStart: string|null, periodEnd: string|null,
+ *   householdSize?: number }} list
  * @param {number} requestedPage - 0-based
  * @param {string} today - YYYY-MM-DD, the user's local today (period label)
  * @returns {{text: string, extra: object}} message text and editMessageText options
@@ -53,7 +54,7 @@ function buildChecklistScreen(list, requestedPage, today) {
   const { page, pages } = clampPage(requestedPage, ordered.length);
   const pageItems = ordered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  const label = formatPeriodLabel(list.periodStart, list.periodEnd, today);
+  const label = formatPeriodLabel(list.periodStart, list.periodEnd, today, list.householdSize);
   const suffix = label ? ` (${label})` : '';
   const lines = [`${T.title}${suffix}`, '', T.hint];
   const counter = formatBoughtCounter(items);
