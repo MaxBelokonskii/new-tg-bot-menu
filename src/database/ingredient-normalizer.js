@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { toBase, parseWeightHint } = require('./unit-converter');
 
 const DICT_DIR = path.resolve(__dirname, '../../database');
 const FALLBACK_TYPE = 'Другое';
@@ -112,43 +113,63 @@ function canonicalName(name, unit) {
 }
 
 /**
+ * @typedef {object} IngredientRow
+ * @property {string} name - canonical ingredient name
+ * @property {number} amount - display amount (as in the recipe card)
+ * @property {string} unit - display unit
+ * @property {number|null} amountBase - amount in the ingredient's base unit; null = "по вкусу"
+ * @property {string|null} baseUnit - 'г' | 'мл' | 'шт'; null = "по вкусу"
+ * @property {boolean} convertible - false when unit-conversions.json lacks a factor
+ */
+
+/**
  * Resolves one recipes.json ingredient entry into one or more canonical rows.
  * Compound entries ("Соль, перец") are split via `_split`; a quantitative
- * amount is divided evenly between the parts.
+ * amount (and weight hint) is divided evenly between the parts.
  *
  * @param {{item: string, amount: string}} entry
- * @returns {Array<{name: string, amount: number, unit: string}>}
+ * @returns {IngredientRow[]}
  */
 function resolveIngredient(entry) {
   const parsed = parseAmount(entry.amount);
   const unit = normalizeUnit(parsed.unit);
+  const hint = parseWeightHint(parsed.unit);
   const parts = splitRules[entry.item] || [entry.item];
   const amount = parsed.amount / parts.length;
-  return parts.map(part => ({ name: canonicalName(part, unit), amount, unit }));
+  const hintGrams = hint === null ? null : hint / parts.length;
+  return parts.map((part) => {
+    const name = canonicalName(part, unit);
+    return { name, amount, unit, ...toBase(name, amount, unit, hintGrams) };
+  });
 }
 
 /**
  * Merges rows that collapsed onto the same ingredient inside one recipe
- * (e.g. "Соль" + "Соль, перец"). Same unit → amounts are summed; a
- * no-amount row ("по вкусу") yields to a quantitative one; otherwise the
- * first row wins and the conflict is reported.
+ * (e.g. "Соль" + "Соль, перец"). Quantities are summed in the base unit
+ * (the display unit is kept only when both rows share it); a "по вкусу" row
+ * yields to a quantitative one. Unconvertible rows are reported.
  *
- * @param {Array<{name: string, amount: number, unit: string}>} rows
- * @returns {{rows: Array<{name: string, amount: number, unit: string}>, conflicts: string[]}}
+ * @param {IngredientRow[]} rows
+ * @returns {{rows: IngredientRow[], conflicts: string[]}}
  */
 function mergeRecipeRows(rows) {
   const byName = new Map();
-  const conflicts = [];
+  const conflicts = rows
+    .filter(r => !r.convertible)
+    .map(r => `${r.name}: no factor for "${r.unit}"`);
   for (const row of rows) {
     const prev = byName.get(row.name);
-    if (!prev) {
+    if (!prev || (prev.amountBase === null && row.amountBase !== null)) {
       byName.set(row.name, { ...row });
-    } else if (prev.unit === row.unit) {
+      continue;
+    }
+    if (row.amountBase === null) continue;
+    prev.amountBase += row.amountBase;
+    if (prev.unit === row.unit) {
       prev.amount += row.amount;
-    } else if (!prev.amount && row.amount) {
-      byName.set(row.name, { ...row });
-    } else if (row.amount) {
-      conflicts.push(`${row.name}: ${prev.amount} ${prev.unit} vs ${row.amount} ${row.unit}`);
+    } else {
+      prev.amount = prev.amountBase;
+      prev.unit = prev.baseUnit;
     }
   }
   return { rows: [...byName.values()], conflicts };
@@ -157,7 +178,7 @@ function mergeRecipeRows(rows) {
 /**
  * Full per-recipe pipeline: resolve every entry, then merge collisions.
  * @param {Array<{item: string, amount: string}>} ingredients
- * @returns {{rows: Array<{name: string, amount: number, unit: string}>, conflicts: string[]}}
+ * @returns {{rows: IngredientRow[], conflicts: string[]}}
  */
 function resolveRecipeIngredients(ingredients) {
   return mergeRecipeRows(ingredients.flatMap(resolveIngredient));

@@ -86,7 +86,7 @@ function buildReport(recipes) {
     `Recipes: ${recipes.length}; source names: ${sourceNames.size}; canonical ingredients: ${canonical.length}`,
     ...section('Compound / alternative names left (must be 0)', dirty),
     ...section('Missing in ingredient-types.json (must be 0)', untyped),
-    ...section('Unmergeable collisions inside a recipe (must be 0)', conflicts),
+    ...section('Units without a conversion factor (must be 0)', conflicts),
     ...section('Broken nutrition per serving (must be 0)', nutrition),
     ...section('Merge candidates — same first word, review manually',
       mergeCandidates(canonical).map(g => g.map(n => `${n} (${usage.get(n)})`).join(' | '))),

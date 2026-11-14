@@ -72,3 +72,15 @@ test('migrate is idempotent', async () => {
     links: await count('recipe_ingredients')
   }, before);
 });
+
+test('catalog stores servings and base-unit amounts', async () => {
+  const multi = await dbGet('SELECT COUNT(*) AS c FROM recipes WHERE servings > 1');
+  assert.equal(multi.c, 21);
+  const broken = await dbGet(
+    `SELECT COUNT(*) AS c FROM recipe_ingredients
+     WHERE (base_unit IS NULL) != (amount_base IS NULL) OR amount_base <= 0`
+  );
+  assert.equal(broken.c, 0);
+  const units = await dbAll('SELECT COUNT(DISTINCT base_unit) AS n, ingredient_id FROM recipe_ingredients WHERE base_unit IS NOT NULL GROUP BY ingredient_id HAVING n > 1');
+  assert.deepEqual(units, [], 'one base unit per ingredient');
+});
