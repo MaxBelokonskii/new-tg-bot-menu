@@ -24,7 +24,7 @@ function register(bot) {
     logger.info(`User ${ctx.from.id} started the bot`);
   });
 
-  bot.help((ctx) => ctx.reply('Send /start to begin.'));
+  bot.help((ctx) => ctx.reply(texts.help));
 }
 
 module.exports = { register };

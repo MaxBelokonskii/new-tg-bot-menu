@@ -1,5 +1,6 @@
 const { Markup } = require('telegraf');
 const texts = require('../bot/texts');
+const { formatNutrition } = require('../utils/formatters');
 
 /**
  * Builds the HTML message + inline keyboard with numbered recipe buttons
@@ -64,7 +65,7 @@ function buildRecipeCard(recipe, ingredients, missingNames) {
   }).join('\n');
 
   const header = `<b>${recipe.name}</b>`;
-  const nutrition = `КБЖУ: ${recipe.calories} / ${recipe.protein} / ${recipe.fat} / ${recipe.carbs}`;
+  const nutrition = formatNutrition(recipe);
   const missingSummary = missingNames.length === 0
     ? texts.reverseSearch.cardFullMatch
     : texts.reverseSearch.cardMissingSummary.replace('{list}', missingNames.join(', '));
@@ -76,11 +77,11 @@ function buildRecipeCard(recipe, ingredients, missingNames) {
     '',
     missingSummary,
     '',
-    `<b>${texts.reverseSearch.ingredientsLabel}</b>`,
+    `<b>${texts.recipeCard.ingredientsLabel}</b>`,
     ingredientLines,
     '',
-    `<b>${texts.reverseSearch.recipeLabel}</b>`,
-    recipe.description || texts.reverseSearch.noDescription
+    `<b>${texts.recipeCard.recipeLabel}</b>`,
+    recipe.description || texts.recipeCard.noDescription
   ].join('\n');
 
   const keyboard = Markup.inlineKeyboard([

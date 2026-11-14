@@ -3,9 +3,10 @@ const texts = require('../bot/texts');
 const logger = require('../utils/logger');
 const { getRandomRecipeByCategory, getRecipeIngredients } = require('../features/meal-suggestions/logic');
 const { categoryForSlot } = require('../features/weekly-planner/logic');
+const { formatNutrition } = require('../utils/formatters');
 
 /**
- * Отправляет меню выбора категорий
+ * Sends (or edits into) the category picker.
  * @param {object} ctx
  */
 async function sendCategorySelection(ctx) {
@@ -30,9 +31,9 @@ async function _buildRecipeCard(recipe) {
     .map(i => `- ${i.name}: ${i.amount} ${i.unit}`)
     .join('\n');
   return `<b>${recipe.name}</b>\n\n` +
-    `КБЖУ: ${recipe.calories} / ${recipe.protein} / ${recipe.fat} / ${recipe.carbs}\n\n` +
-    `<b>Ингредиенты:</b>\n${ingredientText}\n\n` +
-    `<b>Рецепт:</b>\n${recipe.description || 'Описание отсутствует'}`;
+    `${formatNutrition(recipe)}\n\n` +
+    `<b>${texts.recipeCard.ingredientsLabel}</b>\n${ingredientText}\n\n` +
+    `<b>${texts.recipeCard.recipeLabel}</b>\n${recipe.description || texts.recipeCard.noDescription}`;
 }
 
 async function _sendOrEditCard(ctx, message, keyboard) {
@@ -45,7 +46,7 @@ async function _sendOrEditCard(ctx, message, keyboard) {
 }
 
 /**
- * Показывает случайный рецепт из категории (поток «выбор блюда в рацион»).
+ * Shows a random recipe from the category ("pick a dish for the plan" flow).
  * @param {object} ctx
  * @param {string} category
  */
@@ -69,9 +70,9 @@ async function showDishSuggestion(ctx, category) {
 }
 
 /**
- * Показывает случайный рецепт для замены конкретного слота в плане
- * (поток «редактирование приёма пищи»). Категория вычисляется из слота,
- * так что callback_data содержит только date и slot.
+ * Shows a random replacement recipe for a specific plan slot ("edit a meal"
+ * flow). The category is derived from the slot, so callback_data carries
+ * only date and slot.
  *
  * @param {object} ctx
  * @param {string} date - YYYY-MM-DD

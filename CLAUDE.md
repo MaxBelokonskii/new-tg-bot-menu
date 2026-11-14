@@ -36,7 +36,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Переменные окружения (`.env`)
 
-- `BOT_TOKEN` — токен Telegram-бота. Если не задан или равен `your_telegram_bot_token`, бот логирует предупреждение и **не стартует** (см. `src/index.js:start`).
+- `BOT_TOKEN` — токен Telegram-бота. Проверяется по формату BotFather (`src/bot/create-bot.js:isUsableBotToken`); пустой или заглушка вроде `your_telegram_bot_token_here` → бот логирует предупреждение и **не стартует**.
 - `DATABASE_PATH` — путь к SQLite-файлу (по умолчанию `./database/bot.db`).
 - `LOG_LEVEL` — уровень winston-логгера (по умолчанию `info`).
 
@@ -109,7 +109,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **✅ SQL-окна дат исправлены (roadmap 4.3 + 4.4).** `getIngredientsFromPlan` и `getWeeklyPlan` принимают границы Пн..Вс текущей недели из `utils/date-helpers.js:getCurrentWeekBounds()`. Семантика недели: ISO (понедельник — начало, воскресенье — конец).
 - **✅ `slot` теперь вычисляется из категории (roadmap 4.2).** `saveSelectedDish` JOIN'ит `meal_categories`, мапит имя категории на slots (`breakfast`→[1], `main`→[2,3], `salads`→[4], `desserts`→[5]) и делает UPSERT через `ON CONFLICT(daily_menu_id, slot) DO UPDATE SET recipe_id=excluded.recipe_id`. В схеме `daily_menu_items` добавлен `UNIQUE(daily_menu_id, slot)` — требует `npm run db:reset` для существующих БД.
-- **`BOT_TOKEN` placeholder-check не ловит значение из `.env.example` (roadmap 4.7).** `src/index.js:start` сравнивает с `'your_telegram_bot_token'`, а в `.env.example` строка `your_telegram_bot_token_here` — бот попытается стартовать с заглушкой.
+- **✅ `BOT_TOKEN` placeholder-check (roadmap 4.7).** Вместо сравнения с одной строкой — проверка формата токена.
 - **✅ Двухшаговое подтверждение очистки реализовано (roadmap 2.5).** Кнопки в планe/списке ведут на `confirm_clear_day_<date>` / `confirm_clear_shopping`; эти хэндлеры меняют сообщение на Yes/No-диалог (`do_clear_*` / `cancel_clear_*`). Отмена восстанавливает предыдущий экран из БД.
 
 ## Рабочие принципы для агента

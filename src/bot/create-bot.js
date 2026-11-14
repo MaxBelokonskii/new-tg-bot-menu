@@ -9,6 +9,21 @@ const shoppingList = require('./handlers/shopping-list');
 const reverseSearch = require('./handlers/reverse-search');
 const profile = require('./handlers/profile');
 
+// [RU] Формат токена BotFather: `<bot id>:<секрет из 35 символов>`. Проверка
+// формата ловит любые заглушки (`your_telegram_bot_token_here` и т.п.).
+// [EN] BotFather token format: `<bot id>:<35-char secret>`. A format check
+// catches any placeholder (`your_telegram_bot_token_here` etc.).
+const BOT_TOKEN_PATTERN = /^\d+:[A-Za-z0-9_-]{30,}$/;
+
+/**
+ * True if the value looks like a real BotFather token (not empty, not a placeholder).
+ * @param {string|undefined} token
+ * @returns {boolean}
+ */
+function isUsableBotToken(token) {
+  return typeof token === 'string' && BOT_TOKEN_PATTERN.test(token.trim());
+}
+
 /**
  * Builds a fully wired Telegraf bot without launching it.
  *
@@ -41,4 +56,4 @@ function createBot(token) {
   return bot;
 }
 
-module.exports = { createBot };
+module.exports = { createBot, isUsableBotToken };

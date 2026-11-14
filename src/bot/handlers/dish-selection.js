@@ -22,7 +22,7 @@ function register(bot) {
       await ctx.answerCbQuery(texts.dishSelection[status] || texts.dishSelection.added);
     } catch (error) {
       logger.error('Error saving dish:', error);
-      await ctx.answerCbQuery('Ошибка при сохранении блюда.');
+      await ctx.answerCbQuery(texts.dishSelection.errorSave);
     }
     await sendMainMenu(ctx);
   });
