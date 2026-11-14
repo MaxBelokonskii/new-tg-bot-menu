@@ -1,5 +1,4 @@
 const { dbGet, dbAll, withTransaction } = require('../../database/db');
-const { formatLocalDate } = require('../../utils/date-helpers');
 const { getOrCreateUser, CATEGORY_TO_SLOTS, saveSelectedDish } = require('./logic');
 
 /**
@@ -77,17 +76,17 @@ async function checkDishPlacement(telegramId, recipeId, date) {
  *
  * @param {number} telegramId
  * @param {number} recipeId
+ * @param {string} date - YYYY-MM-DD, the user's local today
  * @returns {Promise<{status: 'added'|'replaced'|'unchanged'|'conflict'|'missing',
  *   date: string, placement: object|null}>}
  */
-async function placeDishToday(telegramId, recipeId) {
-  const date = formatLocalDate(new Date());
+async function placeDishToday(telegramId, recipeId, date) {
   return withTransaction(async () => {
     const placement = await checkDishPlacement(telegramId, recipeId, date);
     if (!placement) return { status: 'missing', date, placement: null };
     if (placement.alreadyPlanned) return { status: 'unchanged', date, placement };
     if (placement.freeSlot === null) return { status: 'conflict', date, placement };
-    const { status } = await saveSelectedDish(telegramId, recipeId);
+    const { status } = await saveSelectedDish(telegramId, recipeId, date);
     return { status, date, placement };
   });
 }

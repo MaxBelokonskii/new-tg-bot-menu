@@ -1,20 +1,14 @@
 const texts = require('../texts');
 const logger = require('../../utils/logger');
 const { safeEdit } = require('./helpers');
-const { getUserProfile } = require('../../features/profile/logic');
-const { buildProfileMenu } = require('../../interface/profile');
+const { buildSettingsScreen } = require('./settings-view');
 const {
   getReminderSettings,
   toggleReminder,
   setReminderTime,
-  setWeeklyDay,
-  setUtcOffset
+  setWeeklyDay
 } = require('../../features/reminders/logic');
-const {
-  buildRemindersScreen,
-  buildTimePicker,
-  buildZonePicker
-} = require('../../interface/reminder-settings');
+const { buildRemindersScreen, buildTimePicker } = require('../../interface/reminder-settings');
 
 const T = texts.reminders;
 const TYPE = '(morning|evening|weekly)';
@@ -64,9 +58,9 @@ async function applyChange(ctx, settings, buildScreen, toast) {
 }
 
 /**
- * Registers the "🔔 Reminders" settings handlers: screen, toggles, time,
- * weekday and zone pickers, back to settings. Everything edits the message
- * in place — no scenes.
+ * Registers the "🔔 Reminders" settings handlers: screen, toggles, time and
+ * weekday pickers, back to settings. The zone picker (tz_pick_rem) lives in
+ * handlers/time-zone.js. Everything edits the message in place — no scenes.
  * @param {import('telegraf').Telegraf} bot
  */
 function register(bot) {
@@ -98,18 +92,8 @@ function register(bot) {
     await applyChange(ctx, settings, (s) => buildTimePicker(s.reminders.weekly), T.toasts.daySaved);
   }));
 
-  bot.action('rem_zone', guarded('opening zone picker', async (ctx) => {
-    const { offsetMinutes } = await getReminderSettings(ctx.from.id);
-    await render(ctx, buildZonePicker(offsetMinutes));
-  }));
-
-  bot.action(/^rem_setzone_(\d{1,4})$/, guarded('setting zone', async (ctx) => {
-    const settings = await setUtcOffset(ctx.from.id, Number(ctx.match[1]));
-    await applyChange(ctx, settings, buildRemindersScreen, T.toasts.zoneSaved);
-  }));
-
   bot.action('rem_back', guarded('returning to settings', async (ctx) => {
-    await render(ctx, buildProfileMenu(await getUserProfile(ctx.from.id)));
+    await render(ctx, await buildSettingsScreen(ctx.from.id));
   }));
 }
 

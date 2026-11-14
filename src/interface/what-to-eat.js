@@ -1,7 +1,6 @@
 const { Markup } = require('telegraf');
 const texts = require('../bot/texts');
 const { fillNutrition, formatPortion } = require('./food-log');
-const { formatLocalDate } = require('../utils/date-helpers');
 const { DONE_KCAL } = require('../features/what-to-eat/scoring');
 
 const T = texts.whatToEat;
@@ -66,15 +65,16 @@ function optionRow(option, n) {
   ];
 }
 
-const backRow = () => [Markup.button.callback(T.buttons.back, `fl_day_${formatLocalDate(new Date())}`)];
+const backRow = (today) => [Markup.button.callback(T.buttons.back, `fl_day_${today}`)];
 
 /**
  * Builds the suggestions screen for a getSuggestions() result.
  * @param {{status: string, remaining?: object, singles?: Array, combos?: Array, page?: number}} result
  * @param {{favorite: Set<number>}} prefs - for ❤️ marks
+ * @param {string} today - YYYY-MM-DD, the user's local today (back to the diary day)
  * @returns {{text: string, extra: object}}
  */
-function buildSuggestionsScreen(result, prefs) {
+function buildSuggestionsScreen(result, prefs, today) {
   const lines = [T.title, ''];
   const rows = [];
   if (result.status === 'done') {
@@ -101,7 +101,7 @@ function buildSuggestionsScreen(result, prefs) {
       rows.push([Markup.button.callback(T.buttons.more, `wte_show_${result.page + 1}`)]);
     }
   }
-  rows.push(backRow());
+  rows.push(backRow(today));
   return { text: lines.join('\n'), extra: { parse_mode: 'HTML', ...Markup.inlineKeyboard(rows) } };
 }
 

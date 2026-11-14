@@ -1,5 +1,4 @@
 const { dbAll, withTransaction } = require('../../database/db');
-const { formatLocalDate } = require('../../utils/date-helpers');
 const { calculateRemaining, sumNutrition } = require('../../utils/nutrition-totals');
 const { getOrCreateUser } = require('../weekly-planner/logic');
 const { getUserProfile } = require('../profile/logic');
@@ -35,19 +34,25 @@ async function loadRecipes() {
  * Candidates are all recipes without excluded products (3.2) and not eaten
  * today. No profile/targets → status 'noTargets'.
  *
+ * [RU] Дата и час — локальные для пользователя (getUserClock): правила
+ * времени суток (завтрак после 12:00) идут по его часам, не по серверным.
+ * [EN] Date and hour are the user's local ones (getUserClock): time-of-day
+ * rules (breakfast after 12:00) follow the user's clock, not the server's.
+ *
  * @param {number} telegramId
- * @param {{page?: number, now?: Date}} [options] - `now` is injectable for tests
+ * @param {{today: string, hour: number, page?: number}} options
+ *   today — YYYY-MM-DD, hour — 0..23 in the user's zone
  * @returns {Promise<{status: 'noTargets'|'open'|'done'|'over', remaining?: object,
  *   singles?: Array, combos?: Array, page?: number}>}
  */
-async function getSuggestions(telegramId, { page = 0, now = new Date() } = {}) {
+async function getSuggestions(telegramId, { today, hour, page = 0 }) {
   const profile = await getUserProfile(telegramId);
   const norms = profile ? pickTargets(profile) : null;
   if (!norms || !norms.calories || norms.protein === null || norms.protein === undefined) {
     return { status: 'noTargets' };
   }
 
-  const entries = await getDayLog(telegramId, formatLocalDate(now));
+  const entries = await getDayLog(telegramId, today);
   const remaining = calculateRemaining(sumNutrition(entries), norms);
   const status = remainingStatus(remaining);
   if (status !== 'open') return { status, remaining };
@@ -58,21 +63,22 @@ async function getSuggestions(telegramId, { page = 0, now = new Date() } = {}) {
   const prefs = await getUserIngredientPrefs(await getOrCreateUser(telegramId));
   const candidates = filterByPrefs(recipes, prefs).filter(r => !eatenIds.has(r.id));
 
-  const ctx = { norms, prefs, hour: now.getHours(), eatenCategories };
+  const ctx = { norms, prefs, hour, eatenCategories };
   return { status, remaining, ...buildSuggestions(candidates, remaining, ctx, page) };
 }
 
 /**
- * Logs several dishes (a suggested combination) to today's diary at once.
+ * Logs several dishes (a suggested combination) to the diary at once.
  * @param {number} telegramId
  * @param {Array<{recipeId: number, portion: number}>} items
+ * @param {string} date - YYYY-MM-DD, the user's local today
  * @returns {Promise<number>} number of entries written
  */
-async function logCombo(telegramId, items) {
+async function logCombo(telegramId, items, date) {
   return withTransaction(async () => {
     let written = 0;
     for (const { recipeId, portion } of items) {
-      if (await addEntry(telegramId, { recipeId, portion })) written++;
+      if (await addEntry(telegramId, { recipeId, portion, date })) written++;
     }
     return written;
   });

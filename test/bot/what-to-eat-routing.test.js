@@ -5,7 +5,7 @@ const texts = require('../../src/bot/texts');
 const { saveUserProfile } = require('../../src/features/profile/logic');
 const { getDayLog } = require('../../src/features/food-log/logic');
 const { dbAll } = require('../../src/database/db');
-const { formatLocalDate } = require('../../src/utils/date-helpers');
+const { defaultClock } = require('../helpers/clock');
 const { createFakeBot } = require('../helpers/fake-bot');
 
 const TELEGRAM_ID = 8101;
@@ -15,7 +15,7 @@ const { calls, sendText, sendCallback, methods, reset } = createFakeBot(TELEGRAM
 
 const callbackData = (payload) => (payload.reply_markup?.inline_keyboard || []).flat().map(b => b.callback_data);
 const lastEdit = () => calls.filter(c => c.method === 'editMessageText').at(-1).payload;
-const today = () => formatLocalDate(new Date());
+const today = () => defaultClock().today;
 const plannedToday = async () => (await dbAll(
   `SELECT dmi.recipe_id FROM daily_menu_items dmi
    JOIN daily_menu dm ON dm.id = dmi.daily_menu_id

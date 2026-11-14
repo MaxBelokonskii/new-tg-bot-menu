@@ -3,14 +3,15 @@ const { test, before, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 const texts = require('../../src/bot/texts');
 const { dbAll } = require('../../src/database/db');
-const { formatLocalDate, addDays } = require('../../src/utils/date-helpers');
+const { addDays } = require('../../src/utils/date-helpers');
+const { defaultClock } = require('../helpers/clock');
 const { getDayPlan, checkDishPlacement } = require('../../src/features/weekly-planner/day-plan');
 const { buildRecipeCard } = require('../../src/interface/reverse-search');
 const { createFakeBot } = require('../helpers/fake-bot');
 
 const TELEGRAM_ID = 9301;
 const T = texts.dishSelection;
-const TODAY = formatLocalDate(new Date());
+const TODAY = defaultClock().today;
 const { calls, sendCallback, methods, reset } = createFakeBot(TELEGRAM_ID);
 
 const callbackData = (payload) => (payload.reply_markup?.inline_keyboard || [])

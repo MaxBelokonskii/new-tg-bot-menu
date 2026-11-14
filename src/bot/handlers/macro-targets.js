@@ -5,7 +5,7 @@ const { getUserProfile } = require('../../features/profile/logic');
 const { pickTargets, recalcTargetsFromProfile } = require('../../features/profile/targets');
 const { SCENE_ID } = require('../../features/profile/targets-scene');
 const { buildTargetsScreen } = require('../../interface/macro-targets');
-const { buildProfileMenu } = require('../../interface/profile');
+const { buildSettingsScreen } = require('./settings-view');
 
 /**
  * Registers the "my macro targets" screen handlers (open, edit, recalc, back).
@@ -53,7 +53,7 @@ function register(bot) {
   bot.action('macro_back', async (ctx) => {
     await ctx.answerCbQuery();
     try {
-      const { text, extra } = buildProfileMenu(await getUserProfile(ctx.from.id));
+      const { text, extra } = await buildSettingsScreen(ctx.from.id);
       await safeEdit(ctx, text, extra);
     } catch (error) {
       logger.error('Error returning to profile menu:', error);

@@ -10,7 +10,9 @@ const {
   getLastShoppingList,
   clearShoppingLists
 } = require('../../src/features/shopping-list/logic');
-const { getCurrentWeekBounds } = require('../../src/utils/date-helpers');
+const { getWeekBounds } = require('../../src/utils/date-helpers');
+
+const WEEK = getWeekBounds('2026-11-14');
 
 test('mergeIngredientRows keeps one row per ingredient with a to-taste flag', () => {
   const merged = mergeIngredientRows([
@@ -30,8 +32,8 @@ before(seedDb);
 
 test('shopping list round-trip: build, save, read, clear', async () => {
   const telegramId = 4001;
-  const bounds = getCurrentWeekBounds();
-  await generateWeeklyPlan(telegramId);
+  const bounds = WEEK;
+  await generateWeeklyPlan(telegramId, { week: WEEK });
 
   const rows = await getIngredientsFromPlan(telegramId, bounds);
   assert.ok(rows.length > 0);
@@ -60,7 +62,7 @@ test('shopping list round-trip: build, save, read, clear', async () => {
 test('saveShoppingList rolls back when the user is unknown', async () => {
   const before = await dbGet('SELECT COUNT(*) AS c FROM shopping_lists');
   await assert.rejects(
-    saveShoppingList(9999, [{ id: 1, total_amount: 1, base_unit: 'шт' }], getCurrentWeekBounds()),
+    saveShoppingList(9999, [{ id: 1, total_amount: 1, base_unit: 'шт' }], WEEK),
     /User not found/
   );
   const after = await dbGet('SELECT COUNT(*) AS c FROM shopping_lists');
@@ -69,8 +71,8 @@ test('saveShoppingList rolls back when the user is unknown', async () => {
 
 test('rebuilding replaces the previous list instead of piling snapshots', async () => {
   const telegramId = 4002;
-  const bounds = getCurrentWeekBounds();
-  await generateWeeklyPlan(telegramId);
+  const bounds = WEEK;
+  await generateWeeklyPlan(telegramId, { week: WEEK });
   const rows = await getIngredientsFromPlan(telegramId, bounds);
   await saveShoppingList(telegramId, rows, bounds);
   await saveShoppingList(telegramId, rows, bounds);
@@ -90,7 +92,7 @@ test('amounts are per one serving', async () => {
   );
   assert.ok(recipe, 'catalog has multi-serving recipes');
   const { lastID: userId } = await dbRun('INSERT INTO users (telegram_id) VALUES (?)', [telegramId]);
-  const bounds = getCurrentWeekBounds();
+  const bounds = WEEK;
   const { lastID: menuId } = await dbRun(
     'INSERT INTO daily_menu (user_id, date) VALUES (?, ?)', [userId, bounds.start]
   );

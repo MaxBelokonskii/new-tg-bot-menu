@@ -1,71 +1,115 @@
+// [RU] Чистые хелперы календарных дат YYYY-MM-DD. Вся арифметика — в UTC,
+// поэтому результат не зависит от часового пояса сервера (process.env.TZ).
+// «Сегодня» пользователя считается из момента и его смещения от UTC
+// (localParts), а не из часов сервера.
+// [EN] Pure helpers for YYYY-MM-DD calendar dates. All arithmetic is done in
+// UTC, so results do not depend on the server time zone (process.env.TZ).
+// The user's "today" comes from an instant plus their UTC offset
+// (localParts), never from the server clock.
+
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const MINUTE_MS = 60_000;
+
+const pad = (n) => String(n).padStart(2, '0');
+
 /**
- * Formats a Date into a local YYYY-MM-DD string.
- * Avoids toISOString() UTC drift that shifts the day near midnight in non-UTC zones.
- *
+ * Formats the UTC calendar fields of a Date as YYYY-MM-DD.
  * @param {Date} d
  * @returns {string}
  */
-function formatLocalDate(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+function formatUtcDate(d) {
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
 }
 
 /**
- * Returns ISO-week bounds (Mon..Sun) containing the given date as half-open
- * local-date strings: { start: Monday, endExclusive: next Monday }.
- *
- * Use with SQL `WHERE date >= start AND date < endExclusive`.
- *
- * @param {Date} [now=new Date()]
- * @returns {{ start: string, endExclusive: string }}
+ * Parses YYYY-MM-DD into a Date at 00:00 UTC of that day.
+ * @param {string} date
+ * @returns {Date}
  */
-function getCurrentWeekBounds(now = new Date()) {
-  // [RU] getDay(): 0=вс..6=сб. Смещение до понедельника — (getDay()+6)%7.
-  // [EN] getDay(): 0=Sun..6=Sat. Offset back to Monday is (getDay()+6)%7.
-  const offsetToMonday = (now.getDay() + 6) % 7;
-  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - offsetToMonday);
-  const nextMonday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 7);
+function parseUtcDate(date) {
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d));
+}
+
+/**
+ * Converts an instant into the local calendar date, minutes since local
+ * midnight and ISO weekday (0 = Monday … 6 = Sunday) of a UTC offset.
+ * @param {Date} instant
+ * @param {number} offsetMinutes - UTC offset of the zone, e.g. 180 for UTC+3
+ * @returns {{date: string, minutes: number, weekday: number}}
+ */
+function localParts(instant, offsetMinutes) {
+  // [RU] Сдвигаем момент на смещение и читаем UTC-поля — так результат не
+  // зависит от часового пояса сервера.
+  // [EN] Shift the instant by the offset and read UTC fields, so the result
+  // does not depend on the server time zone.
+  const shifted = new Date(instant.getTime() + offsetMinutes * MINUTE_MS);
   return {
-    start: formatLocalDate(monday),
-    endExclusive: formatLocalDate(nextMonday)
+    date: formatUtcDate(shifted),
+    minutes: shifted.getUTCHours() * 60 + shifted.getUTCMinutes(),
+    weekday: (shifted.getUTCDay() + 6) % 7
   };
 }
 
 /**
- * Returns half-open local-date bounds for the day containing `now`:
- * { start: today, endExclusive: tomorrow }. Same shape as getCurrentWeekBounds.
- *
- * @param {Date} [now=new Date()]
- * @returns {{ start: string, endExclusive: string }}
- */
-function getCurrentDayBounds(now = new Date()) {
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-  return {
-    start: formatLocalDate(today),
-    endExclusive: formatLocalDate(tomorrow)
-  };
-}
-
-/**
- * Shifts a local YYYY-MM-DD date string by a number of days.
+ * Shifts a YYYY-MM-DD date by a number of days.
  * Calendar overflow is normalised (2026-02-31 + 0 → 2026-03-03), so
  * `addDays(d, 0) === d` doubles as a validity check.
- *
  * @param {string} date - YYYY-MM-DD
  * @param {number} days - may be negative
  * @returns {string} YYYY-MM-DD
  */
 function addDays(date, days) {
-  const [y, m, d] = date.split('-').map(Number);
-  return formatLocalDate(new Date(y, m - 1, d + days));
+  const d = parseUtcDate(date);
+  d.setUTCDate(d.getUTCDate() + days);
+  return formatUtcDate(d);
+}
+
+/**
+ * True for a well-formed, existing calendar date (2026-02-30 is not).
+ * @param {unknown} date
+ * @returns {boolean}
+ */
+function isValidDate(date) {
+  return typeof date === 'string' && DATE_PATTERN.test(date) && addDays(date, 0) === date;
+}
+
+/**
+ * ISO weekday of a date: 0 = Monday … 6 = Sunday.
+ * @param {string} date - YYYY-MM-DD
+ * @returns {number}
+ */
+function weekdayOf(date) {
+  return (parseUtcDate(date).getUTCDay() + 6) % 7;
+}
+
+/**
+ * ISO-week bounds (Mon..Sun) of the week containing `date`, half-open:
+ * { start: Monday, endExclusive: next Monday }.
+ * Use with SQL `WHERE date >= start AND date < endExclusive`.
+ * @param {string} date - YYYY-MM-DD
+ * @returns {{start: string, endExclusive: string}}
+ */
+function getWeekBounds(date) {
+  const start = addDays(date, -weekdayOf(date));
+  return { start, endExclusive: addDays(start, 7) };
+}
+
+/**
+ * Half-open bounds of one day: { start: date, endExclusive: next day }.
+ * Same shape as getWeekBounds.
+ * @param {string} date - YYYY-MM-DD
+ * @returns {{start: string, endExclusive: string}}
+ */
+function getDayBounds(date) {
+  return { start: date, endExclusive: addDays(date, 1) };
 }
 
 module.exports = {
-  formatLocalDate,
+  localParts,
   addDays,
-  getCurrentWeekBounds,
-  getCurrentDayBounds
+  isValidDate,
+  weekdayOf,
+  getWeekBounds,
+  getDayBounds
 };

@@ -1,6 +1,6 @@
 const { dbGet, dbAll, dbRun, withTransaction } = require('../../database/db');
 const { getOrCreateUser } = require('../weekly-planner/logic');
-const { formatLocalDate, addDays } = require('../../utils/date-helpers');
+const { addDays, isValidDate } = require('../../utils/date-helpers');
 const { scaleNutrition, sumNutrition } = require('../../utils/nutrition-totals');
 
 // [RU] Допустимые порции: ½ / 1 / 1½ / 2. В callback_data порция едет как
@@ -12,20 +12,16 @@ const HISTORY_DAYS = 7;
 const SEARCH_LIMIT = 10;
 const MIN_QUERY_LENGTH = 2;
 const MAX_SLOT = 5;
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
-const todayString = () => formatLocalDate(new Date());
 
 /**
  * True for a valid YYYY-MM-DD date within the diary window
  * [today − HISTORY_DAYS, today].
  * @param {string} date
- * @param {string} [today] - YYYY-MM-DD, defaults to the local today
+ * @param {string} today - YYYY-MM-DD, the user's local today
  * @returns {boolean}
  */
-function isDiaryDate(date, today = todayString()) {
-  if (typeof date !== 'string' || !DATE_PATTERN.test(date)) return false;
-  if (addDays(date, 0) !== date) return false;
+function isDiaryDate(date, today) {
+  if (!isValidDate(date)) return false;
   return date >= addDays(today, -HISTORY_DAYS) && date <= today;
 }
 
@@ -105,13 +101,15 @@ function getRecipeNutrition(recipeId) {
  * Records an eaten dish in the diary.
  *
  * @param {number} telegramId
- * @param {{recipeId: number, portion?: number, date?: string, slot?: number|null}} entry
- *   date defaults to the local today; slot is set only for dishes taken from the plan
+ * @param {{recipeId: number, portion?: number, date: string, slot?: number|null}} entry
+ *   date — YYYY-MM-DD (the user's local today for "ate it now"); slot is set
+ *   only for dishes taken from the plan
  * @returns {Promise<number|null>} new entry id, or null if the recipe does not exist
- * @throws {Error} on a portion or slot outside the allowed values
+ * @throws {Error} on a portion, date or slot outside the allowed values
  */
-async function addEntry(telegramId, { recipeId, portion = 1, date = todayString(), slot = null }) {
+async function addEntry(telegramId, { recipeId, portion = 1, date, slot = null }) {
   if (!PORTIONS.includes(portion)) throw new Error(`Invalid portion: ${portion}`);
+  if (!isValidDate(date)) throw new Error(`Invalid date: ${date}`);
   if (slot !== null && !(Number.isInteger(slot) && slot >= 1 && slot <= MAX_SLOT)) {
     throw new Error(`Invalid slot: ${slot}`);
   }
@@ -174,12 +172,12 @@ async function getEntry(telegramId, entryId) {
  * @param {number} telegramId
  * @param {number} entryId
  * @param {number} portion - one of PORTIONS
- * @param {string} [today] - YYYY-MM-DD, defaults to the local today
+ * @param {string} today - YYYY-MM-DD, the user's local today
  * @returns {Promise<{status: 'updated'|'notFound'|'outOfRange', date?: string}>}
  *   date of the entry when it exists and belongs to the user
  * @throws {Error} on a portion outside the allowed values
  */
-async function updateEntryPortion(telegramId, entryId, portion, today = todayString()) {
+async function updateEntryPortion(telegramId, entryId, portion, today) {
   if (!PORTIONS.includes(portion)) throw new Error(`Invalid portion: ${portion}`);
   const userId = await getOrCreateUser(telegramId);
   return withTransaction(async () => {

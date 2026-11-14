@@ -1,6 +1,5 @@
 const { dbGet, dbAll, dbRun, withTransaction } = require('../../database/db');
 const logger = require('../../utils/logger');
-const { getCurrentWeekBounds, formatLocalDate } = require('../../utils/date-helpers');
 
 // [RU] README-контракт: слот определяется категорией блюда, а не порядком добавления.
 // [EN] README contract: slot is determined by the dish category, not insertion order.
@@ -72,13 +71,8 @@ async function resolveSlot(dailyMenuId, category) {
   return slots.find(s => !taken.has(s)) ?? slots[0];
 }
 
-async function _saveSelectedDishImpl(telegramId, recipeId) {
+async function _saveSelectedDishImpl(telegramId, recipeId, date) {
   const userId = await getOrCreateUser(telegramId);
-  // [RU] Локальная дата, а не UTC: иначе рядом с полуночью «сегодня» уезжает
-  // в следующие сутки и не попадает в окно текущей недели из getWeeklyPlan.
-  // [EN] Local date, not UTC: near midnight a UTC date can land in tomorrow
-  // and slip out of the current-week window produced by getCurrentWeekBounds.
-  const today = formatLocalDate(new Date());
 
   const recipe = await dbGet(
     `SELECT LOWER(mc.name) AS category
@@ -91,11 +85,11 @@ async function _saveSelectedDishImpl(telegramId, recipeId) {
 
   await dbRun(
     'INSERT OR IGNORE INTO daily_menu (user_id, date) VALUES (?, ?)',
-    [userId, today]
+    [userId, date]
   );
   const menuRow = await dbGet(
     'SELECT id FROM daily_menu WHERE user_id = ? AND date = ?',
-    [userId, today]
+    [userId, date]
   );
   if (!menuRow) throw new Error('Failed to create/find daily menu');
   const dailyMenuId = menuRow.id;
@@ -123,7 +117,8 @@ async function _saveSelectedDishImpl(telegramId, recipeId) {
 }
 
 /**
- * Saves the selected dish into the user's plan for today. Slot is derived
+ * Saves the selected dish into the user's plan for a date (the user's local
+ * today — see features/time-zone/logic.js:getUserClock). Slot is derived
  * from the recipe's category (README contract: 1=breakfast, 2/3=main,
  * 4=salad, 5=dessert). Re-adding into an occupied slot replaces the
  * existing recipe for that slot. Runs in a transaction on the shared write
@@ -131,20 +126,21 @@ async function _saveSelectedDishImpl(telegramId, recipeId) {
  *
  * @param {number} telegramId
  * @param {number} recipeId
+ * @param {string} date - YYYY-MM-DD
  * @returns {Promise<{slot: number, status: 'added'|'replaced'|'unchanged'}>}
  */
-async function saveSelectedDish(telegramId, recipeId) {
-  return withTransaction(() => _saveSelectedDishImpl(telegramId, recipeId));
+async function saveSelectedDish(telegramId, recipeId, date) {
+  return withTransaction(() => _saveSelectedDishImpl(telegramId, recipeId, date));
 }
 
 /**
- * Returns the user's planned dishes for the current ISO week (Mon..Sun).
+ * Returns the user's planned dishes for an ISO week (Mon..Sun).
  * @param {number} telegramId
+ * @param {{start: string, endExclusive: string}} week - from getWeekBounds
  * @returns {Promise<Array<{name: string, category: string, date: string, slot: number}>>}
  */
-async function getWeeklyPlan(telegramId) {
+async function getWeeklyPlan(telegramId, { start, endExclusive }) {
   const userId = await getOrCreateUser(telegramId);
-  const { start, endExclusive } = getCurrentWeekBounds();
   try {
     return await dbAll(
       `SELECT r.name, mc.name AS category, dm.date, dmi.slot

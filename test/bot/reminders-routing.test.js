@@ -3,7 +3,7 @@ const { test, before, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 const texts = require('../../src/bot/texts');
 const { dbGet } = require('../../src/database/db');
-const { formatLocalDate } = require('../../src/utils/date-helpers');
+const { defaultClock } = require('../helpers/clock');
 const { saveUserProfile } = require('../../src/features/profile/logic');
 const { saveSelectedDish } = require('../../src/features/weekly-planner/logic');
 const { getReminderSettings } = require('../../src/features/reminders/logic');
@@ -11,7 +11,7 @@ const { createFakeBot } = require('../helpers/fake-bot');
 
 const TELEGRAM_ID = 8101;
 const T = texts.reminders;
-const TODAY = formatLocalDate(new Date());
+const TODAY = defaultClock().today;
 
 const { calls, sendText, sendCallback, methods, reset } = createFakeBot(TELEGRAM_ID);
 
@@ -40,7 +40,7 @@ test('settings screen has the reminders button that opens the reminders screen',
     'rem_toggle_morning', 'rem_time_morning',
     'rem_toggle_evening', 'rem_time_evening',
     'rem_toggle_weekly', 'rem_time_weekly',
-    'rem_zone', 'rem_back'
+    'tz_pick_rem', 'rem_back'
   ]);
 });
 
@@ -93,17 +93,21 @@ test('a forged or stale option is rejected with a notice', async () => {
   assert.equal((await getReminderSettings(TELEGRAM_ID)).reminders.morning.time_minutes, 480);
 });
 
-test('zone picker lists 11 zones; choosing one saves it', async () => {
-  await sendCallback('rem_zone');
+test('zone picker from reminders lists 11 zones; choosing one returns to reminders', async () => {
+  await sendCallback('tz_pick_rem');
   const data = callbackData(lastEdit());
-  assert.equal(data.filter(d => d.startsWith('rem_setzone_')).length, 11);
+  assert.equal(data.filter(d => d.startsWith('tz_set_rem_')).length, 11);
   assert.equal(data.at(-1), 'rem_menu');
 
   reset();
-  await sendCallback('rem_setzone_720');
-  assert.equal(toast(), T.toasts.zoneSaved);
+  await sendCallback('tz_set_rem_720');
+  assert.equal(toast(), texts.timeZone.saved);
+  assert.ok(lastEdit().text.startsWith(T.title));
   assert.ok(lastEdit().text.includes('Камчатка (UTC+12)'));
   assert.equal((await getReminderSettings(TELEGRAM_ID)).offsetMinutes, 720);
+
+  // вернуть Москву: остальные тесты файла считают «сегодня» по поясу по умолчанию
+  await sendCallback('tz_set_rem_180');
 });
 
 test('back returns to the settings screen', async () => {
@@ -126,7 +130,7 @@ test('reminder buttons work when pressed from a fresh reminder message', async (
   await sendCallback('generate_weekly_plan');
   assert.ok(sentTexts().includes(texts.weeklyPlan.generated));
 
-  await saveSelectedDish(TELEGRAM_ID, (await dbGet('SELECT id FROM recipes LIMIT 1')).id);
+  await saveSelectedDish(TELEGRAM_ID, (await dbGet('SELECT id FROM recipes LIMIT 1')).id, TODAY);
   reset();
   await sendCallback(`wp_day_${TODAY}`);
   assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText']);

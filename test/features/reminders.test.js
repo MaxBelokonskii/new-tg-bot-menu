@@ -11,9 +11,9 @@ const {
   getReminderSettings,
   toggleReminder,
   setReminderTime,
-  setWeeklyDay,
-  setUtcOffset
+  setWeeklyDay
 } = require('../../src/features/reminders/logic');
+const { setUtcOffset } = require('../../src/features/time-zone/logic');
 const { buildReminderMessage } = require('../../src/features/reminders/content');
 const { runReminderTick, createReminderTicker } = require('../../src/features/reminders/scheduler');
 
@@ -93,14 +93,16 @@ test('time, weekday and zone accept only presets', async () => {
 
   assert.equal((await setReminderTime(8004, 'morning', 600, now)).reminders.morning.time_minutes, 600);
   assert.equal((await setWeeklyDay(8004, 0, now)).reminders.weekly.weekday, 0);
-  assert.equal((await setUtcOffset(8004, 720, now)).offsetMinutes, 720);
+  assert.equal(await setUtcOffset(8004, 720, now), 720);
+  assert.equal((await getReminderSettings(8004)).offsetMinutes, 720);
 });
 
 test('changing the zone recomputes last_sent_date for the new local today', async () => {
   const now = new Date('2026-11-14T03:00:00Z'); // 06:00 МСК, 15:00 Камчатка
   await toggleReminder(8005, 'morning', now);
   assert.equal((await getReminderSettings(8005)).reminders.morning.last_sent_date, null);
-  const moved = await setUtcOffset(8005, 720, now);
+  await setUtcOffset(8005, 720, now);
+  const moved = await getReminderSettings(8005);
   assert.equal(moved.reminders.morning.last_sent_date, '2026-11-14', '08:00 already passed in Kamchatka');
 });
 

@@ -218,5 +218,6 @@ module.exports = {
   foodLog: require('./texts/food-log'),
   favoriteRecipes: require('./texts/favorite-recipes'),
   whatToEat: require('./texts/what-to-eat'),
-  reminders: require('./texts/reminders')
+  reminders: require('./texts/reminders'),
+  timeZone: require('./texts/time-zone')
 };

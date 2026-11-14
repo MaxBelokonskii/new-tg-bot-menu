@@ -3,7 +3,7 @@ const logger = require('../../utils/logger');
 const { safeEdit } = require('./helpers');
 const { showPlanDay } = require('./plan-view');
 const planEdit = require('./plan-edit');
-const { formatLocalDate } = require('../../utils/date-helpers');
+const { getUserClock } = require('../../features/time-zone/logic');
 const { sendWeeklyPlanMenu, buildRegenerateChoiceKeyboard } = require('../../interface/weekly-plan');
 const {
   generateWeeklyPlan,
@@ -21,8 +21,6 @@ const CATEGORY_LABEL = {
   desserts: texts.categories.dessert
 };
 
-const today = () => formatLocalDate(new Date());
-
 /**
  * Generates the week and reports the result. When `editPrompt` is set, the
  * "overwrite / fill" question message is replaced by the result so its
@@ -33,11 +31,12 @@ const today = () => formatLocalDate(new Date());
  */
 async function runGeneration(ctx, mode, editPrompt) {
   try {
-    const { slotsWritten } = await generateWeeklyPlan(ctx.from.id, { mode });
+    const clock = await getUserClock(ctx.from.id);
+    const { slotsWritten } = await generateWeeklyPlan(ctx.from.id, { week: clock.week, mode });
     const resultText = slotsWritten === 0 ? texts.weeklyPlan.nothingToFill : texts.weeklyPlan.generated;
     if (editPrompt) await safeEdit(ctx, resultText);
     else await ctx.reply(resultText);
-    if (slotsWritten > 0) await showPlanDay(ctx, today(), { edit: false });
+    if (slotsWritten > 0) await showPlanDay(ctx, clock.today, { edit: false, clock });
   } catch (error) {
     logger.error('Error generating weekly plan:', error);
     // [RU] Специализированная подсказка при «пустой категории после исключений».
@@ -58,7 +57,7 @@ async function runGeneration(ctx, mode, editPrompt) {
 async function handleGenerate(ctx) {
   let count;
   try {
-    count = await countWeekItems(ctx.from.id);
+    count = await countWeekItems(ctx.from.id, (await getUserClock(ctx.from.id)).week);
   } catch (error) {
     logger.error('Error counting week items:', error);
     await ctx.answerCbQuery(texts.weeklyPlan.errorGenerate).catch(() => {});
@@ -111,11 +110,12 @@ function register(bot) {
   bot.action('view_weekly_plan', async (ctx) => {
     await ctx.answerCbQuery();
     try {
-      if (await countWeekItems(ctx.from.id) === 0) {
+      const clock = await getUserClock(ctx.from.id);
+      if (await countWeekItems(ctx.from.id, clock.week) === 0) {
         await ctx.reply(texts.weeklyPlan.empty);
         return;
       }
-      await showPlanDay(ctx, today());
+      await showPlanDay(ctx, clock.today, { clock });
     } catch (error) {
       logger.error('Error viewing plan:', error);
       await ctx.reply(texts.errors.general);

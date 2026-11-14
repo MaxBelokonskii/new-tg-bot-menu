@@ -1,7 +1,7 @@
 const texts = require('../texts');
 const logger = require('../../utils/logger');
 const { safeEdit } = require('./helpers');
-const { formatLocalDate } = require('../../utils/date-helpers');
+const { getUserClock } = require('../../features/time-zone/logic');
 const {
   sendCategorySelection,
   showDishSuggestion,
@@ -13,16 +13,15 @@ const { getDayPlan, placeDishToday } = require('../../features/weekly-planner/da
 const { getUserProfile } = require('../../features/profile/logic');
 
 const T = texts.dishSelection;
-const today = () => formatLocalDate(new Date());
 
 /**
  * Sends (or edits into) the short summary of today's plan.
  * @param {import('telegraf').Context} ctx
  * @param {'added'|'replaced'|'unchanged'} status
+ * @param {string} date - YYYY-MM-DD, the user's local today
  * @param {{edit?: boolean}} [options]
  */
-async function showTodaySummary(ctx, status, { edit = false } = {}) {
-  const date = today();
+async function showTodaySummary(ctx, status, date, { edit = false } = {}) {
   const items = await getDayPlan(ctx.from.id, date);
   const profile = await getUserProfile(ctx.from.id);
   const { text, extra } = buildTodaySummary({
@@ -49,7 +48,8 @@ async function showTodaySummary(ctx, status, { edit = false } = {}) {
  */
 async function handleConfirmDish(ctx) {
   try {
-    const { status, date, placement } = await placeDishToday(ctx.from.id, Number(ctx.match[1]));
+    const { today } = await getUserClock(ctx.from.id);
+    const { status, date, placement } = await placeDishToday(ctx.from.id, Number(ctx.match[1]), today);
     if (status === 'missing') {
       await ctx.answerCbQuery(T.errorSave);
       return;
@@ -61,7 +61,7 @@ async function handleConfirmDish(ctx) {
       return;
     }
     await ctx.answerCbQuery(T[status] || T.added);
-    await showTodaySummary(ctx, status);
+    await showTodaySummary(ctx, status, date);
   } catch (error) {
     logger.error('Error saving dish:', error);
     await ctx.answerCbQuery(T.errorSave).catch(() => {});
@@ -71,19 +71,19 @@ async function handleConfirmDish(ctx) {
 /**
  * "Yes, replace" in the replace question: swaps the dish in the chosen slot
  * and turns the question into today's summary. A question left over from a
- * previous day is not applied.
+ * previous day (in the user's time zone) is not applied.
  * @param {import('telegraf').Context} ctx
  */
 async function handleSwap(ctx) {
   const [, date, slot, recipeId] = ctx.match;
   try {
-    if (date !== today()) {
+    if (date !== (await getUserClock(ctx.from.id)).today) {
       await safeEdit(ctx, T.stale);
       await ctx.answerCbQuery(T.stale);
       return;
     }
     await replaceInSlot(ctx.from.id, date, Number(slot), Number(recipeId));
-    await showTodaySummary(ctx, 'replaced', { edit: true });
+    await showTodaySummary(ctx, 'replaced', date, { edit: true });
     await ctx.answerCbQuery(T.replaced);
   } catch (error) {
     logger.error('Error replacing dish from selection:', error);

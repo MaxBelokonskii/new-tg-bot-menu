@@ -3,7 +3,7 @@ const { test, before, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 const texts = require('../../src/bot/texts');
 const { dbAll } = require('../../src/database/db');
-const { formatLocalDate } = require('../../src/utils/date-helpers');
+const { defaultClock } = require('../helpers/clock');
 const { getDayPlan } = require('../../src/features/weekly-planner/day-plan');
 const { saveSelectedDish } = require('../../src/features/weekly-planner/logic');
 const { createFakeBot } = require('../helpers/fake-bot');
@@ -12,7 +12,7 @@ const { createFakeBot } = require('../helpers/fake-bot');
 const TELEGRAM_ID = 8201;
 const T = texts.whatToEat;
 const DS = texts.dishSelection;
-const TODAY = formatLocalDate(new Date());
+const TODAY = defaultClock().today;
 const { calls, sendCallback, methods, reset } = createFakeBot(TELEGRAM_ID);
 
 const byCategory = {};
@@ -63,8 +63,8 @@ test('taken slot: asks "replace?" in a new message and keeps the plan', async ()
 test('combo: free slots filled, taken ones asked, planned ones reported', async () => {
   const [main1, main2, main3] = byCategory.main;
   const [salad] = byCategory.salads;
-  await saveSelectedDish(TELEGRAM_ID, main1);
-  await saveSelectedDish(TELEGRAM_ID, main2);
+  await saveSelectedDish(TELEGRAM_ID, main1, TODAY);
+  await saveSelectedDish(TELEGRAM_ID, main2, TODAY);
   const breakfast = (await plan())[0][1];
 
   // завтрак уже в плане, основные заняты, салат — свободен

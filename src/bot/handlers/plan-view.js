@@ -1,25 +1,23 @@
 const { safeEdit } = require('./helpers');
-const { formatLocalDate, addDays, getCurrentWeekBounds } = require('../../utils/date-helpers');
+const { isValidDate, getWeekBounds } = require('../../utils/date-helpers');
 const { sumNutrition } = require('../../utils/nutrition-totals');
+const { getUserClock } = require('../../features/time-zone/logic');
 const { getUserProfile } = require('../../features/profile/logic');
 const { pickTargets } = require('../../features/profile/targets');
 const { getDayPlan } = require('../../features/weekly-planner/day-plan');
 const { getWeekPlanNutrition, summarizePlanWeek } = require('../../features/weekly-planner/week-totals');
 const { buildPlanDayScreen } = require('../../interface/plan-day');
 
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
 /**
- * Returns the date when it is a valid day of the current ISO week, otherwise
- * today (stale buttons from a previous week fall back to today).
+ * Returns the date when it is a valid day of the user's current ISO week,
+ * otherwise today (stale buttons from a previous week fall back to today).
  * @param {string} date - YYYY-MM-DD from callback_data
- * @param {Date} [now=new Date()]
+ * @param {string} today - YYYY-MM-DD, the user's local today
  * @returns {string} YYYY-MM-DD
  */
-function resolvePlanDate(date, now = new Date()) {
-  const { start, endExclusive } = getCurrentWeekBounds(now);
-  const valid = typeof date === 'string' && DATE_PATTERN.test(date) && addDays(date, 0) === date;
-  return valid && date >= start && date < endExclusive ? date : formatLocalDate(now);
+function resolvePlanDate(date, today) {
+  const { start, endExclusive } = getWeekBounds(today);
+  return isValidDate(date) && date >= start && date < endExclusive ? date : today;
 }
 
 /**
@@ -27,18 +25,18 @@ function resolvePlanDate(date, now = new Date()) {
  * and builds the day screen.
  * @param {number} telegramId
  * @param {string} date - YYYY-MM-DD
+ * @param {{today: string, week: {start: string, endExclusive: string}}} clock - getUserClock result
  * @returns {Promise<{text: string, extra: object}>}
  */
-async function buildPlanDayView(telegramId, date) {
-  const now = new Date();
-  const day = resolvePlanDate(date, now);
+async function buildPlanDayView(telegramId, date, { today, week }) {
+  const day = resolvePlanDate(date, today);
   const items = await getDayPlan(telegramId, day);
-  const weekRows = await getWeekPlanNutrition(telegramId, now);
+  const weekRows = await getWeekPlanNutrition(telegramId, week);
   const profile = await getUserProfile(telegramId);
   return buildPlanDayScreen({
     date: day,
-    today: formatLocalDate(now),
-    weekStart: getCurrentWeekBounds(now).start,
+    today,
+    weekStart: week.start,
     items,
     totals: sumNutrition(items),
     targets: profile ? pickTargets(profile) : null,
@@ -50,11 +48,13 @@ async function buildPlanDayView(telegramId, date) {
  * Shows a plan day: edits the callback message (default) or sends a new one.
  * @param {import('telegraf').Context} ctx
  * @param {string} date - YYYY-MM-DD
- * @param {{edit?: boolean}} [options]
+ * @param {{edit?: boolean, clock?: object}} [options] - clock: getUserClock
+ *   result when the caller already has it (loaded otherwise)
  * @returns {Promise<void>}
  */
-async function showPlanDay(ctx, date, { edit = true } = {}) {
-  const { text, extra } = await buildPlanDayView(ctx.from.id, date);
+async function showPlanDay(ctx, date, { edit = true, clock = null } = {}) {
+  const userClock = clock || await getUserClock(ctx.from.id);
+  const { text, extra } = await buildPlanDayView(ctx.from.id, date, userClock);
   if (edit) await safeEdit(ctx, text, extra);
   else await ctx.reply(text, extra);
 }

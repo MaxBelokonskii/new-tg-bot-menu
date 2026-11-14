@@ -3,14 +3,15 @@ const { test, before, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 const texts = require('../../src/bot/texts');
 const { dbGet, dbAll } = require('../../src/database/db');
-const { formatLocalDate, addDays } = require('../../src/utils/date-helpers');
+const { addDays } = require('../../src/utils/date-helpers');
+const { defaultClock } = require('../helpers/clock');
 const { getOrCreateUser, saveSelectedDish } = require('../../src/features/weekly-planner/logic');
 const { saveUserProfile } = require('../../src/features/profile/logic');
 const { createFakeBot } = require('../helpers/fake-bot');
 
 const TELEGRAM_ID = 8001;
 const T = texts.foodLog;
-const TODAY = formatLocalDate(new Date());
+const TODAY = defaultClock().today;
 const YESTERDAY = addDays(TODAY, -1);
 
 const { calls, sendText, sendCallback, methods, reset } = createFakeBot(TELEGRAM_ID);
@@ -48,7 +49,7 @@ test('add from plan: empty plan alerts; plan dish → portion → entry with slo
   assert.equal(calls[0].payload.text, T.plan.empty);
 
   const breakfast = await recipeId('Омлет с сыром');
-  await saveSelectedDish(TELEGRAM_ID, breakfast);
+  await saveSelectedDish(TELEGRAM_ID, breakfast, TODAY);
   reset();
   await sendCallback(`fl_plan_${TODAY}`);
   assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText']);
@@ -196,7 +197,7 @@ test('entry editor: current portion marked, new portion saved, back keeps it', a
 test('entry editor refuses foreign, missing and out-of-window entries', async () => {
   const omelet = await recipeId('Омлет с сыром');
   const { addEntry } = require('../../src/features/food-log/logic');
-  const foreign = await addEntry(TELEGRAM_ID + 1, { recipeId: omelet });
+  const foreign = await addEntry(TELEGRAM_ID + 1, { recipeId: omelet, date: TODAY });
   const old = await addEntry(TELEGRAM_ID, { recipeId: omelet, date: addDays(TODAY, -30) });
 
   for (const [data, toast] of [

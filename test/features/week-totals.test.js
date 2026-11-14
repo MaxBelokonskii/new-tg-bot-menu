@@ -5,7 +5,7 @@ const texts = require('../../src/bot/texts');
 const { dbAll } = require('../../src/database/db');
 const { generateWeeklyPlan } = require('../../src/features/weekly-planner/generator');
 const { getWeekPlanNutrition, summarizePlanWeek } = require('../../src/features/weekly-planner/week-totals');
-const { getCurrentWeekBounds } = require('../../src/utils/date-helpers');
+const { getWeekBounds } = require('../../src/utils/date-helpers');
 const { buildPlanDayScreen, formatWeekSummary } = require('../../src/interface/plan-day');
 
 const D = texts.weeklyPlan.day;
@@ -30,11 +30,12 @@ test('summarizePlanWeek: empty week gives zeros without dividing by zero', () =>
 
 test('getWeekPlanNutrition returns one row per planned dish of the current week', async () => {
   const telegramId = 9301;
-  assert.deepEqual(await getWeekPlanNutrition(telegramId), []);
-  await generateWeeklyPlan(telegramId);
-  const rows = await getWeekPlanNutrition(telegramId);
+  const week = getWeekBounds('2026-11-14');
+  assert.deepEqual(await getWeekPlanNutrition(telegramId, week), []);
+  await generateWeeklyPlan(telegramId, { week });
+  const rows = await getWeekPlanNutrition(telegramId, week);
   assert.equal(rows.length, 35, '7 days × 5 slots');
-  const { start, endExclusive } = getCurrentWeekBounds();
+  const { start, endExclusive } = week;
   assert.ok(rows.every(r => r.date >= start && r.date < endExclusive));
 
   const [{ kcal }] = await dbAll(

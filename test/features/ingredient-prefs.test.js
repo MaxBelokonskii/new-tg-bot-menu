@@ -7,6 +7,7 @@ const {
   getUserIngredientPrefs, getPrefsByTelegramId, listPrefs, addPrefsFromText, removePref
 } = require('../../src/features/ingredient-prefs/logic');
 const { generateWeeklyPlan, EmptyCategoryError } = require('../../src/features/weekly-planner/generator');
+const { getWeekBounds } = require('../../src/utils/date-helpers');
 const { getRandomRecipeByCategory } = require('../../src/features/meal-suggestions/logic');
 const { findRecipesByInventory } = require('../../src/features/reverse-search/logic');
 const { migrateLegacyExclusions } = require('../../src/database/legacy-exclusions');
@@ -49,7 +50,7 @@ test('unknown kind is rejected', async () => {
 
 test('weekly generation never plans a recipe with an excluded product', async () => {
   await addPrefsFromText(7004, 'excluded', 'яйцо, сыр');
-  await generateWeeklyPlan(7004, { random: () => 0.5 });
+  await generateWeeklyPlan(7004, { week: getWeekBounds('2026-11-14'), random: () => 0.5 });
   const banned = new Set([...await recipeIdsWith('Яйцо'), ...await recipeIdsWith('Сыр')]);
   const planned = await dbAll(
     `SELECT dmi.recipe_id FROM daily_menu_items dmi JOIN daily_menu dm ON dm.id = dmi.daily_menu_id
@@ -66,7 +67,7 @@ test('weekly generation fails with EmptyCategoryError when a category is fully e
      WHERE mc.name = 'desserts'`
   )).map(r => r.name);
   await addPrefsFromText(7005, 'excluded', names.join(', '));
-  await assert.rejects(generateWeeklyPlan(7005), (err) => err instanceof EmptyCategoryError);
+  await assert.rejects(generateWeeklyPlan(7005, { week: getWeekBounds('2026-11-14') }), (err) => err instanceof EmptyCategoryError);
 });
 
 test('random dish skips excluded products and returns null for an emptied category', async () => {
