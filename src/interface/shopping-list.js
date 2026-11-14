@@ -4,6 +4,7 @@ const { formatShoppingQuantity } = require('../utils/formatters');
 const { addDays } = require('../utils/date-helpers');
 const { planWeeks } = require('../features/weekly-planner/plan-weeks');
 const { formatDayMonthName, formatDateRange } = require('./date-labels');
+const { formatHouseholdSuffix } = require('./household');
 
 /**
  * Picks the period label kind relative to the user's today.
@@ -26,18 +27,21 @@ function periodKind(periodStart, periodEnd, today) {
 
 /**
  * Period label of a list with its dates, relative to the user's today:
- * "на сегодня, 14 нояб.", "на следующую неделю, 24–30 нояб.", "на 13 нояб." …
+ * "на сегодня, 14 нояб.", "на следующую неделю, 24–30 нояб.", "на 13 нояб." …,
+ * plus " · на 3 чел." for a list built for more than one person.
  * Empty when the list has no period.
  * @param {string|null} periodStart - YYYY-MM-DD
  * @param {string|null} periodEnd - YYYY-MM-DD (exclusive)
  * @param {string} today - YYYY-MM-DD, the user's local today
+ * @param {number} [householdSize=1] - shopping_lists.household_size
  * @returns {string}
  */
-function formatPeriodLabel(periodStart, periodEnd, today) {
+function formatPeriodLabel(periodStart, periodEnd, today, householdSize = 1) {
   if (!periodStart || !periodEnd) return '';
   const last = addDays(periodEnd, -1);
   const dates = last > periodStart ? formatDateRange(periodStart, last) : formatDayMonthName(periodStart);
-  return texts.shoppingList.periodLabel[periodKind(periodStart, periodEnd, today)].replace('{dates}', dates);
+  const label = texts.shoppingList.periodLabel[periodKind(periodStart, periodEnd, today)].replace('{dates}', dates);
+  return label + formatHouseholdSuffix(householdSize);
 }
 
 /**
@@ -102,17 +106,18 @@ function formatGroup(header, items) {
  * A list whose period has already ended gets a "rebuild me" note (a future
  * period, e.g. next week, is not stale); bought
  * items are struck through and counted.
- * @param {{ items: Array, periodStart: string|null, periodEnd: string|null }} list
+ * @param {{ items: Array, periodStart: string|null, periodEnd: string|null,
+ *   householdSize?: number }} list
  * @param {string} today - YYYY-MM-DD, the user's local today
  * @returns {string}
  */
 function formatShoppingList(list, today) {
-  const { items, periodStart, periodEnd } = list;
+  const { items, periodStart, periodEnd, householdSize } = list;
   if (!items || items.length === 0) {
     return texts.shoppingList.empty;
   }
 
-  const label = formatPeriodLabel(periodStart, periodEnd, today);
+  const label = formatPeriodLabel(periodStart, periodEnd, today, householdSize);
   const suffix = label ? ` (${label})` : '';
 
   let message = `<b>${texts.shoppingList.title}</b>${suffix}\n\n`;

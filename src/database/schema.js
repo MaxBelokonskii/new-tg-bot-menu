@@ -8,6 +8,7 @@ const TABLES = [
     telegram_id INTEGER NOT NULL UNIQUE,
     username TEXT,
     utc_offset_minutes INTEGER NOT NULL DEFAULT 180,
+    household_size INTEGER NOT NULL DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`,
 
@@ -120,6 +121,7 @@ const TABLES = [
     user_id INTEGER NOT NULL,
     period_start DATE NOT NULL,
     period_end DATE NOT NULL,
+    household_size INTEGER NOT NULL DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
   )`,
@@ -205,12 +207,17 @@ const CATALOG_ADDED_COLUMNS = {
     // [RU] Отметка «куплено» в списке покупок (чек-лист).
     // [EN] "Bought" mark of the shopping list checklist.
     ['is_bought', 'INTEGER NOT NULL DEFAULT 0']
-  ]
+  ],
+  // На сколько человек собран список (множитель количеств)
+  shopping_lists: [['household_size', 'INTEGER NOT NULL DEFAULT 1']]
 };
 
-// [RU] Часовой пояс напоминаний: смещение от UTC в минутах, по умолчанию Москва.
-// [EN] Reminder time zone: UTC offset in minutes, Moscow by default.
-const USERS_ADDED_COLUMNS = [['utc_offset_minutes', 'INTEGER NOT NULL DEFAULT 180']];
+// [RU] Часовой пояс (минуты от UTC, по умолч. Москва) и «готовлю на N человек».
+// [EN] Time zone (UTC offset in minutes, Moscow by default) and household size.
+const USERS_ADDED_COLUMNS = [
+  ['utc_offset_minutes', 'INTEGER NOT NULL DEFAULT 180'],
+  ['household_size', 'INTEGER NOT NULL DEFAULT 1']
+];
 
 const USER_PREFERENCES_ADDED_COLUMNS = [
   ['weight', 'REAL'],

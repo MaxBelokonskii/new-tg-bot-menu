@@ -220,5 +220,6 @@ module.exports = {
   whatToEat: require('./texts/what-to-eat'),
   reminders: require('./texts/reminders'),
   timeZone: require('./texts/time-zone'),
+  household: require('./texts/household'),
   dates: require('./texts/dates')
 };
