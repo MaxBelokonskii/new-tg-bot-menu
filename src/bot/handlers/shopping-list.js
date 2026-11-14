@@ -13,7 +13,7 @@ const {
   buildClearShoppingConfirmKeyboard
 } = require('../../interface/shopping-list');
 const { getDayBounds } = require('../../utils/date-helpers');
-const { planWeeks } = require('../../features/weekly-planner/plan-weeks');
+const { planWeeks, weekKindOfMonday } = require('../../features/weekly-planner/plan-weeks');
 const { getUserClock } = require('../../features/time-zone/logic');
 
 /**
@@ -37,23 +37,36 @@ const PERIOD_BOUNDS = {
   nextweek: (today) => planWeeks(today).next
 };
 
+// Режим списка по виду недели из plan-weeks
+const MODE_BY_WEEK_KIND = { current: 'week', next: 'nextweek' };
+
+/**
+ * Builds the shopping list for the given period and re-renders it; an empty
+ * period is an alert and leaves the message as is.
+ * @param {import('telegraf').Context} ctx
+ * @param {'day'|'week'|'nextweek'} mode - picks the toast texts
+ * @param {{start: string, endExclusive: string}} bounds
+ */
+async function buildListForPeriod(ctx, mode, bounds) {
+  const ingredients = await getIngredientsFromPlan(ctx.from.id, bounds);
+  if (ingredients.length === 0) {
+    return ctx.answerCbQuery(texts.shoppingList.emptyForPeriod[mode], { show_alert: true });
+  }
+  await saveShoppingList(ctx.from.id, ingredients, bounds);
+  await ctx.answerCbQuery(texts.shoppingList.generated[mode]);
+  await renderLastList(ctx);
+}
+
 /**
  * Rebuilds the shopping list for the user's today, current week or next
- * week and re-renders it.
+ * week (relative to the moment of the click) and re-renders it.
  * @param {import('telegraf').Context} ctx
  * @param {'day'|'week'|'nextweek'} mode
  */
 async function regenerateShoppingList(ctx, mode) {
   try {
     const { today } = await getUserClock(ctx.from.id);
-    const bounds = PERIOD_BOUNDS[mode](today);
-    const ingredients = await getIngredientsFromPlan(ctx.from.id, bounds);
-    if (ingredients.length === 0) {
-      return ctx.answerCbQuery(texts.shoppingList.emptyForPeriod[mode], { show_alert: true });
-    }
-    await saveShoppingList(ctx.from.id, ingredients, bounds);
-    await ctx.answerCbQuery(texts.shoppingList.generated[mode]);
-    await renderLastList(ctx);
+    await buildListForPeriod(ctx, mode, PERIOD_BOUNDS[mode](today));
   } catch (error) {
     logger.error(`Error generating shopping list (${mode}):`, error);
     await ctx.answerCbQuery(texts.shoppingList.errorGenerate).catch(() => {});
@@ -61,7 +74,32 @@ async function regenerateShoppingList(ctx, mode) {
 }
 
 /**
- * Registers shopping-list handlers: show, rebuild (today / this week / next week), clear.
+ * sl_week_<monday> (weekly reminder): builds the list for that exact week.
+ * @param {import('telegraf').Context} ctx
+ */
+async function buildWeekListFromCallback(ctx) {
+  try {
+    const monday = ctx.match[1];
+    const { today } = await getUserClock(ctx.from.id);
+    // [RU] Понедельник принимается, только если это текущая или следующая неделя
+    // пользователя в момент нажатия; иначе — тост и текущий список без пересборки.
+    // [EN] Only the user's current or next week is accepted at click time;
+    // otherwise a toast and the current list, nothing rebuilt.
+    const kind = weekKindOfMonday(monday, today);
+    if (!kind) {
+      await ctx.answerCbQuery(texts.shoppingList.staleWeek);
+      return renderLastList(ctx);
+    }
+    await buildListForPeriod(ctx, MODE_BY_WEEK_KIND[kind], planWeeks(today)[kind]);
+  } catch (error) {
+    logger.error('Error generating shopping list for a dated week:', error);
+    await ctx.answerCbQuery(texts.shoppingList.errorGenerate).catch(() => {});
+  }
+}
+
+/**
+ * Registers shopping-list handlers: show, rebuild (today / this week / next
+ * week, or a dated week from the weekly reminder), clear.
  * @param {import('telegraf').Telegraf} bot
  */
 function register(bot) {
@@ -81,6 +119,7 @@ function register(bot) {
   bot.action('generate_shopping_list_day', (ctx) => regenerateShoppingList(ctx, 'day'));
   bot.action('generate_shopping_list_week', (ctx) => regenerateShoppingList(ctx, 'week'));
   bot.action('generate_shopping_list_nextweek', (ctx) => regenerateShoppingList(ctx, 'nextweek'));
+  bot.action(/^sl_week_(\d{4}-\d{2}-\d{2})$/, buildWeekListFromCallback);
 
   bot.action('confirm_clear_shopping', async (ctx) => {
     await ctx.answerCbQuery();

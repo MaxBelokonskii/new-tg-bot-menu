@@ -18,6 +18,7 @@ module.exports = {
     week: 'Список на неделю собран! ✨',
     nextweek: 'Список на следующую неделю собран! ✨'
   },
+  staleWeek: 'Кнопка устарела — показываю текущий список.',
   // [RU] Подпись периода в заголовке — относительно «сегодня» пользователя.
   // [EN] Period label in the header — relative to the user's today.
   periodLabel: {

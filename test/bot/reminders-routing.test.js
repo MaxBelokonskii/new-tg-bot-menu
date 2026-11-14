@@ -118,7 +118,7 @@ test('back returns to the settings screen', async () => {
 
 test('reminder buttons work when pressed from a fresh reminder message', async () => {
   await saveUserProfile(TELEGRAM_ID, { weight: 80, height: 180, age: 30, sex: 'male', activity_level: 'moderate', goal: 'maintain' });
-  for (const data of [`fl_day_${TODAY}`, 'wte_show_0', 'back_to_categories', 'generate_shopping_list_week']) {
+  for (const data of [`fl_day_${TODAY}`, 'wte_show_0', 'back_to_categories', `sl_week_${defaultClock().week.start}`]) {
     reset();
     await sendCallback(data);
     assert.ok(!sentTexts().includes(texts.errors.general), data);

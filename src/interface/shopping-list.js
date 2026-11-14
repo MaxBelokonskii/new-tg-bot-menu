@@ -142,9 +142,9 @@ function getShoppingListKeyboard(listId = null) {
     ...checklistRow,
     [
       Markup.button.callback(texts.shoppingList.generateDay, 'generate_shopping_list_day'),
-      Markup.button.callback(texts.shoppingList.generateWeek, 'generate_shopping_list_week'),
-      Markup.button.callback(texts.shoppingList.generateNextWeek, 'generate_shopping_list_nextweek')
+      Markup.button.callback(texts.shoppingList.generateWeek, 'generate_shopping_list_week')
     ],
+    [Markup.button.callback(texts.shoppingList.generateNextWeek, 'generate_shopping_list_nextweek')],
     [Markup.button.callback(texts.shoppingList.clear, 'confirm_clear_shopping')]
   ]);
 }

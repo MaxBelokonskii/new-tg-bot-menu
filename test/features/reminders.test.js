@@ -145,12 +145,12 @@ test('weekly message: Fri–Sun plans the next week, Mon–Thu the current one',
   const sunday = await buildReminderMessage({ type: 'weekly', telegram_id: 8014 }, '2026-11-15');
   assert.ok(sunday.text.startsWith(M.weeklyTitle));
   assert.ok(sunday.text.includes('на следующую неделю (16–22 нояб.)'));
-  assert.deepEqual(callbackData(sunday.extra), ['gen_week_2026-11-16', 'generate_shopping_list_nextweek']);
+  assert.deepEqual(callbackData(sunday.extra), ['gen_week_2026-11-16', 'sl_week_2026-11-16']);
 
   // 2026-11-11 — среда: текущая неделя 9–15.11
   const wednesday = await buildReminderMessage({ type: 'weekly', telegram_id: 8014 }, '2026-11-11');
   assert.ok(wednesday.text.includes('на эту неделю (9–15 нояб.)'));
-  assert.deepEqual(callbackData(wednesday.extra), ['gen_week_2026-11-09', 'generate_shopping_list_week']);
+  assert.deepEqual(callbackData(wednesday.extra), ['gen_week_2026-11-09', 'sl_week_2026-11-09']);
 });
 
 test('tick sends due reminders once, skips the rest, uses the user\'s local date', async () => {

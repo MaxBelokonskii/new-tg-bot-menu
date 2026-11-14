@@ -124,6 +124,42 @@ test('next-week shopping list: dated header, not stale, separate from this week'
   assert.ok(lastPayload('editMessageText').text.includes('(на эту неделю, 16–22 нояб.)'));
 });
 
+test('the period toggle is two rows: today + this week, then next week', async () => {
+  await sendCallback('generate_shopping_list_week');
+  const rows = lastPayload('editMessageText').reply_markup.inline_keyboard.map(row => row.map(b => b.callback_data));
+  assert.deepEqual(rows.slice(-3), [
+    ['generate_shopping_list_day', 'generate_shopping_list_week'],
+    ['generate_shopping_list_nextweek'],
+    ['confirm_clear_shopping']
+  ]);
+});
+
+test('reminder shopping button sl_week_<monday>: this week, next week, stale', async () => {
+  const period = async () => dbGet('SELECT period_start, period_end FROM shopping_lists WHERE user_id = ?', [await userId()]);
+
+  await sendCallback('sl_week_2026-11-16');
+  assert.equal(answer().text, SL.generated.week);
+  assert.deepEqual(await period(), { period_start: '2026-11-16', period_end: '2026-11-23' });
+  assert.ok(lastPayload('editMessageText').text.includes('(на эту неделю, 16–22 нояб.)'));
+
+  reset();
+  await sendCallback('sl_week_2026-11-23');
+  assert.equal(answer().text, SL.generated.nextweek);
+  assert.deepEqual(await period(), { period_start: '2026-11-23', period_end: '2026-11-30' });
+
+  // [RU] Кнопка воскресного напоминания про прошлую неделю — без пересборки.
+  // [EN] Last week's reminder button: no rebuild, current list shown.
+  reset();
+  await sendCallback('sl_week_2026-11-09');
+  assert.equal(answer().text, SL.staleWeek);
+  assert.deepEqual(await period(), { period_start: '2026-11-23', period_end: '2026-11-30' });
+  assert.ok(lastPayload('editMessageText').text.includes('(на следующую неделю, 23–29 нояб.)'));
+
+  reset();
+  await sendCallback('sl_week_2026-11-30');
+  assert.equal(answer().text, SL.staleWeek, 'the week after next is not accepted');
+});
+
 test('weekly reminder on Sunday evening targets next week; on Monday — this week', async () => {
   await toggleReminder(TELEGRAM_ID, 'weekly', new Date('2026-11-15T12:00:00Z'));
   const sent = [];
@@ -133,12 +169,12 @@ test('weekly reminder on Sunday evening targets next week; on Monday — this we
   await runReminderTick(telegram, new Date('2026-11-15T15:00:00Z'));
   assert.equal(sent.length, 1);
   assert.ok(sent[0].text.includes('на следующую неделю (16–22 нояб.)'));
-  assert.deepEqual(callbackData(sent[0].extra), ['gen_week_2026-11-16', 'generate_shopping_list_nextweek']);
+  assert.deepEqual(callbackData(sent[0].extra), ['gen_week_2026-11-16', 'sl_week_2026-11-16']);
 
   // Пн 16.11, 18:00 МСК: напоминание на понедельник — про текущую неделю
   await setWeeklyDay(TELEGRAM_ID, 0, new Date('2026-11-16T12:00:00Z'));
   await runReminderTick(telegram, new Date('2026-11-16T15:00:00Z'));
   assert.equal(sent.length, 2);
   assert.ok(sent[1].text.includes('на эту неделю (16–22 нояб.)'));
-  assert.deepEqual(callbackData(sent[1].extra), ['gen_week_2026-11-16', 'generate_shopping_list_week']);
+  assert.deepEqual(callbackData(sent[1].extra), ['gen_week_2026-11-16', 'sl_week_2026-11-16']);
 });

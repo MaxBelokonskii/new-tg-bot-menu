@@ -75,19 +75,17 @@ function buildEveningMessage({ date, entriesCount, totals, targets }) {
   return { text: lines.join('\n'), extra: { parse_mode: 'HTML', ...Markup.inlineKeyboard(rows) } };
 }
 
-// Список покупок на неделю напоминания: эта / следующая
-const SHOPPING_CALLBACK = { current: 'generate_shopping_list_week', next: 'generate_shopping_list_nextweek' };
-
 /**
  * Weekly reminder: plan the target week and build its shopping list. The
- * buttons go straight to that week (gen_week_<monday>, no week choice).
+ * buttons go straight to that week: gen_week_<monday> (no week choice) and
+ * sl_week_<monday> (its shopping list); both are checked at click time.
  * @param {{kind: 'current'|'next', monday: string}} target - weeklyReminderWeek result
  * @returns {{text: string, extra: object}}
  */
 function buildWeeklyMessage({ kind, monday }) {
   const keyboard = Markup.inlineKeyboard([
     [Markup.button.callback(fillWeek(B.planWeek, kind, monday), `gen_week_${monday}`)],
-    [Markup.button.callback(fillWeek(B.shoppingWeek, kind, monday), SHOPPING_CALLBACK[kind])]
+    [Markup.button.callback(fillWeek(B.shoppingWeek, kind, monday), `sl_week_${monday}`)]
   ]);
   return {
     text: [M.weeklyTitle, '', fillWeek(M.weeklyBody, kind, monday)].join('\n'),
