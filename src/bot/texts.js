@@ -257,5 +257,6 @@ module.exports = {
       'Другое': '📦 Прочее'
     }
   },
-  foodLog: require('./texts/food-log')
+  foodLog: require('./texts/food-log'),
+  whatToEat: require('./texts/what-to-eat')
 };

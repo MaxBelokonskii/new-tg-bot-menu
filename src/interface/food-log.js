@@ -142,6 +142,11 @@ function buildDayScreen({ date, today, oldest, entries, totals, targets }) {
     T.buttons.delete.replace('{n}', i + 1).replace('{name}', truncate(entry.name)),
     `fl_del_${entry.id}`
   )]));
+  // [RU] Подбор «что ещё съесть» — только для сегодня и при заданных нормах.
+  // [EN] "What else to eat" — only for today and when targets are set.
+  if (date === today && targets) {
+    rows.push([Markup.button.callback(texts.whatToEat.openBtn, 'wte_show_0')]);
+  }
   const nav = buildNavRow(date, today, oldest);
   if (nav.length) rows.push(nav);
 
