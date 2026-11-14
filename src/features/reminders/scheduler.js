@@ -1,5 +1,6 @@
 const logger = require('../../utils/logger');
-const { isDue, localParts } = require('./schedule');
+const { localParts } = require('../../utils/date-helpers');
+const { isDue } = require('./schedule');
 const { getEnabledReminders, claimReminder, disableUserReminders } = require('./logic');
 const { buildReminderMessage } = require('./content');
 

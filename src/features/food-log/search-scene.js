@@ -1,7 +1,7 @@
 const { Scenes } = require('telegraf');
 const texts = require('../../bot/texts');
 const logger = require('../../utils/logger');
-const { formatLocalDate } = require('../../utils/date-helpers');
+const { getUserClock } = require('../time-zone/logic');
 const { isDiaryDate, isSearchQuery, searchRecipes } = require('./logic');
 const { buildSearchResults } = require('../../interface/food-log-pickers');
 const { escapable } = require('../../bot/scene-escape');
@@ -47,7 +47,8 @@ async function handleQuery(ctx) {
 const scene = new Scenes.WizardScene(
   SCENE_ID,
   async (ctx) => {
-    if (!isDiaryDate(ctx.wizard.state.date)) ctx.wizard.state.date = formatLocalDate(new Date());
+    const { today } = await getUserClock(ctx.from.id);
+    if (!isDiaryDate(ctx.wizard.state.date, today)) ctx.wizard.state.date = today;
     await ctx.reply(T.ask);
     return ctx.wizard.next();
   },

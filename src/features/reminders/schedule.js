@@ -1,16 +1,11 @@
-// [RU] Чистые правила напоминаний: варианты настроек, перевод «сейчас» в
-// локальное время пользователя и проверка «пора отправлять». Без БД и таймеров.
-// [EN] Pure reminder rules: setting options, converting "now" into the user's
-// local time and the "is it due" check. No DB, no timers.
+// [RU] Чистые правила напоминаний: варианты настроек и проверка «пора
+// отправлять» по локальному времени пользователя (utils/date-helpers.js:localParts).
+// Без БД и таймеров.
+// [EN] Pure reminder rules: setting options and the "is it due" check in the
+// user's local time (utils/date-helpers.js:localParts). No DB, no timers.
+const { localParts } = require('../../utils/date-helpers');
 
 const REMINDER_TYPES = Object.freeze(['morning', 'evening', 'weekly']);
-
-// Москва (UTC+3) — пояс по умолчанию, как DEFAULT в users.utc_offset_minutes
-const DEFAULT_OFFSET_MINUTES = 180;
-
-// [RU] Российские/СНГ пояса без летнего времени: UTC+2 … UTC+12 (минуты).
-// [EN] Russian/CIS zones without DST: UTC+2 … UTC+12 (minutes).
-const ZONE_OFFSETS = Object.freeze([120, 180, 240, 300, 360, 420, 480, 540, 600, 660, 720]);
 
 const hours = (h) => h * 60;
 
@@ -39,26 +34,6 @@ const DEFAULTS = Object.freeze({
 const GRACE_MINUTES = 180;
 
 const pad = (n) => String(n).padStart(2, '0');
-
-/**
- * Converts a UTC instant into the user's local calendar date, minutes since
- * local midnight and ISO weekday (0 = Monday … 6 = Sunday).
- * @param {Date} nowUtc
- * @param {number} offsetMinutes - UTC offset of the user's zone
- * @returns {{date: string, minutes: number, weekday: number}}
- */
-function localParts(nowUtc, offsetMinutes) {
-  // [RU] Сдвигаем момент на смещение и читаем UTC-поля — так результат не
-  // зависит от часового пояса сервера.
-  // [EN] Shift the instant by the offset and read UTC fields, so the result
-  // does not depend on the server time zone.
-  const shifted = new Date(nowUtc.getTime() + offsetMinutes * 60_000);
-  return {
-    date: `${shifted.getUTCFullYear()}-${pad(shifted.getUTCMonth() + 1)}-${pad(shifted.getUTCDate())}`,
-    minutes: shifted.getUTCHours() * 60 + shifted.getUTCMinutes(),
-    weekday: (shifted.getUTCDay() + 6) % 7
-  };
-}
 
 /**
  * True when the reminder should be sent now: it is enabled, the local time
@@ -113,12 +88,9 @@ function formatTime(minutes) {
 
 module.exports = {
   REMINDER_TYPES,
-  DEFAULT_OFFSET_MINUTES,
-  ZONE_OFFSETS,
   TIME_OPTIONS,
   DEFAULTS,
   GRACE_MINUTES,
-  localParts,
   isDue,
   lastSentAfterChange,
   formatTime

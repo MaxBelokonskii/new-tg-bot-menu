@@ -1,5 +1,6 @@
 const { Markup } = require('telegraf');
 const texts = require('../bot/texts');
+const { formatZone } = require('./time-zone');
 
 /**
  * Builds HTML summary of saved profile fields plus calorie breakdown
@@ -72,18 +73,21 @@ function buildMacrosLines(data) {
 }
 
 /**
- * Builds the profile screen: summary (if filled) or empty-state hint,
- * plus start/edit, (for a filled profile) macro targets, product
- * preference and reminder buttons.
+ * Builds the settings (profile) screen: summary (if filled) or empty-state
+ * hint, plus start/edit, (for a filled profile) macro targets, product
+ * preference, reminder and time zone buttons.
  * @param {object|null} profile
+ * @param {number} offsetMinutes - the user's UTC offset, shown on the zone button
  * @returns {{text: string, extra: object}}
  */
-function buildProfileMenu(profile) {
+function buildProfileMenu(profile, offsetMinutes) {
   const P = texts.ingredientPrefs.listBtn;
+  const zoneBtn = texts.timeZone.settingsBtn.replace('{zone}', formatZone(offsetMinutes));
   const prefsRows = [
     [Markup.button.callback(P.excluded, 'prefs_list_excluded')],
     [Markup.button.callback(P.favorite, 'prefs_list_favorite')],
-    [Markup.button.callback(texts.reminders.openBtn, 'rem_menu')]
+    [Markup.button.callback(texts.reminders.openBtn, 'rem_menu')],
+    [Markup.button.callback(zoneBtn, 'tz_pick_settings')]
   ];
   if (!profile) {
     const keyboard = Markup.inlineKeyboard([
@@ -103,19 +107,8 @@ function buildProfileMenu(profile) {
   };
 }
 
-/**
- * Sends the profile screen as a new message.
- * @param {object} ctx
- * @param {object|null} profile
- */
-async function sendProfileMenu(ctx, profile) {
-  const { text, extra } = buildProfileMenu(profile);
-  return ctx.reply(text, extra);
-}
-
 module.exports = {
   buildProfileSummary,
   buildCaloriesBlock,
-  buildProfileMenu,
-  sendProfileMenu
+  buildProfileMenu
 };

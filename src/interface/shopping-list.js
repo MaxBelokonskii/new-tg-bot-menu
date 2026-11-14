@@ -1,7 +1,7 @@
 const { Markup } = require('telegraf');
 const texts = require('../bot/texts');
 const { formatShoppingQuantity } = require('../utils/formatters');
-const { formatLocalDate } = require('../utils/date-helpers');
+const { addDays } = require('../utils/date-helpers');
 
 /**
  * Derives 'day' or 'week' mode from the shopping list period bounds.
@@ -12,13 +12,10 @@ const { formatLocalDate } = require('../utils/date-helpers');
 function deriveMode(periodStart, periodEnd) {
   if (!periodStart || !periodEnd) return null;
   // [RU] Разница ровно в 1 день ⇒ режим «сегодня», иначе считаем «неделей».
-  // [EN] 1-day span means the user picked the daily mode.
-  const start = new Date(periodStart);
-  const end = new Date(periodEnd);
-  const diffDays = Math.round((end - start) / (1000 * 60 * 60 * 24));
-  // [RU] Строгое равенство: 0/отрицательные разницы — повреждённые данные, не маскируем их как «день».
-  // [EN] Strict equality: 0/negative spans indicate corrupted data — do not silently label them 'day'.
-  return diffDays === 1 ? 'day' : 'week';
+  // Строгое равенство: 0/отрицательные разницы — повреждённые данные, не маскируем их как «день».
+  // [EN] A 1-day span means the user picked the daily mode. Strict equality:
+  // 0/negative spans indicate corrupted data — do not silently label them 'day'.
+  return addDays(periodStart, 1) === periodEnd ? 'day' : 'week';
 }
 
 /**
@@ -83,10 +80,10 @@ function formatGroup(header, items) {
  * A list whose period has already ended gets a "rebuild me" note; bought
  * items are struck through and counted.
  * @param {{ items: Array, periodStart: string|null, periodEnd: string|null }} list
- * @param {string} [today] - YYYY-MM-DD local date, injectable for tests
+ * @param {string} today - YYYY-MM-DD, the user's local today
  * @returns {string}
  */
-function formatShoppingList(list, today = formatLocalDate(new Date())) {
+function formatShoppingList(list, today) {
   const { items, periodStart, periodEnd } = list;
   if (!items || items.length === 0) {
     return texts.shoppingList.empty;

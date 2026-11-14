@@ -1,5 +1,5 @@
 const { dbGet, dbAll, dbRun, withTransaction } = require('../../database/db');
-const { getCurrentWeekBounds, formatLocalDate } = require('../../utils/date-helpers');
+const { addDays } = require('../../utils/date-helpers');
 const { getOrCreateUser } = require('./logic');
 const { getUserIngredientPrefs } = require('../ingredient-prefs/logic');
 const {
@@ -119,7 +119,7 @@ async function loadFilteredCandidates(prefs) {
 }
 
 /**
- * Returns planned items of the user's current ISO week.
+ * Returns planned items of the user's ISO week.
  * @param {number} userId
  * @param {{start: string, endExclusive: string}} bounds
  * @returns {Promise<Array<{date: string, slot: number, recipe_id: number}>>}
@@ -135,14 +135,15 @@ async function loadWeekItems(userId, { start, endExclusive }) {
 }
 
 /**
- * Counts dishes already planned for the current ISO week — the UI asks
+ * Counts dishes already planned for an ISO week — the UI asks
  * "overwrite or fill empty" when it is non-zero.
  * @param {number} telegramId
+ * @param {{start: string, endExclusive: string}} week - from getWeekBounds
  * @returns {Promise<number>}
  */
-async function countWeekItems(telegramId) {
+async function countWeekItems(telegramId, week) {
   const userId = await getOrCreateUser(telegramId);
-  return (await loadWeekItems(userId, getCurrentWeekBounds())).length;
+  return (await loadWeekItems(userId, week)).length;
 }
 
 /**
@@ -159,10 +160,9 @@ async function ensureWeekDays(userId, weekStart) {
   );
   if (!week) throw new Error('Failed to create/find weekly_menu');
 
-  const [y, m, d] = weekStart.split('-').map(Number);
   const days = [];
   for (let i = 0; i < 7; i++) {
-    const date = formatLocalDate(new Date(y, m - 1, d + i));
+    const date = addDays(weekStart, i);
     await dbRun('INSERT OR IGNORE INTO daily_menu (user_id, date) VALUES (?, ?)', [userId, date]);
     const menu = await dbGet('SELECT id FROM daily_menu WHERE user_id = ? AND date = ?', [userId, date]);
     if (!menu) throw new Error(`Failed to create/find daily_menu for ${date}`);
@@ -205,7 +205,8 @@ function buildInitialState(items, mode) {
 }
 
 /**
- * Generates the plan for the current ISO week (Mon..Sun): for every slot
+ * Generates the plan for an ISO week (Mon..Sun; the user's current week —
+ * see features/time-zone/logic.js:getUserClock): for every slot
  * picks a random recipe among the TOP_K closest to the user's per-slot kcal
  * target, without repeating a recipe within the week until its category is
  * exhausted. Skips recipes with excluded products and favors recipes with
@@ -215,15 +216,16 @@ function buildInitialState(items, mode) {
  * one transaction, so a failure leaves no partially generated week.
  *
  * @param {number} telegramId
- * @param {{mode?: 'overwrite'|'fill', random?: () => number}} [options]
- *   mode `overwrite` (default) rewrites all 35 slots, `fill` keeps existing
- *   dishes and fills only empty slots; `random` is injectable for tests.
+ * @param {{week: {start: string, endExclusive: string}, mode?: 'overwrite'|'fill',
+ *   random?: () => number}} options
+ *   `week` — bounds from getWeekBounds; mode `overwrite` (default) rewrites
+ *   all 35 slots, `fill` keeps existing dishes and fills only empty slots;
+ *   `random` is injectable for tests.
  * @returns {Promise<{weekStart: string, daysFilled: string[], slotsWritten: number}>}
  */
-async function generateWeeklyPlan(telegramId, options = {}) {
-  const { mode = GENERATION_MODES.OVERWRITE, random = Math.random } = options;
+async function generateWeeklyPlan(telegramId, options) {
+  const { week: bounds, mode = GENERATION_MODES.OVERWRITE, random = Math.random } = options;
   const userId = await getOrCreateUser(telegramId);
-  const bounds = getCurrentWeekBounds();
 
   const targets = await dbGet(
     `SELECT target_breakfast, target_main1, target_main2, target_salad, target_dessert

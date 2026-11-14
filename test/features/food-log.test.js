@@ -2,7 +2,7 @@ const { seedDb } = require('../helpers/memory-db');
 const { test, before } = require('node:test');
 const assert = require('node:assert/strict');
 const { dbGet, dbAll } = require('../../src/database/db');
-const { formatLocalDate, addDays } = require('../../src/utils/date-helpers');
+const { addDays } = require('../../src/utils/date-helpers');
 const { saveSelectedDish } = require('../../src/features/weekly-planner/logic');
 const {
   isDiaryDate,
@@ -21,7 +21,7 @@ const {
 
 const USER = 7001;
 const OTHER = 7002;
-const TODAY = formatLocalDate(new Date());
+const TODAY = '2026-11-14';
 
 const recipeByName = (name) => dbGet(
   'SELECT id, calories, protein, fat, carbs FROM recipes WHERE name = ?', [name]
@@ -74,8 +74,8 @@ test('searchRecipes finds Cyrillic names in the seeded catalog, max 10', async (
 
 test('addEntry + getDayLog/getDayTotals scale nutrition by portion', async () => {
   const omelet = await recipeByName('Омлет с сыром');
-  const id1 = await addEntry(USER, { recipeId: omelet.id, portion: 1.5 });
-  const id2 = await addEntry(USER, { recipeId: omelet.id, portion: 0.5, slot: 1 });
+  const id1 = await addEntry(USER, { recipeId: omelet.id, portion: 1.5, date: TODAY });
+  const id2 = await addEntry(USER, { recipeId: omelet.id, portion: 0.5, slot: 1, date: TODAY });
   assert.ok(id1 && id2);
 
   const log = await getDayLog(USER, TODAY);
@@ -92,11 +92,13 @@ test('addEntry + getDayLog/getDayTotals scale nutrition by portion', async () =>
   assert.deepEqual(await getDayLog(USER, addDays(TODAY, -1)), []);
 });
 
-test('addEntry rejects bad portion/slot and returns null for an unknown recipe', async () => {
+test('addEntry rejects bad portion/slot/date and returns null for an unknown recipe', async () => {
   const omelet = await recipeByName('Омлет с сыром');
-  await assert.rejects(addEntry(USER, { recipeId: omelet.id, portion: 3 }), /portion/);
-  await assert.rejects(addEntry(USER, { recipeId: omelet.id, slot: 9 }), /slot/);
-  assert.equal(await addEntry(USER, { recipeId: 999999 }), null);
+  await assert.rejects(addEntry(USER, { recipeId: omelet.id, portion: 3, date: TODAY }), /portion/);
+  await assert.rejects(addEntry(USER, { recipeId: omelet.id, slot: 9, date: TODAY }), /slot/);
+  await assert.rejects(addEntry(USER, { recipeId: omelet.id }), /date/);
+  await assert.rejects(addEntry(USER, { recipeId: omelet.id, date: '2026-02-31' }), /date/);
+  assert.equal(await addEntry(USER, { recipeId: 999999, date: TODAY }), null);
 });
 
 test('deleteEntry removes only the owner\'s entry and returns its date', async () => {
@@ -114,7 +116,7 @@ test('deleteEntry removes only the owner\'s entry and returns its date', async (
 
 test('getEntry returns only the owner\'s entry with per-serving nutrition', async () => {
   const omelet = await recipeByName('Омлет с сыром');
-  const id = await addEntry(USER, { recipeId: omelet.id, portion: 1.5 });
+  const id = await addEntry(USER, { recipeId: omelet.id, portion: 1.5, date: TODAY });
   const entry = await getEntry(USER, id);
   assert.deepEqual(
     [entry.id, entry.date, entry.portion, entry.recipeId, entry.name, entry.calories],
@@ -130,13 +132,13 @@ test('updateEntryPortion changes only the owner\'s entry within the diary window
   const id = await addEntry(USER, { recipeId: omelet.id, date: yesterday });
   const portionOf = async () => (await dbGet('SELECT portion FROM food_log WHERE id = ?', [id])).portion;
 
-  assert.deepEqual(await updateEntryPortion(USER, id, 2), { status: 'updated', date: yesterday });
+  assert.deepEqual(await updateEntryPortion(USER, id, 2, TODAY), { status: 'updated', date: yesterday });
   assert.equal(await portionOf(), 2);
   const [logged] = await getDayLog(USER, yesterday);
   assert.equal(logged.calories, omelet.calories * 2);
 
-  assert.deepEqual(await updateEntryPortion(OTHER, id, 0.5), { status: 'notFound' }, 'foreign entry');
-  assert.deepEqual(await updateEntryPortion(USER, 999999, 0.5), { status: 'notFound' }, 'missing entry');
+  assert.deepEqual(await updateEntryPortion(OTHER, id, 0.5, TODAY), { status: 'notFound' }, 'foreign entry');
+  assert.deepEqual(await updateEntryPortion(USER, 999999, 0.5, TODAY), { status: 'notFound' }, 'missing entry');
   assert.equal(await portionOf(), 2);
 
   // окно дневника считается от переданного «сегодня»
@@ -145,20 +147,20 @@ test('updateEntryPortion changes only the owner\'s entry within the diary window
   assert.equal(await portionOf(), 2);
 
   for (const bad of [portionFromHalves(5), 3, 0, undefined]) {
-    await assert.rejects(updateEntryPortion(USER, id, bad), /portion/, String(bad));
+    await assert.rejects(updateEntryPortion(USER, id, bad, TODAY), /portion/, String(bad));
   }
   assert.equal(await portionOf(), 2);
 });
 
 test('getPlanDishes lists today\'s plan and flags dishes already in the diary', async () => {
   const breakfast = await recipeByName('Омлет с томатами и сыром');
-  await saveSelectedDish(OTHER, breakfast.id);
+  await saveSelectedDish(OTHER, breakfast.id, TODAY);
   let dishes = await getPlanDishes(OTHER, TODAY);
   assert.deepEqual(dishes, [
     { slot: 1, recipeId: breakfast.id, name: 'Омлет с томатами и сыром', logged: false }
   ]);
 
-  await addEntry(OTHER, { recipeId: breakfast.id, slot: 1 });
+  await addEntry(OTHER, { recipeId: breakfast.id, slot: 1, date: TODAY });
   dishes = await getPlanDishes(OTHER, TODAY);
   assert.equal(dishes[0].logged, true);
   assert.deepEqual(await getPlanDishes(USER, addDays(TODAY, -1)), []);

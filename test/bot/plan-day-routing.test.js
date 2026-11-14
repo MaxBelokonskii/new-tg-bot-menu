@@ -3,17 +3,17 @@ const { test, before, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 const texts = require('../../src/bot/texts');
 const { dbGet } = require('../../src/database/db');
-const { formatLocalDate, addDays, getCurrentWeekBounds } = require('../../src/utils/date-helpers');
+const { addDays, weekdayOf } = require('../../src/utils/date-helpers');
+const { defaultClock } = require('../helpers/clock');
 const { getDayPlan } = require('../../src/features/weekly-planner/day-plan');
 const { saveUserProfile } = require('../../src/features/profile/logic');
 const { resolvePlanDate } = require('../../src/bot/handlers/plan-view');
-const { buildPlanDayScreen, formatPlanDate, weekdayIndex } = require('../../src/interface/plan-day');
+const { buildPlanDayScreen, formatPlanDate } = require('../../src/interface/plan-day');
 const { createFakeBot } = require('../helpers/fake-bot');
 
 const TELEGRAM_ID = 9201;
 const T = texts.weeklyPlan;
-const TODAY = formatLocalDate(new Date());
-const { start: MONDAY } = getCurrentWeekBounds();
+const { today: TODAY, week: { start: MONDAY } } = defaultClock();
 const SUNDAY = addDays(MONDAY, 6);
 const { calls, sendCallback, methods, reset } = createFakeBot(TELEGRAM_ID);
 
@@ -24,15 +24,13 @@ const lastEdit = () => calls.filter(c => c.method === 'editMessageText').at(-1).
 before(seedDb);
 beforeEach(reset);
 
-test('weekdayIndex / formatPlanDate / resolvePlanDate', () => {
-  assert.equal(weekdayIndex('2026-11-09'), 0, 'Monday');
-  assert.equal(weekdayIndex('2026-11-15'), 6, 'Sunday');
+test('formatPlanDate / resolvePlanDate', () => {
   assert.equal(formatPlanDate('2026-11-11'), 'Ср 11.11');
-  const now = new Date(2026, 10, 12);
-  assert.equal(resolvePlanDate('2026-11-15', now), '2026-11-15');
-  assert.equal(resolvePlanDate('2026-11-16', now), '2026-11-12', 'next week → today');
-  assert.equal(resolvePlanDate('2026-11-08', now), '2026-11-12', 'last week → today');
-  assert.equal(resolvePlanDate('2026-02-31', now), '2026-11-12', 'invalid date → today');
+  const today = '2026-11-12';
+  assert.equal(resolvePlanDate('2026-11-15', today), '2026-11-15');
+  assert.equal(resolvePlanDate('2026-11-16', today), '2026-11-12', 'next week → today');
+  assert.equal(resolvePlanDate('2026-11-08', today), '2026-11-12', 'last week → today');
+  assert.equal(resolvePlanDate('2026-02-31', today), '2026-11-12', 'invalid date → today');
 });
 
 test('empty week keeps the "no plan" text', async () => {
@@ -47,7 +45,7 @@ test('view shows today with weekday name, kcal per dish, totals and day navigati
   await sendCallback('view_weekly_plan');
   assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText']);
   const { text } = calls[1].payload;
-  assert.ok(text.includes(T.days[weekdayIndex(TODAY)]), 'weekday name');
+  assert.ok(text.includes(T.days[weekdayOf(TODAY)]), 'weekday name');
   assert.ok(text.includes(T.day.todayMark.trim()));
   assert.ok(!text.includes(TODAY), 'no raw YYYY-MM-DD');
   assert.ok(text.includes(T.day.totalsHeader));
@@ -78,7 +76,7 @@ test('navigation: Monday has only ▶️, Sunday only ◀️; stale dates fall b
   assert.deepEqual(nav, [`wp_day_${addDays(SUNDAY, -1)}`]);
 
   await sendCallback(`wp_day_${addDays(SUNDAY, 7)}`);
-  assert.ok(lastEdit().text.includes(T.days[weekdayIndex(TODAY)]));
+  assert.ok(lastEdit().text.includes(T.days[weekdayOf(TODAY)]));
 
   reset();
   await sendCallback('wp_menu');

@@ -1,18 +1,16 @@
 const { dbAll } = require('../../database/db');
 const { getOrCreateUser } = require('./logic');
 const { NUTRIENTS, sumNutrition } = require('../../utils/nutrition-totals');
-const { getCurrentWeekBounds } = require('../../utils/date-helpers');
 
 /**
- * Returns every planned dish of the current ISO week (Mon..Sun) with its
- * date and per-serving nutrition — one row per daily_menu_items entry.
+ * Returns every planned dish of an ISO week (Mon..Sun) with its date and
+ * per-serving nutrition — one row per daily_menu_items entry.
  * @param {number} telegramId
- * @param {Date} [now=new Date()]
+ * @param {{start: string, endExclusive: string}} week - from getWeekBounds
  * @returns {Promise<Array<{date: string, calories: number, protein: number, fat: number, carbs: number}>>}
  */
-async function getWeekPlanNutrition(telegramId, now = new Date()) {
+async function getWeekPlanNutrition(telegramId, { start, endExclusive }) {
   const userId = await getOrCreateUser(telegramId);
-  const { start, endExclusive } = getCurrentWeekBounds(now);
   return dbAll(
     `SELECT dm.date, r.calories, r.protein, r.fat, r.carbs
      FROM daily_menu_items dmi

@@ -1,7 +1,7 @@
 const { Markup } = require('telegraf');
 const texts = require('../bot/texts');
 const { NUTRIENTS } = require('../utils/nutrition-totals');
-const { addDays } = require('../utils/date-helpers');
+const { addDays, weekdayOf } = require('../utils/date-helpers');
 const { slotLabel } = require('../utils/formatters');
 
 const T = texts.weeklyPlan;
@@ -9,16 +9,6 @@ const D = T.day;
 const BUTTON_NAME_MAX = 28;
 
 const truncate = (name) => (name.length > BUTTON_NAME_MAX ? `${name.slice(0, BUTTON_NAME_MAX - 1)}…` : name);
-
-/**
- * ISO weekday index of a local YYYY-MM-DD date: 0 = Monday … 6 = Sunday.
- * @param {string} date
- * @returns {number}
- */
-function weekdayIndex(date) {
-  const [y, m, d] = date.split('-').map(Number);
-  return (new Date(y, m - 1, d).getDay() + 6) % 7;
-}
 
 /**
  * Formats YYYY-MM-DD as DD.MM.
@@ -37,7 +27,7 @@ function formatDayMonth(date) {
  */
 function formatPlanDate(date) {
   return T.shortDate
-    .replace('{day}', T.daysShort[weekdayIndex(date)])
+    .replace('{day}', T.daysShort[weekdayOf(date)])
     .replace('{date}', formatDayMonth(date));
 }
 
@@ -134,11 +124,11 @@ function buildNavRow(date, weekStart) {
   const row = [];
   if (date > weekStart) {
     const prev = addDays(date, -1);
-    row.push(Markup.button.callback(D.prevBtn.replace('{day}', T.daysShort[weekdayIndex(prev)]), `wp_day_${prev}`));
+    row.push(Markup.button.callback(D.prevBtn.replace('{day}', T.daysShort[weekdayOf(prev)]), `wp_day_${prev}`));
   }
   if (date < addDays(weekStart, 6)) {
     const next = addDays(date, 1);
-    row.push(Markup.button.callback(D.nextBtn.replace('{day}', T.daysShort[weekdayIndex(next)]), `wp_day_${next}`));
+    row.push(Markup.button.callback(D.nextBtn.replace('{day}', T.daysShort[weekdayOf(next)]), `wp_day_${next}`));
   }
   return row;
 }
@@ -164,7 +154,7 @@ function buildNavRow(date, weekStart) {
  */
 function buildPlanDayScreen({ date, today, weekStart, items, totals, targets, week = null }) {
   const header = D.header
-    .replace('{day}', T.days[weekdayIndex(date)])
+    .replace('{day}', T.days[weekdayOf(date)])
     .replace('{date}', formatDayMonth(date))
     .replace('{today}', date === today ? D.todayMark : '');
   const lines = [`<b>${T.title}</b>`, '', header, ''];
@@ -189,7 +179,6 @@ function buildPlanDayScreen({ date, today, weekStart, items, totals, targets, we
 }
 
 module.exports = {
-  weekdayIndex,
   formatPlanDate,
   formatPlanItem,
   formatNutrientRow,

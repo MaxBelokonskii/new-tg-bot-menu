@@ -3,7 +3,7 @@ const { test, before, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 const texts = require('../../src/bot/texts');
 const { isUsableBotToken } = require('../../src/bot/create-bot');
-const { formatLocalDate } = require('../../src/utils/date-helpers');
+const { defaultClock } = require('../helpers/clock');
 const { createFakeBot } = require('../helpers/fake-bot');
 
 const { calls, sendText, sendCallback, methods, reset } = createFakeBot(5001);
@@ -46,7 +46,7 @@ test('generate → view → edit slot → cancel flow is routed', async () => {
   await sendCallback('view_weekly_plan');
   assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText']);
 
-  const today = formatLocalDate(new Date());
+  const { today } = defaultClock();
   reset();
   await sendCallback(`edit_slot_${today}_1`);
   assert.equal(methods()[0], 'answerCallbackQuery');
@@ -77,7 +77,7 @@ test('generate on a non-empty week asks overwrite/fill, fill reports nothing to 
 });
 
 test('clear-day and remove-slot confirmations are routed', async () => {
-  const today = formatLocalDate(new Date());
+  const { today } = defaultClock();
   for (const data of [`confirm_clear_day_${today}`, `confirm_remove_slot_${today}_2`]) {
     reset();
     await sendCallback(data);

@@ -1,19 +1,32 @@
 const texts = require('../texts');
 const logger = require('../../utils/logger');
-const { sendProfileMenu } = require('../../interface/profile');
+const { safeEdit } = require('./helpers');
+const { buildSettingsScreen } = require('./settings-view');
 const { SCENE_ID } = require('../../features/profile/scene');
-const { getUserProfile } = require('../../features/profile/logic');
 
 /**
- * Registers profile (settings) handlers.
+ * Registers profile (settings) handlers: the settings screen from the main
+ * menu and from "back to settings" buttons, and the profile survey start.
  * @param {import('telegraf').Telegraf} bot
  */
 function register(bot) {
   bot.hears(texts.mainMenu.buttons.settings, async (ctx) => {
     try {
-      await sendProfileMenu(ctx, await getUserProfile(ctx.from.id));
+      const { text, extra } = await buildSettingsScreen(ctx.from.id);
+      await ctx.reply(text, extra);
     } catch (error) {
       logger.error('Error loading profile:', error);
+      await ctx.reply(texts.errors.general);
+    }
+  });
+
+  bot.action('settings_menu', async (ctx) => {
+    await ctx.answerCbQuery();
+    try {
+      const { text, extra } = await buildSettingsScreen(ctx.from.id);
+      await safeEdit(ctx, text, extra);
+    } catch (error) {
+      logger.error('Error returning to settings:', error);
       await ctx.reply(texts.errors.general);
     }
   });

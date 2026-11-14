@@ -10,7 +10,10 @@ const {
   pickRecipe,
   TOP_K
 } = require('../../src/features/weekly-planner/generator');
-const { formatLocalDate } = require('../../src/utils/date-helpers');
+const { getWeekBounds } = require('../../src/utils/date-helpers');
+
+const TODAY = '2026-11-14';
+const WEEK = getWeekBounds(TODAY);
 
 const PROFILE = { weight: 80, height: 180, age: 30, sex: 'male', activity_level: 'moderate', goal: 'maintain' };
 const recipes = (n) => Array.from({ length: n }, (_, i) => ({ id: i + 1, calories: (i + 1) * 100 }));
@@ -40,7 +43,7 @@ before(seedDb);
 
 test('with a filled profile the week has no repeated dishes per category (4.14)', async () => {
   await saveUserProfile(6001, PROFILE);
-  await generateWeeklyPlan(6001);
+  await generateWeeklyPlan(6001, { week: WEEK });
   const rows = await dbAll(
     `SELECT dmi.slot, dmi.recipe_id FROM daily_menu_items dmi
      JOIN daily_menu dm ON dm.id = dmi.daily_menu_id
@@ -59,23 +62,22 @@ test('fill mode keeps manual dishes and fills only empty slots (4.17)', async ()
   const [{ id: manualBreakfast }] = await dbAll(
     "SELECT r.id FROM recipes r JOIN meal_categories mc ON mc.id = r.category_id WHERE mc.name = 'breakfast' LIMIT 1"
   );
-  await saveSelectedDish(6002, manualBreakfast);
-  assert.equal(await countWeekItems(6002), 1);
+  await saveSelectedDish(6002, manualBreakfast, TODAY);
+  assert.equal(await countWeekItems(6002, WEEK), 1);
 
-  const first = await generateWeeklyPlan(6002, { mode: 'fill' });
+  const first = await generateWeeklyPlan(6002, { week: WEEK, mode: 'fill' });
   assert.equal(first.slotsWritten, 34);
-  const plan = await getWeeklyPlan(6002);
-  const today = formatLocalDate(new Date());
+  const plan = await getWeeklyPlan(6002, WEEK);
   const breakfasts = plan.filter(p => p.slot === 1);
-  const todayBreakfast = breakfasts.find(p => p.date === today);
+  const todayBreakfast = breakfasts.find(p => p.date === TODAY);
   const manualRow = (await dbAll('SELECT name FROM recipes WHERE id = ?', [manualBreakfast]))[0];
   assert.equal(todayBreakfast.name, manualRow.name);
   assert.equal(breakfasts.filter(p => p.name === manualRow.name).length, 1, 'manual dish not repeated');
 
-  const second = await generateWeeklyPlan(6002, { mode: 'fill' });
+  const second = await generateWeeklyPlan(6002, { week: WEEK, mode: 'fill' });
   assert.equal(second.slotsWritten, 0);
 
-  const overwrite = await generateWeeklyPlan(6002, { mode: 'overwrite' });
+  const overwrite = await generateWeeklyPlan(6002, { week: WEEK, mode: 'overwrite' });
   assert.equal(overwrite.slotsWritten, 35);
-  assert.equal(await countWeekItems(6002), 35);
+  assert.equal(await countWeekItems(6002, WEEK), 35);
 });

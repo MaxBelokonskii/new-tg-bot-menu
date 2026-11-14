@@ -12,7 +12,8 @@ const {
   getShoppingListKeyboard,
   buildClearShoppingConfirmKeyboard
 } = require('../../interface/shopping-list');
-const { getCurrentWeekBounds, getCurrentDayBounds } = require('../../utils/date-helpers');
+const { getDayBounds } = require('../../utils/date-helpers');
+const { getUserClock } = require('../../features/time-zone/logic');
 
 /**
  * Re-renders the callback message as the user's current shopping list.
@@ -21,19 +22,22 @@ const { getCurrentWeekBounds, getCurrentDayBounds } = require('../../utils/date-
  */
 async function renderLastList(ctx) {
   const list = await getLastShoppingList(ctx.from.id);
-  return safeEdit(ctx, formatShoppingList(list), {
+  const { today } = await getUserClock(ctx.from.id);
+  return safeEdit(ctx, formatShoppingList(list, today), {
     parse_mode: 'HTML', ...getShoppingListKeyboard(list.listId)
   });
 }
 
 /**
- * Rebuilds the shopping list for today or the current week and re-renders it.
+ * Rebuilds the shopping list for the user's today or current week and
+ * re-renders it.
  * @param {import('telegraf').Context} ctx
  * @param {'day'|'week'} mode
  */
 async function regenerateShoppingList(ctx, mode) {
-  const bounds = mode === 'day' ? getCurrentDayBounds() : getCurrentWeekBounds();
   try {
+    const clock = await getUserClock(ctx.from.id);
+    const bounds = mode === 'day' ? getDayBounds(clock.today) : clock.week;
     const ingredients = await getIngredientsFromPlan(ctx.from.id, bounds);
     if (ingredients.length === 0) {
       return ctx.answerCbQuery(texts.shoppingList.emptyForPeriod[mode], { show_alert: true });
@@ -57,7 +61,8 @@ function register(bot) {
   bot.hears(texts.mainMenu.buttons.shoppingList, async (ctx) => {
     try {
       const list = await getLastShoppingList(ctx.from.id);
-      await ctx.reply(formatShoppingList(list), {
+      const { today } = await getUserClock(ctx.from.id);
+      await ctx.reply(formatShoppingList(list, today), {
         parse_mode: 'HTML', ...getShoppingListKeyboard(list.listId)
       });
     } catch (error) {

@@ -6,6 +6,7 @@ const { dbAll } = require('../../src/database/db');
 const { generateWeeklyPlan } = require('../../src/features/weekly-planner/generator');
 const { getLastShoppingList } = require('../../src/features/shopping-list/logic');
 const { createFakeBot } = require('../helpers/fake-bot');
+const { defaultClock } = require('../helpers/clock');
 
 const TELEGRAM_ID = 8301;
 const T = texts.shoppingList.checklist;
@@ -26,7 +27,7 @@ test('no list → no checklist button; built list → checklist button with list
   assert.deepEqual(methods(), ['sendMessage']);
   assert.ok(!callbackData(calls[0].payload).some(d => d.startsWith('sl_check_')));
 
-  await generateWeeklyPlan(TELEGRAM_ID);
+  await generateWeeklyPlan(TELEGRAM_ID, { week: defaultClock().week });
   reset();
   await sendCallback('generate_shopping_list_week');
   const { listId } = await getLastShoppingList(TELEGRAM_ID);

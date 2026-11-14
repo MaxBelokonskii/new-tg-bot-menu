@@ -4,8 +4,7 @@ const { safeEdit } = require('./helpers');
 const { listPrefs, removePref } = require('../../features/ingredient-prefs/logic');
 const { SCENE_ID } = require('../../features/ingredient-prefs/scene');
 const { buildPrefsScreen } = require('../../interface/ingredient-prefs');
-const { getUserProfile } = require('../../features/profile/logic');
-const { buildProfileMenu } = require('../../interface/profile');
+const { buildSettingsScreen } = require('./settings-view');
 
 const KIND = '(excluded|favorite)';
 
@@ -54,7 +53,7 @@ function register(bot) {
   bot.action('prefs_back', async (ctx) => {
     await ctx.answerCbQuery();
     try {
-      const { text, extra } = buildProfileMenu(await getUserProfile(ctx.from.id));
+      const { text, extra } = await buildSettingsScreen(ctx.from.id);
       await safeEdit(ctx, text, extra);
     } catch (error) {
       logger.error('Error returning to settings:', error);

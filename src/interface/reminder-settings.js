@@ -1,35 +1,13 @@
 const { Markup } = require('telegraf');
 const texts = require('../bot/texts');
-const { REMINDER_TYPES, ZONE_OFFSETS, TIME_OPTIONS, formatTime } = require('../features/reminders/schedule');
+const { REMINDER_TYPES, TIME_OPTIONS, formatTime } = require('../features/reminders/schedule');
+const { formatZone, formatZoneShort } = require('./time-zone');
 
 const T = texts.reminders;
 const DAYS_SHORT = texts.weeklyPlan.daysShort;
-const ZONES_PER_ROW = 2;
 
 const htmlExtra = (rows) => ({ parse_mode: 'HTML', ...Markup.inlineKeyboard(rows) });
 const mark = (label, selected) => (selected ? T.selectedMark.replace('{label}', label) : label);
-
-/**
- * Full zone label: "Москва (UTC+3)".
- * @param {number} offsetMinutes
- * @returns {string}
- */
-function formatZone(offsetMinutes) {
-  return T.zoneLabel
-    .replace('{city}', T.zones[offsetMinutes] || '')
-    .replace('{hours}', offsetMinutes / 60);
-}
-
-/**
- * Short zone label for buttons: "Москва +3".
- * @param {number} offsetMinutes
- * @returns {string}
- */
-function formatZoneShort(offsetMinutes) {
-  return T.zoneShort
-    .replace('{city}', T.zones[offsetMinutes] || '')
-    .replace('{hours}', offsetMinutes / 60);
-}
 
 /**
  * When the reminder fires: "08:00" or, for weekly, "Вс, 18:00".
@@ -44,7 +22,7 @@ function formatWhen(reminder) {
 
 /**
  * Builds the "🔔 Reminders" settings screen: zone, each reminder's state and
- * time, toggle/time buttons per type, zone picker and back to settings.
+ * time, toggle/time buttons per type, zone picker (tz_pick_rem) and back to settings.
  * @param {{offsetMinutes: number, reminders: object}} settings - getReminderSettings result
  * @returns {{text: string, extra: object}}
  */
@@ -62,7 +40,7 @@ function buildRemindersScreen({ offsetMinutes, reminders }) {
       Markup.button.callback(T.timeBtn.replace('{when}', when), `rem_time_${type}`)
     ]);
   }
-  rows.push([Markup.button.callback(T.zoneBtn.replace('{zone}', formatZoneShort(offsetMinutes)), 'rem_zone')]);
+  rows.push([Markup.button.callback(T.zoneBtn.replace('{zone}', formatZoneShort(offsetMinutes)), 'tz_pick_rem')]);
   rows.push([Markup.button.callback(T.backBtn, 'rem_back')]);
   return { text: lines.join('\n'), extra: htmlExtra(rows) };
 }
@@ -95,29 +73,8 @@ function buildTimePicker(reminder) {
   return { text: lines.join('\n'), extra: htmlExtra(rows) };
 }
 
-/**
- * Zone picker: Russian/CIS zones two per row, the current one marked.
- * @param {number} currentOffset
- * @returns {{text: string, extra: object}}
- */
-function buildZonePicker(currentOffset) {
-  const rows = [];
-  ZONE_OFFSETS.forEach((offset, i) => {
-    const button = Markup.button.callback(
-      mark(formatZoneShort(offset), offset === currentOffset),
-      `rem_setzone_${offset}`
-    );
-    if (i % ZONES_PER_ROW === 0) rows.push([button]);
-    else rows[rows.length - 1].push(button);
-  });
-  rows.push([Markup.button.callback(T.toBackBtn, 'rem_menu')]);
-  return { text: T.zonePrompt, extra: htmlExtra(rows) };
-}
-
 module.exports = {
-  formatZone,
   formatWhen,
   buildRemindersScreen,
-  buildTimePicker,
-  buildZonePicker
+  buildTimePicker
 };

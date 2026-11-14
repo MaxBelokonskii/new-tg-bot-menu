@@ -1,9 +1,8 @@
 const { dbGet, dbAll, dbRun, withTransaction } = require('../../database/db');
 const { getOrCreateUser } = require('../weekly-planner/logic');
+const { DEFAULT_OFFSET_MINUTES } = require('../time-zone/clock');
 const {
   REMINDER_TYPES,
-  DEFAULT_OFFSET_MINUTES,
-  ZONE_OFFSETS,
   TIME_OPTIONS,
   DEFAULTS,
   lastSentAfterChange
@@ -138,30 +137,25 @@ async function setWeeklyDay(telegramId, weekday, now = new Date()) {
 }
 
 /**
- * Stores the user's time zone and recomputes last_sent_date of the stored
- * reminders for the new local "today".
- * @param {number} telegramId
- * @param {number} offsetMinutes - one of ZONE_OFFSETS
- * @param {Date} [now=new Date()]
- * @returns {Promise<{offsetMinutes: number, reminders: object}|null>} null for an unknown zone
+ * Recomputes last_sent_date of the user's stored reminders after a time
+ * zone change, for the new local "today". Call inside the transaction that
+ * changes users.utc_offset_minutes (features/time-zone/logic.js:setUtcOffset).
+ * @param {number} userId - internal user id
+ * @param {number} offsetMinutes - the new UTC offset
+ * @param {Date} now
+ * @returns {Promise<void>}
  */
-async function setUtcOffset(telegramId, offsetMinutes, now = new Date()) {
-  if (!ZONE_OFFSETS.includes(offsetMinutes)) return null;
-  return withTransaction(async () => {
-    const userId = await getOrCreateUser(telegramId);
-    await dbRun('UPDATE users SET utc_offset_minutes = ? WHERE id = ?', [offsetMinutes, userId]);
-    const rows = await dbAll(
-      'SELECT type, time_minutes, last_sent_date FROM reminders WHERE user_id = ?',
-      [userId]
+async function refreshSentDatesForZone(userId, offsetMinutes, now) {
+  const rows = await dbAll(
+    'SELECT type, time_minutes, last_sent_date FROM reminders WHERE user_id = ?',
+    [userId]
+  );
+  for (const row of rows) {
+    await dbRun(
+      'UPDATE reminders SET last_sent_date = ? WHERE user_id = ? AND type = ?',
+      [lastSentAfterChange(row, offsetMinutes, now), userId, row.type]
     );
-    for (const row of rows) {
-      await dbRun(
-        'UPDATE reminders SET last_sent_date = ? WHERE user_id = ? AND type = ?',
-        [lastSentAfterChange(row, offsetMinutes, now), userId, row.type]
-      );
-    }
-    return loadSettings(userId);
-  });
+  }
 }
 
 /**
@@ -215,7 +209,7 @@ module.exports = {
   toggleReminder,
   setReminderTime,
   setWeeklyDay,
-  setUtcOffset,
+  refreshSentDatesForZone,
   getEnabledReminders,
   claimReminder,
   disableUserReminders

@@ -7,6 +7,7 @@ const { placeDishToday } = require('../../features/weekly-planner/day-plan');
 const { buildReplaceQuestion } = require('../../interface/dish-selection');
 const { getPrefsByTelegramId } = require('../../features/ingredient-prefs/logic');
 const { buildSuggestionsScreen } = require('../../interface/what-to-eat');
+const { getUserClock } = require('../../features/time-zone/logic');
 
 const T = texts.whatToEat;
 // [RU] 2–3 блюда в комбинации, порция — число половинок 1..4 (как в дневнике).
@@ -22,13 +23,14 @@ const MAX_PAGE = 50;
  * @param {string} [toast] - callback answer text
  */
 async function showSuggestions(ctx, page, toast) {
-  const result = await getSuggestions(ctx.from.id, { page });
+  const { today, hour } = await getUserClock(ctx.from.id);
+  const result = await getSuggestions(ctx.from.id, { today, hour, page });
   if (result.status === 'noTargets') {
     await ctx.answerCbQuery(T.noTargets, { show_alert: true });
     return;
   }
   await ctx.answerCbQuery(toast);
-  const { text, extra } = buildSuggestionsScreen(result, await getPrefsByTelegramId(ctx.from.id));
+  const { text, extra } = buildSuggestionsScreen(result, await getPrefsByTelegramId(ctx.from.id), today);
   await safeEdit(ctx, text, extra);
 }
 
@@ -81,7 +83,8 @@ function register(bot) {
 
   bot.action(/^wte_eat_(\d+)_([1-4])$/, guarded('logging dish', async (ctx) => {
     const portion = portionFromHalves(Number(ctx.match[2]));
-    const id = await addEntry(ctx.from.id, { recipeId: Number(ctx.match[1]), portion });
+    const { today } = await getUserClock(ctx.from.id);
+    const id = await addEntry(ctx.from.id, { recipeId: Number(ctx.match[1]), portion, date: today });
     await showSuggestions(ctx, 0, id ? T.eaten : texts.foodLog.recipeNotFound);
   }));
 
@@ -90,12 +93,13 @@ function register(bot) {
       const [recipeId, halves] = part.split('x').map(Number);
       return { recipeId, portion: portionFromHalves(halves) };
     });
-    const count = await logCombo(ctx.from.id, items);
+    const count = await logCombo(ctx.from.id, items, (await getUserClock(ctx.from.id)).today);
     await showSuggestions(ctx, 0, T.comboEaten.replace('{count}', count));
   }));
 
   bot.action(/^wte_plan_(\d+)$/, guarded('adding to plan', async (ctx) => {
-    const result = await placeDishToday(ctx.from.id, Number(ctx.match[1]));
+    const { today } = await getUserClock(ctx.from.id);
+    const result = await placeDishToday(ctx.from.id, Number(ctx.match[1]), today);
     if (result.status === 'conflict') {
       await ctx.answerCbQuery();
       await askReplace(ctx, result);
@@ -109,10 +113,11 @@ function register(bot) {
 
   bot.action(COMBO_PLAN, guarded('adding combo to plan', async (ctx) => {
     const ids = ctx.match[1].split('-').map(Number);
+    const { today } = await getUserClock(ctx.from.id);
     const results = [];
     // [RU] Последовательно: блюдо из комбинации может занять слот для следующего.
     // [EN] Sequential: one combo dish may take the slot the next one needs.
-    for (const id of ids) results.push(await placeDishToday(ctx.from.id, id));
+    for (const id of ids) results.push(await placeDishToday(ctx.from.id, id, today));
     await ctx.answerCbQuery(comboPlanToast(results));
     for (const result of results.filter(r => r.status === 'conflict')) await askReplace(ctx, result);
   }));

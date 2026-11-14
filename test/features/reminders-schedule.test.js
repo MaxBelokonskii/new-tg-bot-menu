@@ -3,7 +3,6 @@ const assert = require('node:assert/strict');
 const {
   GRACE_MINUTES,
   DEFAULTS,
-  localParts,
   isDue,
   lastSentAfterChange,
   formatTime
@@ -15,12 +14,6 @@ const KAMCHATKA = 720;
 const at = (iso) => new Date(iso);
 const reminder = (over = {}) => ({
   type: 'morning', enabled: 1, time_minutes: 8 * 60, weekday: null, last_sent_date: null, ...over
-});
-
-test('localParts shifts by the offset independently of the server zone', () => {
-  assert.deepEqual(localParts(at('2026-11-14T05:00:00Z'), MSK), { date: '2026-11-14', minutes: 480, weekday: 5 });
-  // +12 переходит через полночь UTC: 20:30Z субботы — 08:30 воскресенья на Камчатке
-  assert.deepEqual(localParts(at('2026-11-14T20:30:00Z'), KAMCHATKA), { date: '2026-11-15', minutes: 510, weekday: 6 });
 });
 
 test('isDue: at and after the time within the grace window, not before', () => {

@@ -3,7 +3,7 @@ const { test, before, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 const texts = require('../../src/bot/texts');
 const { dbAll } = require('../../src/database/db');
-const { formatLocalDate } = require('../../src/utils/date-helpers');
+const { defaultClock } = require('../helpers/clock');
 const { getOrCreateUser } = require('../../src/features/weekly-planner/logic');
 const { setFavorite, isFavorite } = require('../../src/features/favorite-recipes/logic');
 const { buildRecipeCard } = require('../../src/interface/reverse-search');
@@ -11,7 +11,7 @@ const { createFakeBot } = require('../helpers/fake-bot');
 
 const TELEGRAM_ID = 9401;
 const T = texts.favoriteRecipes;
-const TODAY = formatLocalDate(new Date());
+const TODAY = defaultClock().today;
 const { calls, sendText, sendCallback, methods, reset } = createFakeBot(TELEGRAM_ID);
 
 const callbackData = (payload) => (payload.reply_markup?.inline_keyboard || [])
