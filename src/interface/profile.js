@@ -48,32 +48,65 @@ function buildCaloriesBlock(data) {
   if (data.bmr) header.push(`• ${C.bmr}: ${data.bmr} ${U.kcal}`);
   if (data.tdee) header.push(`• ${C.tdee}: ${data.tdee} ${U.kcal}`);
   header.push(`• ${C.target}: ${data.target_calories} ${U.kcal}`);
-  return [...header, '', C.slotsHeader, ...slotLines].join('\n');
+  if (data.targets_manual) header.push(C.manualMark);
+  return [...header, ...buildMacrosLines(data), '', C.slotsHeader, ...slotLines].join('\n');
 }
 
 /**
- * Renders the profile screen: summary (if filled) or empty-state hint,
- * plus a single start/edit button.
- * @param {object} ctx
- * @param {object|null} profile
+ * Renders daily macro lines (with a leading blank line) or nothing when
+ * macros are absent.
+ * @param {object} data - object with target_protein/target_fat/target_carbs
+ * @returns {string[]}
  */
-async function sendProfileMenu(ctx, profile) {
+function buildMacrosLines(data) {
+  if (data.target_protein === null || data.target_protein === undefined) return [];
+  const M = texts.profile.calories.macros;
+  const g = texts.profile.units.grams;
+  return [
+    '',
+    texts.profile.calories.macrosHeader,
+    `• ${M.protein}: ${data.target_protein} ${g}`,
+    `• ${M.fat}: ${data.target_fat} ${g}`,
+    `• ${M.carbs}: ${data.target_carbs} ${g}`
+  ];
+}
+
+/**
+ * Builds the profile screen: summary (if filled) or empty-state hint,
+ * plus start/edit and (for a filled profile) macro targets buttons.
+ * @param {object|null} profile
+ * @returns {{text: string, extra: object}}
+ */
+function buildProfileMenu(profile) {
   if (!profile) {
     const keyboard = Markup.inlineKeyboard([
       [Markup.button.callback(texts.profile.startBtn, 'profile_start')]
     ]);
-    const text = `${texts.profile.menuTitle}\n\n${texts.profile.emptyHint}`;
-    return ctx.reply(text, keyboard);
+    return { text: `${texts.profile.menuTitle}\n\n${texts.profile.emptyHint}`, extra: keyboard };
   }
   const keyboard = Markup.inlineKeyboard([
+    [Markup.button.callback(texts.profile.targetsBtn, 'macro_targets')],
     [Markup.button.callback(texts.profile.editBtn, 'profile_start')]
   ]);
-  const text = `${texts.profile.menuTitle}\n\n${buildProfileSummary(profile)}`;
-  return ctx.reply(text, { parse_mode: 'HTML', ...keyboard });
+  return {
+    text: `${texts.profile.menuTitle}\n\n${buildProfileSummary(profile)}`,
+    extra: { parse_mode: 'HTML', ...keyboard }
+  };
+}
+
+/**
+ * Sends the profile screen as a new message.
+ * @param {object} ctx
+ * @param {object|null} profile
+ */
+async function sendProfileMenu(ctx, profile) {
+  const { text, extra } = buildProfileMenu(profile);
+  return ctx.reply(text, extra);
 }
 
 module.exports = {
   buildProfileSummary,
   buildCaloriesBlock,
+  buildProfileMenu,
   sendProfileMenu
 };

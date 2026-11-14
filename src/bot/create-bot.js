@@ -2,12 +2,14 @@ const { Telegraf, Scenes, session } = require('telegraf');
 const logger = require('../utils/logger');
 const { profileScene } = require('../features/profile/scene');
 const { reverseSearchScene } = require('../features/reverse-search/scene');
+const { macroTargetScene } = require('../features/profile/targets-scene');
 const common = require('./handlers/common');
 const dishSelection = require('./handlers/dish-selection');
 const weeklyPlan = require('./handlers/weekly-plan');
 const shoppingList = require('./handlers/shopping-list');
 const reverseSearch = require('./handlers/reverse-search');
 const profile = require('./handlers/profile');
+const macroTargets = require('./handlers/macro-targets');
 
 // [RU] Формат токена BotFather: `<bot id>:<секрет из 35 символов>`. Проверка
 // формата ловит любые заглушки (`your_telegram_bot_token_here` и т.п.).
@@ -40,12 +42,15 @@ function isUsableBotToken(token) {
 function createBot(token) {
   const bot = new Telegraf(token);
 
-  // [RU] Session in-memory: состояние анкеты/обратного поиска короткоживущее.
-  // [EN] In-memory session: survey/reverse-search state is short-lived.
+  // [RU] Session in-memory: состояние анкеты/обратного поиска/правки норм короткоживущее.
+  // [EN] In-memory session: survey/reverse-search/target-edit state is short-lived.
   bot.use(session());
-  bot.use(new Scenes.Stage([profileScene, reverseSearchScene]).middleware());
+  bot.use(new Scenes.Stage([profileScene, reverseSearchScene, macroTargetScene]).middleware());
 
-  for (const feature of [common, dishSelection, weeklyPlan, shoppingList, reverseSearch, profile]) {
+  const features = [
+    common, dishSelection, weeklyPlan, shoppingList, reverseSearch, profile, macroTargets
+  ];
+  for (const feature of features) {
     feature.register(bot);
   }
 
