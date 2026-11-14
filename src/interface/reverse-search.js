@@ -6,7 +6,7 @@ const { formatNutrition } = require('../utils/formatters');
  * Builds the HTML message + inline keyboard with numbered recipe buttons
  * for the reverse-search result list.
  *
- * @param {Array<{id:number,name:string,calories:number,missing:string[]}>} recipes
+ * @param {Array<{id:number,name:string,calories:number,missing:string[],favorites?:number}>} recipes
  * @param {string[]} unknownTokens - user tokens that didn't match any ingredient
  * @returns {{text: string, keyboard: object} | null}
  */
@@ -21,7 +21,8 @@ function buildResultsMessage(recipes, unknownTokens) {
 
   recipes.forEach((recipe, idx) => {
     const num = idx + 1;
-    let line = `${num}. <b>${recipe.name}</b> — ${recipe.calories} ${texts.reverseSearch.kcalSuffix}`;
+    const badge = recipe.favorites > 0 ? ` ${texts.ingredientPrefs.favoriteBadge}` : '';
+    let line = `${num}. <b>${recipe.name}</b>${badge} — ${recipe.calories} ${texts.reverseSearch.kcalSuffix}`;
     if (recipe.missing.length === 0) {
       line += ` ${texts.reverseSearch.fullMatchBadge}`;
     } else {

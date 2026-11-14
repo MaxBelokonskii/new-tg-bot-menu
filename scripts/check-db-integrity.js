@@ -15,7 +15,7 @@ const TABLES = [
   'users', 'meal_categories', 'recipes', 'ingredients',
   'recipe_ingredients', 'daily_menu', 'daily_menu_items',
   'weekly_menu', 'weekly_menu_days', 'user_preferences',
-  'shopping_lists', 'shopping_list_items'
+  'shopping_lists', 'shopping_list_items', 'user_ingredient_prefs'
 ];
 
 async function main() {

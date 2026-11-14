@@ -3,6 +3,7 @@ const texts = require('../bot/texts');
 const logger = require('../utils/logger');
 const { getRandomRecipeByCategory, getRecipeIngredients } = require('../features/meal-suggestions/logic');
 const { categoryForSlot } = require('../features/weekly-planner/logic');
+const { getPrefsByTelegramId } = require('../features/ingredient-prefs/logic');
 const { formatNutrition } = require('../utils/formatters');
 
 /**
@@ -52,7 +53,8 @@ async function _sendOrEditCard(ctx, message, keyboard) {
  */
 async function showDishSuggestion(ctx, category) {
   try {
-    const recipe = await getRandomRecipeByCategory(category);
+    const prefs = await getPrefsByTelegramId(ctx.from.id);
+    const recipe = await getRandomRecipeByCategory(category, { prefs });
     if (!recipe) {
       return ctx.reply(texts.editSlot.noRecipesInCategory);
     }
@@ -81,7 +83,8 @@ async function showDishSuggestion(ctx, category) {
 async function showReplacementSuggestion(ctx, date, slot) {
   try {
     const category = categoryForSlot(slot);
-    const recipe = await getRandomRecipeByCategory(category);
+    const prefs = await getPrefsByTelegramId(ctx.from.id);
+    const recipe = await getRandomRecipeByCategory(category, { prefs });
     if (!recipe) {
       return ctx.reply(texts.editSlot.noRecipesInCategory);
     }

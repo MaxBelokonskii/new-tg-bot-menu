@@ -8,6 +8,7 @@ const {
   getRecipeById
 } = require('../../features/reverse-search/logic');
 const { getRecipeIngredients } = require('../../features/meal-suggestions/logic');
+const { getPrefsByTelegramId } = require('../../features/ingredient-prefs/logic');
 const { buildResultsMessage, buildRecipeCard } = require('../../interface/reverse-search');
 
 /**
@@ -68,7 +69,8 @@ function register(bot) {
       const inventory = await requireInventory(ctx);
       if (!inventory) return;
       const targets = await getUserTargets(ctx.from.id);
-      const recipes = await findRecipesByInventory(inventory, targets);
+      const prefs = await getPrefsByTelegramId(ctx.from.id);
+      const recipes = await findRecipesByInventory(inventory, targets, prefs);
       const payload = buildResultsMessage(recipes, []);
       if (!payload) return safeEdit(ctx, texts.reverseSearch.noResults);
       await safeEdit(ctx, payload.text, { parse_mode: 'HTML', ...payload.keyboard });

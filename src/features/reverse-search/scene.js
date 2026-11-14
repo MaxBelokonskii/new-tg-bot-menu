@@ -1,11 +1,9 @@
 const { Scenes } = require('telegraf');
 const texts = require('../../bot/texts');
 const logger = require('../../utils/logger');
-const {
-  parseInventory,
-  findRecipesByInventory,
-  getUserTargets
-} = require('./logic');
+const { findRecipesByInventory, getUserTargets } = require('./logic');
+const { parseIngredientList } = require('../../utils/ingredient-lookup');
+const { getPrefsByTelegramId } = require('../ingredient-prefs/logic');
 const { buildResultsMessage } = require('../../interface/reverse-search');
 
 const SCENE_ID = 'reverse_search';
@@ -24,7 +22,7 @@ const scene = new Scenes.WizardScene(
       await ctx.reply(texts.reverseSearch.invalidInput);
       return;
     }
-    const { canonical, unknown } = parseInventory(text);
+    const { canonical, unknown } = parseIngredientList(text);
     if (canonical.length === 0) {
       await ctx.reply(texts.reverseSearch.nothingMatched);
       return ctx.scene.leave();
@@ -32,7 +30,8 @@ const scene = new Scenes.WizardScene(
 
     try {
       const targets = await getUserTargets(ctx.from.id);
-      const recipes = await findRecipesByInventory(canonical, targets);
+      const prefs = await getPrefsByTelegramId(ctx.from.id);
+      const recipes = await findRecipesByInventory(canonical, targets, prefs);
       // [RU] Сохраняем инвентарь в session — нужен, когда юзер тапнет кнопку
       // рецепта: карточка хочет показать «не хватает: …».
       // [EN] Persist inventory in session — needed when the user taps a recipe
