@@ -8,8 +8,8 @@ const {
   buildReplaceQuestion,
   buildTodaySummary
 } = require('../../interface/dish-selection');
-const { saveSelectedDish, replaceInSlot } = require('../../features/weekly-planner/logic');
-const { getDayPlan, checkDishPlacement } = require('../../features/weekly-planner/day-plan');
+const { replaceInSlot } = require('../../features/weekly-planner/logic');
+const { getDayPlan, placeDishToday } = require('../../features/weekly-planner/day-plan');
 const { getUserProfile } = require('../../features/profile/logic');
 
 const T = texts.dishSelection;
@@ -38,38 +38,28 @@ async function showTodaySummary(ctx, status, { edit = false } = {}) {
 /**
  * "✅ Select" on a recipe card (dish selection and reverse search).
  *
- * [RU] Занятость слота проверяется до записи: свободный слот — сохраняем
- * через saveSelectedDish (контракт {slot, status} не меняется), блюдо уже
- * в плане — «уже в плане», все слоты категории заняты — спрашиваем
- * «заменить?» вместо молчаливой перезаписи.
- * [EN] Slot occupancy is checked before writing: a free slot is saved via
- * saveSelectedDish (its {slot, status} contract is unchanged), an already
- * planned dish reports "unchanged", and when every slot of the category is
- * taken the user is asked "replace?" instead of a silent overwrite.
+ * [RU] placeDishToday проверяет занятость до записи: свободный слот —
+ * сохраняем, блюдо уже в плане — «уже в плане», все слоты категории
+ * заняты — спрашиваем «заменить?» вместо молчаливой перезаписи.
+ * [EN] placeDishToday checks occupancy before writing: a free slot is saved,
+ * an already planned dish reports "unchanged", and when every slot of the
+ * category is taken the user is asked "replace?" instead of an overwrite.
  *
  * @param {import('telegraf').Context} ctx
  */
 async function handleConfirmDish(ctx) {
-  const recipeId = Number(ctx.match[1]);
-  const date = today();
   try {
-    const placement = await checkDishPlacement(ctx.from.id, recipeId, date);
-    if (!placement) {
+    const { status, date, placement } = await placeDishToday(ctx.from.id, Number(ctx.match[1]));
+    if (status === 'missing') {
       await ctx.answerCbQuery(T.errorSave);
       return;
     }
-    if (placement.alreadyPlanned) {
-      await ctx.answerCbQuery(T.unchanged);
-      await showTodaySummary(ctx, 'unchanged');
-      return;
-    }
-    if (placement.freeSlot === null) {
+    if (status === 'conflict') {
       await ctx.answerCbQuery();
       const { text, extra } = buildReplaceQuestion(placement, date);
       await ctx.reply(text, extra);
       return;
     }
-    const { status } = await saveSelectedDish(ctx.from.id, recipeId);
     await ctx.answerCbQuery(T[status] || T.added);
     await showTodaySummary(ctx, status);
   } catch (error) {

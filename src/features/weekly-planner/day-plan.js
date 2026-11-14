@@ -1,5 +1,6 @@
-const { dbGet, dbAll } = require('../../database/db');
-const { getOrCreateUser, CATEGORY_TO_SLOTS } = require('./logic');
+const { dbGet, dbAll, withTransaction } = require('../../database/db');
+const { formatLocalDate } = require('../../utils/date-helpers');
+const { getOrCreateUser, CATEGORY_TO_SLOTS, saveSelectedDish } = require('./logic');
 
 /**
  * Returns the dishes planned for one day with per-serving nutrition,
@@ -64,4 +65,31 @@ async function checkDishPlacement(telegramId, recipeId, date) {
   };
 }
 
-module.exports = { getDayPlan, checkDishPlacement };
+/**
+ * Adds a recipe to today's plan only when it does not overwrite anything.
+ *
+ * [RU] Проверка и запись — в одной транзакции, чтобы между ними никто не
+ * занял слот. 'conflict' — все слоты категории заняты: ничего не пишем,
+ * UI спрашивает «заменить?» по placement.
+ * [EN] Check and write share one transaction so no one takes the slot in
+ * between. 'conflict' means every slot of the category is taken: nothing is
+ * written and the UI asks "replace?" using `placement`.
+ *
+ * @param {number} telegramId
+ * @param {number} recipeId
+ * @returns {Promise<{status: 'added'|'replaced'|'unchanged'|'conflict'|'missing',
+ *   date: string, placement: object|null}>}
+ */
+async function placeDishToday(telegramId, recipeId) {
+  const date = formatLocalDate(new Date());
+  return withTransaction(async () => {
+    const placement = await checkDishPlacement(telegramId, recipeId, date);
+    if (!placement) return { status: 'missing', date, placement: null };
+    if (placement.alreadyPlanned) return { status: 'unchanged', date, placement };
+    if (placement.freeSlot === null) return { status: 'conflict', date, placement };
+    const { status } = await saveSelectedDish(telegramId, recipeId);
+    return { status, date, placement };
+  });
+}
+
+module.exports = { getDayPlan, checkDishPlacement, placeDishToday };

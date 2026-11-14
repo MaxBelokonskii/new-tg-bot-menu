@@ -3,7 +3,8 @@ const logger = require('../../utils/logger');
 const { safeEdit } = require('./helpers');
 const { getSuggestions, logCombo } = require('../../features/what-to-eat/logic');
 const { addEntry, portionFromHalves } = require('../../features/food-log/logic');
-const { saveSelectedDish } = require('../../features/weekly-planner/logic');
+const { placeDishToday } = require('../../features/weekly-planner/day-plan');
+const { buildReplaceQuestion } = require('../../interface/dish-selection');
 const { getPrefsByTelegramId } = require('../../features/ingredient-prefs/logic');
 const { buildSuggestionsScreen } = require('../../interface/what-to-eat');
 
@@ -29,6 +30,33 @@ async function showSuggestions(ctx, page, toast) {
   await ctx.answerCbQuery(toast);
   const { text, extra } = buildSuggestionsScreen(result, await getPrefsByTelegramId(ctx.from.id));
   await safeEdit(ctx, text, extra);
+}
+
+/**
+ * Sends the "slot is taken — replace?" question as a new message, so the
+ * suggestions screen stays in place.
+ * @param {import('telegraf').Context} ctx
+ * @param {{date: string, placement: object}} result - placeDishToday result
+ */
+async function askReplace(ctx, { date, placement }) {
+  const { text, extra } = buildReplaceQuestion(placement, date);
+  await ctx.reply(text, extra);
+}
+
+/**
+ * Summarises a combo "to plan" as one toast: added / already planned / asked.
+ * @param {Array<{status: string}>} results
+ * @returns {string}
+ */
+function comboPlanToast(results) {
+  const count = (pred) => results.filter(r => pred(r.status)).length;
+  const added = count(s => s === 'added' || s === 'replaced');
+  const parts = [T.comboPlanned.replace('{count}', added)];
+  const already = count(s => s === 'unchanged');
+  const asked = count(s => s === 'conflict');
+  if (already) parts.push(T.comboAlready.replace('{count}', already));
+  if (asked) parts.push(T.comboAsked.replace('{count}', asked));
+  return parts.join(T.toastJoin);
 }
 
 function guarded(label, fn) {
@@ -67,14 +95,26 @@ function register(bot) {
   }));
 
   bot.action(/^wte_plan_(\d+)$/, guarded('adding to plan', async (ctx) => {
-    const { status } = await saveSelectedDish(ctx.from.id, Number(ctx.match[1]));
-    await ctx.answerCbQuery(texts.dishSelection[status] || texts.dishSelection.added);
+    const result = await placeDishToday(ctx.from.id, Number(ctx.match[1]));
+    if (result.status === 'conflict') {
+      await ctx.answerCbQuery();
+      await askReplace(ctx, result);
+      return;
+    }
+    const DS = texts.dishSelection;
+    await ctx.answerCbQuery(result.status === 'missing'
+      ? texts.foodLog.recipeNotFound
+      : (DS[result.status] || DS.added));
   }));
 
   bot.action(COMBO_PLAN, guarded('adding combo to plan', async (ctx) => {
     const ids = ctx.match[1].split('-').map(Number);
-    for (const id of ids) await saveSelectedDish(ctx.from.id, id);
-    await ctx.answerCbQuery(T.comboPlanned.replace('{count}', ids.length));
+    const results = [];
+    // [RU] Последовательно: блюдо из комбинации может занять слот для следующего.
+    // [EN] Sequential: one combo dish may take the slot the next one needs.
+    for (const id of ids) results.push(await placeDishToday(ctx.from.id, id));
+    await ctx.answerCbQuery(comboPlanToast(results));
+    for (const result of results.filter(r => r.status === 'conflict')) await askReplace(ctx, result);
   }));
 }
 
