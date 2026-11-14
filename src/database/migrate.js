@@ -8,6 +8,7 @@ const {
   hasType,
   isDirtyName
 } = require('./ingredient-normalizer');
+const { computeRecipeNutrition, hasNutrition } = require('./nutrition-calculator');
 
 async function upsertCategories(recipes) {
   const categories = [...new Set(recipes.map(r => r.category))];
@@ -23,10 +24,12 @@ async function upsertCategories(recipes) {
  * compound/alternative names, every canonical name has a shopping-list type.
  *
  * @param {Array<object>} recipes - recipes.json entries
- * @returns {{resolved: Map<string, Array<{name: string, amount: number, unit: string}>>, names: Set<string>}}
+ * @returns {{resolved: Map<string, Array<object>>, names: Set<string>,
+ *            nutritionByRecipe: Map<string, ReturnType<typeof computeRecipeNutrition>>}}
  */
 function resolveCatalog(recipes) {
   const resolved = new Map();
+  const nutritionByRecipe = new Map();
   const names = new Set();
   for (const recipe of recipes) {
     const { rows, conflicts } = resolveRecipeIngredients(recipe.ingredients);
@@ -36,6 +39,15 @@ function resolveCatalog(recipes) {
     rows.forEach(r => names.add(r.name));
     resolved.set(recipe.name, rows);
   }
+  const noNutrition = [...names].filter(n => !hasNutrition(n));
+  if (noNutrition.length) {
+    throw new Error(`Ingredients missing in ingredient-nutrition.json: ${noNutrition.join('; ')}`);
+  }
+  for (const recipe of recipes) {
+    const nutrition = computeRecipeNutrition(recipe, resolved.get(recipe.name));
+    if (nutrition.calories <= 0) throw new Error(`"${recipe.name}": computed calories = 0`);
+    nutritionByRecipe.set(recipe.name, nutrition);
+  }
   const dirty = [...names].filter(isDirtyName);
   if (dirty.length) {
     throw new Error(`Compound ingredient names left after normalization: ${dirty.join('; ')}`);
@@ -44,7 +56,7 @@ function resolveCatalog(recipes) {
   if (untyped.length) {
     throw new Error(`Ingredients missing in ingredient-types.json: ${untyped.join('; ')}`);
   }
-  return { resolved, names };
+  return { resolved, names, nutritionByRecipe };
 }
 
 async function upsertIngredients(names) {
@@ -62,31 +74,31 @@ async function upsertIngredients(names) {
   return names.size;
 }
 
-async function upsertRecipe(recipe) {
-  const servings = Math.max(1, Number(recipe.servings) || 1);
+/**
+ * Inserts a recipe or refreshes servings/nutrition of an existing one, so a
+ * plain re-run applies dictionary changes without db:reset.
+ * @param {object} recipe - recipes.json entry
+ * @param {{servings: number, calories: number, protein: number, fat: number, carbs: number}} n
+ * @returns {Promise<{id: number, inserted: boolean}>}
+ */
+async function upsertRecipe(recipe, n) {
   const existing = await get('SELECT id FROM recipes WHERE name = ?', [recipe.name]);
   if (existing) {
-    await run('UPDATE recipes SET servings = ? WHERE id = ?', [servings, existing.id]);
+    await run(
+      `UPDATE recipes SET servings = ?, calories = ?, protein = ?, fat = ?, carbs = ?
+       WHERE id = ?`,
+      [n.servings, n.calories, n.protein, n.fat, n.carbs, existing.id]
+    );
     return { id: existing.id, inserted: false };
   }
 
   const catRow = await get('SELECT id FROM meal_categories WHERE name = ?', [recipe.category]);
   if (!catRow) throw new Error(`Category not found for recipe "${recipe.name}": ${recipe.category}`);
 
-  const nutrition = recipe.nutrition_per_serving || recipe.nutrition || {};
   const result = await run(
     `INSERT INTO recipes (name, category_id, description, calories, protein, fat, carbs, servings)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      recipe.name,
-      catRow.id,
-      recipe.description || null,
-      nutrition.calories || 0,
-      nutrition.proteins || nutrition.protein || 0,
-      nutrition.fats || nutrition.fat || 0,
-      nutrition.carbs || 0,
-      servings
-    ]
+    [recipe.name, catRow.id, recipe.description || null, n.calories, n.protein, n.fat, n.carbs, n.servings]
   );
   return { id: result.lastID, inserted: true };
 }
@@ -118,7 +130,7 @@ async function migrate() {
   const jsonPath = path.resolve(__dirname, '../../database/recipes.json');
   const { recipes } = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
   console.log(`Loaded ${recipes.length} recipes from JSON.`);
-  const { resolved, names } = resolveCatalog(recipes);
+  const { resolved, names, nutritionByRecipe } = resolveCatalog(recipes);
 
   await withTransaction(async () => {
     const catCount = await upsertCategories(recipes);
@@ -131,7 +143,7 @@ async function migrate() {
     let skipped = 0;
     for (let i = 0; i < recipes.length; i++) {
       const recipe = recipes[i];
-      const { id, inserted: wasInserted } = await upsertRecipe(recipe);
+      const { id, inserted: wasInserted } = await upsertRecipe(recipe, nutritionByRecipe.get(recipe.name));
       await linkIngredients(id, resolved.get(recipe.name));
       wasInserted ? inserted++ : skipped++;
       if ((i + 1) % 50 === 0) console.log(`Processed ${i + 1} recipes...`);
