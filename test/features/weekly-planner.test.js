@@ -6,9 +6,9 @@ const {
   getOrCreateUser,
   saveSelectedDish,
   replaceInSlot,
-  generateWeeklyPlan,
   getWeeklyPlan
 } = require('../../src/features/weekly-planner/logic');
+const { generateWeeklyPlan } = require('../../src/features/weekly-planner/generator');
 const { formatLocalDate } = require('../../src/utils/date-helpers');
 
 const recipeIds = async (category) => (await dbAll(

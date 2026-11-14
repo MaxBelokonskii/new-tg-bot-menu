@@ -2,7 +2,7 @@ const { seedDb } = require('../helpers/memory-db');
 const { test, before } = require('node:test');
 const assert = require('node:assert/strict');
 const { dbGet } = require('../../src/database/db');
-const { generateWeeklyPlan } = require('../../src/features/weekly-planner/logic');
+const { generateWeeklyPlan } = require('../../src/features/weekly-planner/generator');
 const {
   mergeIngredientRows,
   getIngredientsFromPlan,

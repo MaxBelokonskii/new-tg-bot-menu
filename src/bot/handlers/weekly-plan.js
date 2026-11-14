@@ -6,16 +6,21 @@ const {
   sendWeeklyPlanMenu,
   buildWeeklyPlanMessage,
   buildClearDayConfirmKeyboard,
-  buildRemoveSlotConfirmKeyboard
+  buildRemoveSlotConfirmKeyboard,
+  buildRegenerateChoiceKeyboard
 } = require('../../interface/weekly-plan');
 const {
   getWeeklyPlan,
   clearDailyPlan,
   removeSlot,
-  replaceInSlot,
-  generateWeeklyPlan,
-  EmptyCategoryError
+  replaceInSlot
 } = require('../../features/weekly-planner/logic');
+const {
+  generateWeeklyPlan,
+  countWeekItems,
+  EmptyCategoryError,
+  GENERATION_MODES
+} = require('../../features/weekly-planner/generator');
 
 // [RU] Английские ключи категорий из БД → локализованные подписи для UI.
 // [EN] DB category keys (en) → localized labels for UI.
@@ -68,13 +73,22 @@ async function sendPlan(ctx, plan) {
   return ctx.reply(payload.text, { parse_mode: 'HTML', reply_markup: payload.reply_markup });
 }
 
-async function handleGenerate(ctx) {
-  await ctx.answerCbQuery(texts.weeklyPlan.generating);
+/**
+ * Generates the week and reports the result. When `editPrompt` is set, the
+ * "overwrite / fill" question message is replaced by the result so its
+ * buttons can't be pressed twice.
+ * @param {import('telegraf').Context} ctx
+ * @param {'overwrite'|'fill'} mode
+ * @param {boolean} editPrompt
+ */
+async function runGeneration(ctx, mode, editPrompt) {
   try {
-    await generateWeeklyPlan(ctx.from.id);
+    const { slotsWritten } = await generateWeeklyPlan(ctx.from.id, { mode });
+    const resultText = slotsWritten === 0 ? texts.weeklyPlan.nothingToFill : texts.weeklyPlan.generated;
+    if (editPrompt) await safeEdit(ctx, resultText);
+    else await ctx.reply(resultText);
     const plan = await getWeeklyPlan(ctx.from.id);
-    await ctx.reply(texts.weeklyPlan.generated);
-    if (buildWeeklyPlanMessage(plan)) await sendPlan(ctx, plan);
+    if (slotsWritten > 0 && buildWeeklyPlanMessage(plan)) await sendPlan(ctx, plan);
   } catch (error) {
     logger.error('Error generating weekly plan:', error);
     // [RU] Специализированная подсказка при «пустой категории после исключений».
@@ -85,6 +99,52 @@ async function handleGenerate(ctx) {
     }
     await ctx.reply(texts.weeklyPlan.errorGenerate);
   }
+}
+
+/**
+ * "Generate" button: an empty week is generated right away; otherwise the
+ * user chooses between overwriting everything and filling empty slots (4.17).
+ * @param {import('telegraf').Context} ctx
+ */
+async function handleGenerate(ctx) {
+  let count;
+  try {
+    count = await countWeekItems(ctx.from.id);
+  } catch (error) {
+    logger.error('Error counting week items:', error);
+    await ctx.answerCbQuery(texts.weeklyPlan.errorGenerate).catch(() => {});
+    return;
+  }
+  if (count === 0) {
+    await ctx.answerCbQuery(texts.weeklyPlan.generating);
+    return runGeneration(ctx, GENERATION_MODES.OVERWRITE, false);
+  }
+  await ctx.answerCbQuery();
+  try {
+    await safeEdit(ctx, texts.weeklyPlan.confirmRegenerate.replace('{count}', count), {
+      reply_markup: buildRegenerateChoiceKeyboard()
+    });
+  } catch (error) {
+    logger.error('Error showing regenerate choice:', error);
+  }
+}
+
+function registerGenerate(bot) {
+  bot.action('generate_weekly_plan', handleGenerate);
+
+  bot.action(/^generate_weekly_plan_(overwrite|fill)$/, async (ctx) => {
+    await ctx.answerCbQuery(texts.weeklyPlan.generating);
+    await runGeneration(ctx, ctx.match[1], true);
+  });
+
+  bot.action('cancel_generate_weekly_plan', async (ctx) => {
+    await ctx.answerCbQuery(texts.confirm.canceled);
+    try {
+      await sendWeeklyPlanMenu(ctx);
+    } catch (error) {
+      logger.error('Error restoring weekly plan menu:', error);
+    }
+  });
 }
 
 function registerClearDay(bot) {
@@ -180,7 +240,7 @@ function registerRemoveSlot(bot) {
 function register(bot) {
   bot.hears(texts.mainMenu.buttons.weeklyPlan, (ctx) => sendWeeklyPlanMenu(ctx));
 
-  bot.action('generate_weekly_plan', handleGenerate);
+  registerGenerate(bot);
 
   bot.action('view_weekly_plan', async (ctx) => {
     await ctx.answerCbQuery();

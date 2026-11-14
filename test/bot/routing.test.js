@@ -77,6 +77,25 @@ test('generate → view → edit slot → cancel flow is routed', async () => {
   assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText']);
 });
 
+test('generate on a non-empty week asks overwrite/fill, fill reports nothing to do', async () => {
+  await sendCallback('generate_weekly_plan');
+  assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText']);
+  assert.equal(calls[1].payload.text, texts.weeklyPlan.confirmRegenerate.replace('{count}', 35));
+
+  calls = [];
+  await sendCallback('generate_weekly_plan_fill');
+  assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText']);
+  assert.equal(calls[1].payload.text, texts.weeklyPlan.nothingToFill);
+
+  calls = [];
+  await sendCallback('generate_weekly_plan_overwrite');
+  assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText', 'sendMessage']);
+
+  calls = [];
+  await sendCallback('cancel_generate_weekly_plan');
+  assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText']);
+});
+
 test('clear-day and remove-slot confirmations are routed', async () => {
   const today = formatLocalDate(new Date());
   for (const data of [`confirm_clear_day_${today}`, `confirm_remove_slot_${today}_2`]) {
