@@ -3,7 +3,7 @@ const { test, before, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 const texts = require('../../src/bot/texts');
 const { dbGet, dbAll } = require('../../src/database/db');
-const { addDays } = require('../../src/utils/date-helpers');
+const { addDays, getWeekBounds } = require('../../src/utils/date-helpers');
 const { defaultClock } = require('../helpers/clock');
 const { getOrCreateUser, saveSelectedDish } = require('../../src/features/weekly-planner/logic');
 const { saveUserProfile } = require('../../src/features/profile/logic');
@@ -39,7 +39,8 @@ test('main menu has the diary button; empty diary without a profile shows the hi
   assert.ok(text.includes(T.empty));
   assert.ok(text.includes(T.noProfileHint));
   assert.deepEqual(callbackData(calls[0].payload), [
-    `fl_plan_${TODAY}`, `fl_search_${TODAY}`, `fl_fav_${TODAY}_0`, `fl_day_${YESTERDAY}`
+    `fl_plan_${TODAY}`, `fl_search_${TODAY}`, `fl_fav_${TODAY}_0`, `fl_day_${YESTERDAY}`,
+    `st_week_${getWeekBounds(TODAY).start}`
   ]);
 });
 

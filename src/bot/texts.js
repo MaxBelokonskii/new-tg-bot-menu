@@ -222,5 +222,6 @@ module.exports = {
   timeZone: require('./texts/time-zone'),
   household: require('./texts/household'),
   dates: require('./texts/dates'),
-  export: require('./texts/export')
+  export: require('./texts/export'),
+  statistics: require('./texts/statistics')
 };

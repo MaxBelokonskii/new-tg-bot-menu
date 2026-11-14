@@ -1,7 +1,7 @@
 const { Markup } = require('telegraf');
 const texts = require('../bot/texts');
 const { NUTRIENTS, calculateRemaining } = require('../utils/nutrition-totals');
-const { addDays } = require('../utils/date-helpers');
+const { addDays, getWeekBounds } = require('../utils/date-helpers');
 
 const T = texts.foodLog;
 const BAR_WIDTH = 10;
@@ -118,7 +118,8 @@ function buildNavRow(date, today, oldest) {
 /**
  * Builds the diary day screen: eaten dishes with kcal/P/F/C, totals vs
  * targets with progress bars (or a fill-the-profile hint), add buttons, one
- * "✏️" button per entry (opens the entry editor) and day navigation.
+ * "✏️" button per entry (opens the entry editor), day navigation and
+ * "📊 Статистика" (the current week's stats).
  *
  * @param {{date: string, today: string, oldest: string,
  *   entries: Array<{id: number, name: string, portion: number, calories: number,
@@ -152,6 +153,8 @@ function buildDayScreen({ date, today, oldest, entries, totals, targets }) {
   }
   const nav = buildNavRow(date, today, oldest);
   if (nav.length) rows.push(nav);
+  // Статистика всегда открывается на текущей неделе пользователя
+  rows.push([Markup.button.callback(texts.statistics.openBtn, `st_week_${getWeekBounds(today).start}`)]);
 
   return { text: lines.join('\n'), extra: { parse_mode: 'HTML', ...Markup.inlineKeyboard(rows) } };
 }

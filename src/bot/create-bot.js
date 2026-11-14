@@ -21,6 +21,7 @@ const reminders = require('./handlers/reminders');
 const timeZone = require('./handlers/time-zone');
 const household = require('./handlers/household');
 const exportFiles = require('./handlers/export');
+const statistics = require('./handlers/statistics');
 
 // [RU] Формат токена BotFather: `<bot id>:<секрет из 35 символов>`. Проверка
 // формата ловит любые заглушки (`your_telegram_bot_token_here` и т.п.).
@@ -63,7 +64,7 @@ function createBot(token) {
   const features = [
     common, dishSelection, weeklyPlan, shoppingList, shoppingChecklist, reverseSearch, profile,
     macroTargets, ingredientPrefs, foodLog, whatToEat, favoriteRecipes, reminders, timeZone,
-    household, exportFiles
+    household, exportFiles, statistics
   ];
   for (const feature of features) {
     feature.register(bot);
