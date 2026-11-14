@@ -111,3 +111,9 @@ test('unknown recipe answers with an error toast', async () => {
   assert.deepEqual(methods(), ['answerCallbackQuery']);
   assert.equal(toast(), T.errorSave);
 });
+
+test('"back to categories" answers the callback so the button stops spinning', async () => {
+  await sendCallback('back_to_categories');
+  assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText']);
+  assert.ok(callbackData(calls[1].payload).includes('select_cat_main'));
+});
