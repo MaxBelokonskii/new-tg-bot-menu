@@ -1,14 +1,14 @@
 require('dotenv').config();
 const { initDb } = require('./database/schema');
 const logger = require('./utils/logger');
-const { createBot } = require('./bot/create-bot');
+const { createBot, isUsableBotToken } = require('./bot/create-bot');
 
 const bot = createBot(process.env.BOT_TOKEN || 'DUMMY_TOKEN');
 
 async function start() {
   await initDb();
-  if (!process.env.BOT_TOKEN || process.env.BOT_TOKEN === 'your_telegram_bot_token') {
-    logger.warn('BOT_TOKEN is not set. Bot will not start.');
+  if (!isUsableBotToken(process.env.BOT_TOKEN)) {
+    logger.warn('BOT_TOKEN is missing or a placeholder. Bot will not start.');
     return;
   }
   await bot.launch(() => logger.info('Bot is running...'));

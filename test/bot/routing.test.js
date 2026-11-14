@@ -3,7 +3,7 @@ const { test, before, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 const { Telegram } = require('telegraf');
 const texts = require('../../src/bot/texts');
-const { createBot } = require('../../src/bot/create-bot');
+const { createBot, isUsableBotToken } = require('../../src/bot/create-bot');
 const { formatLocalDate } = require('../../src/utils/date-helpers');
 
 // [RU] Перехватываем все вызовы Bot API: тест проверяет маршрутизацию
@@ -43,6 +43,19 @@ const methods = () => calls.map(c => c.method);
 
 before(seedDb);
 beforeEach(() => { calls = []; });
+
+test('isUsableBotToken rejects empty values and placeholders', () => {
+  for (const bad of [undefined, '', 'your_telegram_bot_token', 'your_telegram_bot_token_here', '123:short']) {
+    assert.equal(isUsableBotToken(bad), false, String(bad));
+  }
+  assert.equal(isUsableBotToken('1234567890:AAEhBP0av28dsJNkPQXjE_FQq6ZmLX4WuOk'), true);
+});
+
+test('/help replies in Russian from texts.js', async () => {
+  await sendText('/help');
+  assert.deepEqual(methods(), ['sendMessage']);
+  assert.equal(calls[0].payload.text, texts.help);
+});
 
 test('/start replies with welcome and main menu', async () => {
   await sendText('/start');
