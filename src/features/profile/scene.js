@@ -1,7 +1,7 @@
 const { Scenes, Markup } = require('telegraf');
 const texts = require('../../bot/texts');
 const logger = require('../../utils/logger');
-const { saveUserProfile } = require('./logic');
+const { saveUserProfile, hasManualTargets } = require('./logic');
 const { buildProfileSummary } = require('../../interface/profile');
 
 const SCENE_ID = 'profile_survey';
@@ -14,7 +14,8 @@ const SCENE_ID = 'profile_survey';
 const STEP = Object.freeze({
   SEX: 4,
   ACTIVITY: 5,
-  GOAL: 6
+  GOAL: 6,
+  OVERWRITE: 7
 });
 
 const parseNumber = (text) => parseFloat(String(text || '').replace(',', '.').trim());
@@ -40,6 +41,44 @@ const goalKeyboard = Markup.inlineKeyboard([
   [Markup.button.callback(texts.profile.goal.maintain, 'profile_goal_maintain')],
   [Markup.button.callback(texts.profile.goal.gain, 'profile_goal_gain')]
 ]);
+
+const overwriteKeyboard = Markup.inlineKeyboard([
+  [Markup.button.callback(texts.profile.overwriteYes, 'profile_overwrite_yes')],
+  [Markup.button.callback(texts.profile.overwriteNo, 'profile_overwrite_no')]
+]);
+
+/**
+ * Saves the survey answers, renders the summary and leaves the scene.
+ * @param {import('telegraf').Context} ctx
+ * @param {boolean} keepManualTargets - keep user's manual kcal/macros
+ */
+async function finishSurvey(ctx, keepManualTargets) {
+  try {
+    const { bmr, tdee, target, slots, macros, manual } =
+      await saveUserProfile(ctx.from.id, ctx.wizard.state, { keepManualTargets });
+    const enriched = {
+      ...ctx.wizard.state,
+      bmr,
+      tdee,
+      target_calories: target,
+      target_breakfast: slots.breakfast,
+      target_main1: slots.main1,
+      target_main2: slots.main2,
+      target_salad: slots.salad,
+      target_dessert: slots.dessert,
+      target_protein: macros.protein,
+      target_fat: macros.fat,
+      target_carbs: macros.carbs,
+      targets_manual: manual ? 1 : 0
+    };
+    await ctx.reply(texts.profile.saved);
+    await ctx.reply(buildProfileSummary(enriched), { parse_mode: 'HTML' });
+  } catch (error) {
+    logger.error('Error saving profile:', error);
+    await ctx.reply(texts.profile.errorSave);
+  }
+  return ctx.scene.leave();
+}
 
 const scene = new Scenes.WizardScene(
   SCENE_ID,
@@ -82,7 +121,9 @@ const scene = new Scenes.WizardScene(
   // напоминаем кликнуть по кнопке.
   async (ctx) => { if (ctx.message?.text) await ctx.reply(texts.profile.askSex); },
   async (ctx) => { if (ctx.message?.text) await ctx.reply(texts.profile.askActivity); },
-  async (ctx) => { if (ctx.message?.text) await ctx.reply(texts.profile.askGoal); }
+  async (ctx) => { if (ctx.message?.text) await ctx.reply(texts.profile.askGoal); },
+  // Step 7: только если есть ручные нормы — ждём «перезаписать?» кнопкой
+  async (ctx) => { if (ctx.message?.text) await ctx.reply(texts.profile.askOverwriteManual); }
 );
 
 scene.action(/^profile_sex_(male|female)$/, async (ctx) => {
@@ -112,26 +153,27 @@ scene.action(/^profile_goal_(loss|maintain|gain)$/, async (ctx) => {
   await ctx.editMessageText(
     `${texts.profile.labels.goal}: ${texts.profile.goal[ctx.match[1]]}`
   );
+  // [RU] Ручные нормы не затираем молча: сначала спрашиваем пользователя.
+  // [EN] Never silently overwrite manual targets: ask the user first.
   try {
-    const { bmr, tdee, target, slots } = await saveUserProfile(ctx.from.id, ctx.wizard.state);
-    const enriched = {
-      ...ctx.wizard.state,
-      bmr,
-      tdee,
-      target_calories: target,
-      target_breakfast: slots.breakfast,
-      target_main1: slots.main1,
-      target_main2: slots.main2,
-      target_salad: slots.salad,
-      target_dessert: slots.dessert
-    };
-    await ctx.reply(texts.profile.saved);
-    await ctx.reply(buildProfileSummary(enriched), { parse_mode: 'HTML' });
+    if (await hasManualTargets(ctx.from.id)) {
+      await ctx.reply(texts.profile.askOverwriteManual, overwriteKeyboard);
+      return ctx.wizard.next();
+    }
   } catch (error) {
-    logger.error('Error saving profile:', error);
+    logger.error('Error checking manual targets:', error);
     await ctx.reply(texts.profile.errorSave);
+    return ctx.scene.leave();
   }
-  return ctx.scene.leave();
+  return finishSurvey(ctx, false);
+});
+
+scene.action(/^profile_overwrite_(yes|no)$/, async (ctx) => {
+  await ctx.answerCbQuery();
+  if (ctx.wizard.cursor !== STEP.OVERWRITE) return;
+  const overwrite = ctx.match[1] === 'yes';
+  await ctx.editMessageText(texts.profile.overwriteChosen[ctx.match[1]]);
+  return finishSurvey(ctx, !overwrite);
 });
 
 scene.command('cancel', async (ctx) => {

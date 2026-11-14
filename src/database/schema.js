@@ -103,6 +103,10 @@ const TABLES = [
     target_main2 INTEGER,
     target_salad INTEGER,
     target_dessert INTEGER,
+    target_protein INTEGER,
+    target_fat INTEGER,
+    target_carbs INTEGER,
+    targets_manual INTEGER DEFAULT 0,
     FOREIGN KEY (user_id) REFERENCES users(id)
   )`,
 
@@ -140,7 +144,11 @@ const USER_PREFERENCES_ADDED_COLUMNS = [
   ['target_main1', 'INTEGER'],
   ['target_main2', 'INTEGER'],
   ['target_salad', 'INTEGER'],
-  ['target_dessert', 'INTEGER']
+  ['target_dessert', 'INTEGER'],
+  ['target_protein', 'INTEGER'],
+  ['target_fat', 'INTEGER'],
+  ['target_carbs', 'INTEGER'],
+  ['targets_manual', 'INTEGER DEFAULT 0']
 ];
 
 /**

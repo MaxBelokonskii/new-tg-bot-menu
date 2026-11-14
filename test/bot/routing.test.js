@@ -1,48 +1,15 @@
 const { seedDb } = require('../helpers/memory-db');
 const { test, before, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
-const { Telegram } = require('telegraf');
 const texts = require('../../src/bot/texts');
-const { createBot, isUsableBotToken } = require('../../src/bot/create-bot');
+const { isUsableBotToken } = require('../../src/bot/create-bot');
 const { formatLocalDate } = require('../../src/utils/date-helpers');
+const { createFakeBot } = require('../helpers/fake-bot');
 
-// [RU] Перехватываем все вызовы Bot API: тест проверяет маршрутизацию
-// апдейтов в хэндлеры, а не сеть.
-// [EN] Intercept every Bot API call: the test checks update routing, not the network.
-let calls = [];
-Telegram.prototype.callApi = async function callApi(method, payload) {
-  calls.push({ method, payload });
-  if (method === 'sendMessage' || method === 'editMessageText') {
-    return { message_id: 1, date: 0, chat: { id: 1, type: 'private' }, text: payload.text };
-  }
-  return true;
-};
-
-const bot = createBot('123:TEST');
-bot.botInfo = { id: 1, is_bot: true, first_name: 'test', username: 'test_bot' };
-
-const USER = { id: 5001, is_bot: false, first_name: 'Tester', username: 'tester' };
-const CHAT = { id: 5001, type: 'private' };
-let updateId = 0;
-
-const sendText = (text) => bot.handleUpdate({
-  update_id: ++updateId,
-  message: { message_id: updateId, date: 0, chat: CHAT, from: USER, text,
-    ...(text.startsWith('/') ? { entities: [{ type: 'bot_command', offset: 0, length: text.length }] } : {}) }
-});
-
-const sendCallback = (data) => bot.handleUpdate({
-  update_id: ++updateId,
-  callback_query: {
-    id: String(updateId), from: USER, chat_instance: '1', data,
-    message: { message_id: 1, date: 0, chat: CHAT, from: bot.botInfo, text: 'prev' }
-  }
-});
-
-const methods = () => calls.map(c => c.method);
+const { calls, sendText, sendCallback, methods, reset } = createFakeBot(5001);
 
 before(seedDb);
-beforeEach(() => { calls = []; });
+beforeEach(reset);
 
 test('isUsableBotToken rejects empty values and placeholders', () => {
   for (const bad of [undefined, '', 'your_telegram_bot_token', 'your_telegram_bot_token_here', '123:short']) {
@@ -75,17 +42,17 @@ test('generate → view → edit slot → cancel flow is routed', async () => {
   assert.deepEqual(methods(), ['answerCallbackQuery', 'sendMessage', 'sendMessage']);
   assert.equal(calls[1].payload.text, texts.weeklyPlan.generated);
 
-  calls = [];
+  reset();
   await sendCallback('view_weekly_plan');
   assert.deepEqual(methods(), ['answerCallbackQuery', 'sendMessage']);
 
   const today = formatLocalDate(new Date());
-  calls = [];
+  reset();
   await sendCallback(`edit_slot_${today}_1`);
   assert.equal(methods()[0], 'answerCallbackQuery');
   assert.ok(methods().length > 1);
 
-  calls = [];
+  reset();
   await sendCallback(`cancel_edit_${today}_1`);
   assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText']);
 });
@@ -95,16 +62,16 @@ test('generate on a non-empty week asks overwrite/fill, fill reports nothing to 
   assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText']);
   assert.equal(calls[1].payload.text, texts.weeklyPlan.confirmRegenerate.replace('{count}', 35));
 
-  calls = [];
+  reset();
   await sendCallback('generate_weekly_plan_fill');
   assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText']);
   assert.equal(calls[1].payload.text, texts.weeklyPlan.nothingToFill);
 
-  calls = [];
+  reset();
   await sendCallback('generate_weekly_plan_overwrite');
   assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText', 'sendMessage']);
 
-  calls = [];
+  reset();
   await sendCallback('cancel_generate_weekly_plan');
   assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText']);
 });
@@ -112,7 +79,7 @@ test('generate on a non-empty week asks overwrite/fill, fill reports nothing to 
 test('clear-day and remove-slot confirmations are routed', async () => {
   const today = formatLocalDate(new Date());
   for (const data of [`confirm_clear_day_${today}`, `confirm_remove_slot_${today}_2`]) {
-    calls = [];
+    reset();
     await sendCallback(data);
     assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText'], data);
   }
@@ -121,7 +88,7 @@ test('clear-day and remove-slot confirmations are routed', async () => {
 test('shopping list rebuild and clear dialog are routed', async () => {
   await sendCallback('generate_shopping_list_week');
   assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText']);
-  calls = [];
+  reset();
   await sendCallback('confirm_clear_shopping');
   assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText']);
 });
@@ -129,7 +96,7 @@ test('shopping list rebuild and clear dialog are routed', async () => {
 test('dish selection category and reverse-search expiry are routed', async () => {
   await sendCallback('select_cat_breakfast');
   assert.ok(methods().length > 0);
-  calls = [];
+  reset();
   await sendCallback('reverse_back_to_list');
   assert.deepEqual(methods(), ['answerCallbackQuery', 'sendMessage']);
   assert.equal(calls[1].payload.text, texts.reverseSearch.sessionExpired);
