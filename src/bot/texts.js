@@ -221,5 +221,6 @@ module.exports = {
   reminders: require('./texts/reminders'),
   timeZone: require('./texts/time-zone'),
   household: require('./texts/household'),
-  dates: require('./texts/dates')
+  dates: require('./texts/dates'),
+  export: require('./texts/export')
 };
