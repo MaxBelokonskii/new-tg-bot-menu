@@ -14,9 +14,16 @@ const {
 } = require('../../interface/shopping-list');
 const { getCurrentWeekBounds, getCurrentDayBounds } = require('../../utils/date-helpers');
 
+/**
+ * Re-renders the callback message as the user's current shopping list.
+ * @param {import('telegraf').Context} ctx
+ * @returns {Promise<void>}
+ */
 async function renderLastList(ctx) {
   const list = await getLastShoppingList(ctx.from.id);
-  return safeEdit(ctx, formatShoppingList(list), { parse_mode: 'HTML', ...getShoppingListKeyboard() });
+  return safeEdit(ctx, formatShoppingList(list), {
+    parse_mode: 'HTML', ...getShoppingListKeyboard(list.listId)
+  });
 }
 
 /**
@@ -50,7 +57,9 @@ function register(bot) {
   bot.hears(texts.mainMenu.buttons.shoppingList, async (ctx) => {
     try {
       const list = await getLastShoppingList(ctx.from.id);
-      await ctx.reply(formatShoppingList(list), { parse_mode: 'HTML', ...getShoppingListKeyboard() });
+      await ctx.reply(formatShoppingList(list), {
+        parse_mode: 'HTML', ...getShoppingListKeyboard(list.listId)
+      });
     } catch (error) {
       logger.error('Error showing shopping list:', error);
       await ctx.reply(texts.errors.general);
@@ -96,4 +105,4 @@ function register(bot) {
   });
 }
 
-module.exports = { register };
+module.exports = { register, renderLastList };
