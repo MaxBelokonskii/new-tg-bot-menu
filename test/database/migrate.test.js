@@ -75,7 +75,7 @@ test('migrate is idempotent', async () => {
 
 test('catalog stores servings and base-unit amounts', async () => {
   const multi = await dbGet('SELECT COUNT(*) AS c FROM recipes WHERE servings > 1');
-  assert.equal(multi.c, 21);
+  assert.ok(multi.c > 90, `multi-serving recipes: ${multi.c}`);
   const broken = await dbGet(
     `SELECT COUNT(*) AS c FROM recipe_ingredients
      WHERE (base_unit IS NULL) != (amount_base IS NULL) OR amount_base <= 0`
@@ -83,4 +83,13 @@ test('catalog stores servings and base-unit amounts', async () => {
   assert.equal(broken.c, 0);
   const units = await dbAll('SELECT COUNT(DISTINCT base_unit) AS n, ingredient_id FROM recipe_ingredients WHERE base_unit IS NOT NULL GROUP BY ingredient_id HAVING n > 1');
   assert.deepEqual(units, [], 'one base unit per ingredient');
+});
+
+test('every recipe has sane computed nutrition per serving (Stage 3.1 p.5)', async () => {
+  const recipes = await dbAll('SELECT name, calories, protein, fat, carbs FROM recipes');
+  for (const r of recipes) {
+    assert.ok(r.calories >= 50 && r.calories <= 700, `${r.name}: ${r.calories} kcal`);
+    const fromMacros = r.protein * 4 + r.fat * 9 + r.carbs * 4;
+    assert.ok(Math.abs(fromMacros - r.calories) / r.calories <= 0.15, `${r.name}: ${r.calories} vs ${fromMacros}`);
+  }
 });

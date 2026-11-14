@@ -70,4 +70,17 @@ function toBase(name, amount, unit, hintGrams = null) {
   return { amountBase: grams / spec['шт'], baseUnit, convertible: true };
 }
 
-module.exports = { toBase, baseUnitOf, parseWeightHint };
+/**
+ * Weight in grams of an amount given in the ingredient's base unit
+ * (pieces are multiplied by the piece weight).
+ * @param {string} name - canonical ingredient name
+ * @param {number} amountBase
+ * @param {string} baseUnit
+ * @returns {number}
+ */
+function baseToGrams(name, amountBase, baseUnit) {
+  if (baseUnit !== 'шт') return amountBase;
+  return amountBase * ((SPECS[name] && SPECS[name]['шт']) || 0);
+}
+
+module.exports = { toBase, baseUnitOf, baseToGrams, parseWeightHint };
