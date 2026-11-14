@@ -3,10 +3,13 @@ const texts = require('../../bot/texts');
 const logger = require('../../utils/logger');
 const { PREF_KINDS, addPrefsFromText, listPrefs } = require('./logic');
 const { buildPrefsScreen, buildAddPrompt, buildAddResult } = require('../../interface/ingredient-prefs');
+const { escapable } = require('../../bot/scene-escape');
 
 const SCENE_ID = 'ingredient_prefs_add';
 const KINDS = new Set(Object.values(PREF_KINDS));
 const T = texts.ingredientPrefs;
+const CANCEL_CALLBACK = 'prefs_add_cancel';
+const OWN_CALLBACK = /^prefs_add_cancel$/;
 
 /**
  * Sends the refreshed list screen as a new message.
@@ -71,14 +74,17 @@ const scene = new Scenes.WizardScene(
     await ctx.reply(text, extra);
     return ctx.wizard.next();
   },
-  async (ctx) => {
-    if (ctx.callbackQuery) {
+  // [RU] Своя inline-кнопка здесь одна — «Отмена»; остальные кнопки, кнопки
+  // главного меню и команды выводят из сцены (bot/scene-escape.js).
+  // [EN] The only own inline button is "Cancel"; other buttons, main-menu
+  // buttons and commands leave the scene (bot/scene-escape.js).
+  escapable(async (ctx) => {
+    if (ctx.callbackQuery?.data === CANCEL_CALLBACK) {
       await ctx.answerCbQuery();
-      if (ctx.callbackQuery.data === 'prefs_add_cancel') return cancel(ctx);
-      return ctx.reply(T.invalidInput);
+      return cancel(ctx);
     }
     return handleInput(ctx);
-  }
+  }, { ownCallback: OWN_CALLBACK })
 );
 
 scene.command('cancel', cancel);

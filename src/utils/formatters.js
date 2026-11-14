@@ -13,6 +13,48 @@ function formatNutrition({ calories, protein, fat, carbs }) {
     .replace('{carbs}', carbs);
 }
 
+/**
+ * Picks the Russian plural form for a count: 1 / 2–4 / 5+ (11–14 → 5+).
+ * @param {number} n
+ * @param {[string, string, string]} forms - forms for 1, 2–4 and 5+
+ * @returns {string}
+ */
+function pluralRu(n, [one, few, many]) {
+  const abs = Math.abs(Math.trunc(n));
+  const mod100 = abs % 100;
+  const mod10 = abs % 10;
+  if (mod100 >= 11 && mod100 <= 14) return many;
+  if (mod10 === 1) return one;
+  if (mod10 >= 2 && mod10 <= 4) return few;
+  return many;
+}
+
+/**
+ * Builds the recipe-card ingredients header: "Ингредиенты (на 4 порции):".
+ * Ingredient amounts are for the whole dish, so the servings count is shown
+ * next to them (nutrition on the card is per serving).
+ * @param {number} servings - recipes.servings; falls back to 1
+ * @returns {string}
+ */
+function formatIngredientsHeader(servings) {
+  const n = Number.isInteger(servings) && servings > 0 ? servings : 1;
+  const amount = pluralRu(n, texts.recipeCard.servings).replace('{n}', n);
+  return texts.recipeCard.ingredientsLabel.replace('{servings}', amount);
+}
+
+// [RU] Номер слота плана → ключ подписи в texts.profile.calories.slots.
+// [EN] Plan slot number → label key in texts.profile.calories.slots.
+const SLOT_KEYS = { 1: 'breakfast', 2: 'main1', 3: 'main2', 4: 'salad', 5: 'dessert' };
+
+/**
+ * Localized label of a plan slot ("Завтрак", "Основное №1", …).
+ * @param {number} slot - 1..5
+ * @returns {string}
+ */
+function slotLabel(slot) {
+  return texts.profile.calories.slots[SLOT_KEYS[slot]] || String(slot);
+}
+
 const LARGE_UNIT_FACTOR = 1000;
 
 /**
@@ -57,4 +99,11 @@ function formatShoppingQuantity({ total_amount: amount, unit, to_taste: toTaste 
   return toTaste ? `${qty} + ${texts.shoppingList.toTaste}` : qty;
 }
 
-module.exports = { formatNutrition, formatQuantity, formatShoppingQuantity };
+module.exports = {
+  formatNutrition,
+  pluralRu,
+  formatIngredientsHeader,
+  slotLabel,
+  formatQuantity,
+  formatShoppingQuantity
+};
