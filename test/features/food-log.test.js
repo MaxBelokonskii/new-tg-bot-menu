@@ -12,6 +12,8 @@ const {
   searchRecipes,
   addEntry,
   deleteEntry,
+  getEntry,
+  updateEntryPortion,
   getDayLog,
   getDayTotals,
   getPlanDishes
@@ -108,6 +110,44 @@ test('deleteEntry removes only the owner\'s entry and returns its date', async (
   assert.equal(await deleteEntry(OTHER, id), yesterday);
   assert.equal(await dbGet('SELECT 1 FROM food_log WHERE id = ?', [id]), undefined);
   assert.equal(await deleteEntry(OTHER, id), null, 'second delete is a no-op');
+});
+
+test('getEntry returns only the owner\'s entry with per-serving nutrition', async () => {
+  const omelet = await recipeByName('Омлет с сыром');
+  const id = await addEntry(USER, { recipeId: omelet.id, portion: 1.5 });
+  const entry = await getEntry(USER, id);
+  assert.deepEqual(
+    [entry.id, entry.date, entry.portion, entry.recipeId, entry.name, entry.calories],
+    [id, TODAY, 1.5, omelet.id, 'Омлет с сыром', omelet.calories]
+  );
+  assert.equal(await getEntry(OTHER, id), null);
+  assert.equal(await getEntry(USER, 999999), null);
+});
+
+test('updateEntryPortion changes only the owner\'s entry within the diary window', async () => {
+  const omelet = await recipeByName('Омлет с сыром');
+  const yesterday = addDays(TODAY, -1);
+  const id = await addEntry(USER, { recipeId: omelet.id, date: yesterday });
+  const portionOf = async () => (await dbGet('SELECT portion FROM food_log WHERE id = ?', [id])).portion;
+
+  assert.deepEqual(await updateEntryPortion(USER, id, 2), { status: 'updated', date: yesterday });
+  assert.equal(await portionOf(), 2);
+  const [logged] = await getDayLog(USER, yesterday);
+  assert.equal(logged.calories, omelet.calories * 2);
+
+  assert.deepEqual(await updateEntryPortion(OTHER, id, 0.5), { status: 'notFound' }, 'foreign entry');
+  assert.deepEqual(await updateEntryPortion(USER, 999999, 0.5), { status: 'notFound' }, 'missing entry');
+  assert.equal(await portionOf(), 2);
+
+  // окно дневника считается от переданного «сегодня»
+  const later = addDays(yesterday, 8);
+  assert.deepEqual(await updateEntryPortion(USER, id, 0.5, later), { status: 'outOfRange', date: yesterday });
+  assert.equal(await portionOf(), 2);
+
+  for (const bad of [portionFromHalves(5), 3, 0, undefined]) {
+    await assert.rejects(updateEntryPortion(USER, id, bad), /portion/, String(bad));
+  }
+  assert.equal(await portionOf(), 2);
 });
 
 test('getPlanDishes lists today\'s plan and flags dishes already in the diary', async () => {

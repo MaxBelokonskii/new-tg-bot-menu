@@ -126,7 +126,7 @@ test('search scene: main-menu/inline buttons leave the scene and are routed; /ca
   assert.equal(calls[0].payload.text, T.search.canceled);
 });
 
-test('day screen with a profile shows norms; delete removes only by button', async () => {
+test('day screen with a profile shows norms; delete from the entry editor', async () => {
   await saveUserProfile(TELEGRAM_ID, {
     weight: 80, height: 180, age: 30, sex: 'male', activity_level: 'moderate', goal: 'maintain'
   });
@@ -138,6 +138,11 @@ test('day screen with a profile shows norms; delete removes only by button', asy
   assert.ok(!text.includes(T.noProfileHint));
 
   const [entry] = await logRows();
+  assert.ok(!callbackData(calls[1].payload).some(d => d.startsWith('fl_del_')), 'delete lives in the editor');
+  assert.ok(callbackData(calls[1].payload).includes(`fl_entry_${entry.id}`));
+
+  reset();
+  await sendCallback(`fl_entry_${entry.id}`);
   const del = callbackData(calls[1].payload).find(d => d.startsWith('fl_del_'));
   assert.equal(del, `fl_del_${entry.id}`);
 
@@ -148,6 +153,71 @@ test('day screen with a profile shows norms; delete removes only by button', asy
   reset();
   await sendCallback(del);
   assert.equal(calls[0].payload.text, T.entryNotFound);
+});
+
+test('entry editor: current portion marked, new portion saved, back keeps it', async () => {
+  const omelet = await recipeId('Омлет с сыром');
+  await sendCallback(`fl_add_${YESTERDAY}_${omelet}_0_2`);
+  const entry = (await logRows()).at(-1);
+  const screen = calls.at(-1).payload;
+  const editBtn = screen.reply_markup.inline_keyboard.flat().find(b => b.callback_data === `fl_entry_${entry.id}`);
+  assert.ok(editBtn.text.startsWith('✏️'));
+
+  reset();
+  await sendCallback(`fl_entry_${entry.id}`);
+  assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText']);
+  const editor = calls[1].payload;
+  assert.ok(editor.text.includes('Омлет с сыром'));
+  const [portionRow, actionRow] = editor.reply_markup.inline_keyboard;
+  assert.deepEqual(portionRow.map(b => b.callback_data), [1, 2, 3, 4].map(h => `fl_port_${entry.id}_${h}`));
+  assert.deepEqual(portionRow.map(b => b.text), ['½', T.edit.currentMark.replace('{portion}', '1'), '1½', '2']);
+  assert.deepEqual(actionRow.map(b => b.callback_data), [`fl_del_${entry.id}`, `fl_day_${YESTERDAY}`]);
+  assert.ok([...portionRow, ...actionRow].every(b => Buffer.byteLength(b.callback_data) <= 64));
+
+  // «назад» — без изменений
+  reset();
+  await sendCallback(`fl_day_${YESTERDAY}`);
+  assert.equal((await logRows()).at(-1).portion, 1);
+
+  reset();
+  await sendCallback(`fl_port_${entry.id}_3`);
+  assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText']);
+  assert.equal(calls[0].payload.text, T.portionUpdated);
+  assert.ok(calls[1].payload.text.includes('Омлет с сыром ×1½'));
+  assert.ok(calls[1].payload.text.includes(T.dayYesterday.split(',')[0]), 'same day re-rendered');
+  assert.equal((await logRows()).at(-1).portion, 1.5);
+
+  reset();
+  await sendCallback(`fl_entry_${entry.id}`);
+  const marked = calls[1].payload.reply_markup.inline_keyboard[0].map(b => b.text);
+  assert.deepEqual(marked, ['½', '1', T.edit.currentMark.replace('{portion}', '1½'), '2']);
+});
+
+test('entry editor refuses foreign, missing and out-of-window entries', async () => {
+  const omelet = await recipeId('Омлет с сыром');
+  const { addEntry } = require('../../src/features/food-log/logic');
+  const foreign = await addEntry(TELEGRAM_ID + 1, { recipeId: omelet });
+  const old = await addEntry(TELEGRAM_ID, { recipeId: omelet, date: addDays(TODAY, -30) });
+
+  for (const [data, toast] of [
+    [`fl_entry_${foreign}`, T.entryNotFound],
+    [`fl_port_${foreign}_4`, T.entryNotFound],
+    ['fl_entry_999999', T.entryNotFound],
+    [`fl_entry_${old}`, T.entryOutOfRange],
+    [`fl_port_${old}_4`, T.entryOutOfRange]
+  ]) {
+    reset();
+    await sendCallback(data);
+    assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText'], data);
+    assert.equal(calls[0].payload.text, toast, data);
+    assert.ok(calls[1].payload.text.includes(T.dayToday.split(',')[0]), `${data} falls back to today`);
+  }
+  const portions = await dbAll('SELECT portion FROM food_log WHERE id IN (?, ?)', [foreign, old]);
+  assert.deepEqual(portions.map(r => r.portion), [1, 1]);
+
+  reset();
+  await sendCallback(`fl_port_${foreign}_5`);
+  assert.ok(!methods().includes('editMessageText'), 'halves outside 1..4 are not routed');
 });
 
 test('day navigation: yesterday ↔ today, out-of-window dates fall back to today', async () => {

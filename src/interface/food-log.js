@@ -117,8 +117,8 @@ function buildNavRow(date, today, oldest) {
 
 /**
  * Builds the diary day screen: eaten dishes with kcal/P/F/C, totals vs
- * targets with progress bars (or a fill-the-profile hint), add/delete and
- * day navigation buttons.
+ * targets with progress bars (or a fill-the-profile hint), add buttons, one
+ * "✏️" button per entry (opens the entry editor) and day navigation.
  *
  * @param {{date: string, today: string, oldest: string,
  *   entries: Array<{id: number, name: string, portion: number, calories: number,
@@ -139,8 +139,8 @@ function buildDayScreen({ date, today, oldest, entries, totals, targets }) {
     Markup.button.callback(T.buttons.search, `fl_search_${date}`)
   ]];
   entries.forEach((entry, i) => rows.push([Markup.button.callback(
-    T.buttons.delete.replace('{n}', i + 1).replace('{name}', truncate(entry.name)),
-    `fl_del_${entry.id}`
+    T.buttons.entry.replace('{n}', i + 1).replace('{name}', truncate(entry.name)),
+    `fl_entry_${entry.id}`
   )]));
   // [RU] Подбор «что ещё съесть» — только для сегодня и при заданных нормах.
   // [EN] "What else to eat" — only for today and when targets are set.

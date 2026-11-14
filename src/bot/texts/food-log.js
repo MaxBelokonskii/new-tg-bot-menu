@@ -32,7 +32,8 @@ module.exports = {
     fromPlanToday: '➕ Из плана на сегодня',
     fromPlanDay: '➕ Из плана на этот день',
     search: '🔍 Найти рецепт',
-    delete: '✖️ {n}. {name}',
+    entry: '✏️ {n}. {name}',
+    deleteEntry: '🗑 Удалить',
     prevYesterday: '◀️ Вчера',
     prevDate: '◀️ {date}',
     nextToday: 'Сегодня ▶️',
@@ -51,6 +52,11 @@ module.exports = {
     perServing: 'На 1 порцию: {kcal} ккал · Б {protein} · Ж {fat} · У {carbs}',
     ask: 'Сколько порций съели?'
   },
+  edit: {
+    current: 'Сейчас в дневнике: {portion} порц. — {kcal} ккал',
+    ask: 'Выберите новую порцию или удалите запись:',
+    currentMark: '✅ {portion}'
+  },
   search: {
     ask: 'Введите часть названия блюда (например, «омлет» или «салат»).\nОтправьте /cancel для отмены.',
     tooShort: 'Нужно хотя бы 2 буквы. Попробуйте ещё раз или отправьте /cancel.',
@@ -62,6 +68,8 @@ module.exports = {
   },
   added: 'Записано в дневник ✅',
   deleted: 'Запись удалена ✨',
+  portionUpdated: 'Порция изменена ✅',
+  entryOutOfRange: 'Запись старше 7 дней — её уже нельзя изменить.',
   entryNotFound: 'Запись не найдена — возможно, уже удалена.',
   recipeNotFound: 'Рецепт не найден.',
   dateOutOfRange: 'Дневник доступен за последние 7 дней — показываю сегодня.',

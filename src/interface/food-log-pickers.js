@@ -1,6 +1,7 @@
 const { Markup } = require('telegraf');
 const texts = require('../bot/texts');
-const { formatDayLabel, fillNutrition, truncate } = require('./food-log');
+const { formatDayLabel, formatPortion, fillNutrition, truncate } = require('./food-log');
+const { scaleNutrition } = require('../utils/nutrition-totals');
 
 const T = texts.foodLog;
 const PORTION_HALVES = [1, 2, 3, 4];
@@ -76,8 +77,39 @@ function buildPortionPicker(date, recipe, slot) {
   return { text, extra: { parse_mode: 'HTML', ...keyboard } };
 }
 
+/**
+ * Builds the editor of an existing diary entry: the portion picker with the
+ * current portion marked ✅, plus "delete" and "back to diary" buttons.
+ * [RU] Выбор той же порции не запрещён — просто сохранит то же значение.
+ * [EN] Picking the same portion is allowed — it just saves the same value.
+ *
+ * @param {{id: number, date: string, portion: number, name: string,
+ *   calories: number, protein: number, fat: number, carbs: number}} entry - nutrition per serving
+ * @returns {{text: string, extra: object}}
+ */
+function buildEntryEditor(entry) {
+  const current = scaleNutrition(entry, entry.portion);
+  const text = [
+    `<b>${entry.name}</b>`,
+    fillNutrition(T.portion.perServing, entry),
+    fillNutrition(T.edit.current.replace('{portion}', formatPortion(entry.portion)), current),
+    '',
+    T.edit.ask
+  ].join('\n');
+  const currentHalves = Math.round(entry.portion * 2);
+  const keyboard = Markup.inlineKeyboard([
+    PORTION_HALVES.map(halves => Markup.button.callback(
+      halves === currentHalves ? T.edit.currentMark.replace('{portion}', T.portions[halves]) : T.portions[halves],
+      `fl_port_${entry.id}_${halves}`
+    )),
+    [Markup.button.callback(T.buttons.deleteEntry, `fl_del_${entry.id}`), backToDay(entry.date)]
+  ]);
+  return { text, extra: { parse_mode: 'HTML', ...keyboard } };
+}
+
 module.exports = {
   buildPlanPicker,
   buildSearchResults,
-  buildPortionPicker
+  buildPortionPicker,
+  buildEntryEditor
 };
