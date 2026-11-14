@@ -66,8 +66,8 @@ test('checklist: one toggle button per item with marks, list id and page', () =>
       item(6, 'Огурец', 'Овощи', { unit: 'шт', total_amount: 2 })
     ]
   };
-  const { text, extra } = buildChecklistScreen(list, 0);
-  assert.ok(text.startsWith(T.title));
+  const { text, extra } = buildChecklistScreen(list, 0, TODAY);
+  assert.ok(text.startsWith(`${T.title} (на эту неделю, 9–15 нояб.)`));
   assert.ok(text.includes('☑️ Куплено: 1 из 2'));
   assert.ok(!text.includes('Страница'), 'single page has no page line');
   assert.deepEqual(buttons(extra).slice(0, 2), [
@@ -76,7 +76,7 @@ test('checklist: one toggle button per item with marks, list id and page', () =>
   ]);
   assert.deepEqual(callbacks(extra).slice(2), ['sl_reset_9_0', 'sl_list']);
 
-  const unmarked = buildChecklistScreen({ ...list, items: [item(6, 'Огурец', 'Овощи')] }, 0);
+  const unmarked = buildChecklistScreen({ ...list, items: [item(6, 'Огурец', 'Овощи')] }, 0, TODAY);
   assert.deepEqual(callbacks(unmarked.extra), ['sl_tgl_9_6_0', 'sl_list'], 'no reset without marks');
 });
 
@@ -84,16 +84,16 @@ test('checklist pages: 10 items per page, nav buttons, clamped page', () => {
   const items = Array.from({ length: 23 }, (_, i) => item(i + 1, `Продукт ${String(i + 1).padStart(2, '0')}`, 'Овощи'));
   const list = { listId: 123456, ...period, items };
 
-  const first = buildChecklistScreen(list, 0);
+  const first = buildChecklistScreen(list, 0, TODAY);
   assert.ok(first.text.includes('Страница 1 из 3'));
   assert.equal(callbacks(first.extra).filter(d => d.startsWith('sl_tgl_')).length, 10);
   assert.deepEqual(buttons(first.extra)[10], [{ text: T.nextBtn, callback_data: 'sl_check_123456_1' }]);
 
-  const middle = buildChecklistScreen(list, 1);
+  const middle = buildChecklistScreen(list, 1, TODAY);
   assert.deepEqual(buttons(middle.extra)[10].map(b => b.callback_data), ['sl_check_123456_0', 'sl_check_123456_2']);
   assert.ok(callbacks(middle.extra).includes('sl_tgl_123456_11_1'));
 
-  const last = buildChecklistScreen(list, 99);
+  const last = buildChecklistScreen(list, 99, TODAY);
   assert.ok(last.text.includes('Страница 3 из 3'));
   assert.equal(callbacks(last.extra).filter(d => d.startsWith('sl_tgl_')).length, 3);
   assert.ok(buttons(last.extra).length <= 15);

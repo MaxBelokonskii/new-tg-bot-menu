@@ -5,6 +5,7 @@ const { renderLastList } = require('./shopping-list');
 const { getLastShoppingList } = require('../../features/shopping-list/logic');
 const { toggleBought, resetBought } = require('../../features/shopping-list/bought');
 const { buildChecklistScreen } = require('../../interface/shopping-checklist');
+const { getUserClock } = require('../../features/time-zone/logic');
 
 const T = texts.shoppingList.checklist;
 
@@ -31,7 +32,8 @@ async function showStale(ctx) {
 async function renderChecklist(ctx, listId, page, toast) {
   const list = await getLastShoppingList(ctx.from.id);
   if (list.listId !== listId) return showStale(ctx);
-  const { text, extra } = buildChecklistScreen(list, page);
+  const { today } = await getUserClock(ctx.from.id);
+  const { text, extra } = buildChecklistScreen(list, page, today);
   await safeEdit(ctx, text, extra);
   await ctx.answerCbQuery(toast);
 }

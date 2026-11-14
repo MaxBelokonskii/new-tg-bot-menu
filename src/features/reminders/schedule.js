@@ -3,7 +3,8 @@
 // Без БД и таймеров.
 // [EN] Pure reminder rules: setting options and the "is it due" check in the
 // user's local time (utils/date-helpers.js:localParts). No DB, no timers.
-const { localParts } = require('../../utils/date-helpers');
+const { localParts, weekdayOf } = require('../../utils/date-helpers');
+const { planWeeks } = require('../weekly-planner/plan-weeks');
 
 const REMINDER_TYPES = Object.freeze(['morning', 'evening', 'weekly']);
 
@@ -32,6 +33,12 @@ const DEFAULTS = Object.freeze({
 // is only sent within the window, so an evening restart won't send the
 // morning plan.
 const GRACE_MINUTES = 180;
+
+// [RU] С пятницы (4) по воскресенье недельное напоминание зовёт планировать
+// следующую неделю, с понедельника по четверг — текущую.
+// [EN] From Friday (4) to Sunday the weekly reminder targets the next week,
+// Monday to Thursday — the current one.
+const NEXT_WEEK_FROM_WEEKDAY = 4;
 
 const pad = (n) => String(n).padStart(2, '0');
 
@@ -78,6 +85,17 @@ function lastSentAfterChange(reminder, offsetMinutes, nowUtc) {
 }
 
 /**
+ * Which week the weekly reminder is about on the user's local date: the
+ * next one from Friday to Sunday, otherwise the current one.
+ * @param {string} localDate - YYYY-MM-DD, the user's local today
+ * @returns {{kind: 'current'|'next', monday: string}}
+ */
+function weeklyReminderWeek(localDate) {
+  const kind = weekdayOf(localDate) >= NEXT_WEEK_FROM_WEEKDAY ? 'next' : 'current';
+  return { kind, monday: planWeeks(localDate)[kind].start };
+}
+
+/**
  * Formats minutes since midnight as HH:MM.
  * @param {number} minutes
  * @returns {string}
@@ -93,5 +111,6 @@ module.exports = {
   GRACE_MINUTES,
   isDue,
   lastSentAfterChange,
+  weeklyReminderWeek,
   formatTime
 };

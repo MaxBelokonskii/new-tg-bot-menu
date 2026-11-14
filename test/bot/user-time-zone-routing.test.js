@@ -7,6 +7,7 @@ const { saveUserProfile } = require('../../src/features/profile/logic');
 const { getSuggestions } = require('../../src/features/what-to-eat/logic');
 const { getPrefsByTelegramId } = require('../../src/features/ingredient-prefs/logic');
 const { buildSuggestionsScreen } = require('../../src/interface/what-to-eat');
+const { fillWeek } = require('../../src/interface/weekly-plan');
 const { createFakeBot } = require('../helpers/fake-bot');
 
 const TELEGRAM_ID = 9501;
@@ -122,7 +123,13 @@ test('what-to-eat uses the user\'s local hour for time-of-day rules', async () =
 });
 
 test('the generated week, plan view and shopping list follow the user\'s week', async () => {
-  await sendCallback('generate_weekly_plan_fill');
+  // понедельник 09.11 — текущая неделя по Москве, но для пользователя уже прошлая
+  await sendCallback('generate_weekly_plan_fill_2026-11-09');
+  assert.equal(toast(), texts.weeklyPlan.staleWeek);
+  assert.equal(lastPayload('editMessageText').text, texts.weeklyPlan.chooseWeek);
+
+  reset();
+  await sendCallback(`generate_weekly_plan_fill_${USER_TODAY}`);
   const rows = await dbAll(
     'SELECT DISTINCT date FROM daily_menu WHERE user_id = ? ORDER BY date', [await userId()]
   );
@@ -137,7 +144,7 @@ test('the generated week, plan view and shopping list follow the user\'s week', 
   await sendCallback(`wp_day_${MOSCOW_TODAY}`);
   const day = lastPayload('editMessageText');
   assert.ok(day.text.includes(texts.weeklyPlan.days[0]), 'Monday');
-  assert.ok(day.text.includes(texts.weeklyPlan.day.weekHeader.replace('{days}', 7)));
+  assert.ok(day.text.includes(fillWeek(texts.weeklyPlan.day.weekHeader, 'current', USER_TODAY).replace('{days}', 7)));
   assert.ok(!callbackData(day).includes(`wp_day_${MOSCOW_TODAY}`), 'no ◀️ before Monday');
 
   reset();

@@ -13,6 +13,7 @@ const {
   buildClearShoppingConfirmKeyboard
 } = require('../../interface/shopping-list');
 const { getDayBounds } = require('../../utils/date-helpers');
+const { planWeeks } = require('../../features/weekly-planner/plan-weeks');
 const { getUserClock } = require('../../features/time-zone/logic');
 
 /**
@@ -28,24 +29,30 @@ async function renderLastList(ctx) {
   });
 }
 
+// [RU] Период списка по режиму кнопки — от «сегодня» пользователя.
+// [EN] List period per button mode — from the user's today.
+const PERIOD_BOUNDS = {
+  day: (today) => getDayBounds(today),
+  week: (today) => planWeeks(today).current,
+  nextweek: (today) => planWeeks(today).next
+};
+
 /**
- * Rebuilds the shopping list for the user's today or current week and
- * re-renders it.
+ * Rebuilds the shopping list for the user's today, current week or next
+ * week and re-renders it.
  * @param {import('telegraf').Context} ctx
- * @param {'day'|'week'} mode
+ * @param {'day'|'week'|'nextweek'} mode
  */
 async function regenerateShoppingList(ctx, mode) {
   try {
-    const clock = await getUserClock(ctx.from.id);
-    const bounds = mode === 'day' ? getDayBounds(clock.today) : clock.week;
+    const { today } = await getUserClock(ctx.from.id);
+    const bounds = PERIOD_BOUNDS[mode](today);
     const ingredients = await getIngredientsFromPlan(ctx.from.id, bounds);
     if (ingredients.length === 0) {
       return ctx.answerCbQuery(texts.shoppingList.emptyForPeriod[mode], { show_alert: true });
     }
     await saveShoppingList(ctx.from.id, ingredients, bounds);
-    await ctx.answerCbQuery(
-      mode === 'day' ? texts.shoppingList.generatedDay : texts.shoppingList.generatedWeek
-    );
+    await ctx.answerCbQuery(texts.shoppingList.generated[mode]);
     await renderLastList(ctx);
   } catch (error) {
     logger.error(`Error generating shopping list (${mode}):`, error);
@@ -54,7 +61,7 @@ async function regenerateShoppingList(ctx, mode) {
 }
 
 /**
- * Registers shopping-list handlers: show, rebuild (day/week), clear.
+ * Registers shopping-list handlers: show, rebuild (today / this week / next week), clear.
  * @param {import('telegraf').Telegraf} bot
  */
 function register(bot) {
@@ -73,6 +80,7 @@ function register(bot) {
 
   bot.action('generate_shopping_list_day', (ctx) => regenerateShoppingList(ctx, 'day'));
   bot.action('generate_shopping_list_week', (ctx) => regenerateShoppingList(ctx, 'week'));
+  bot.action('generate_shopping_list_nextweek', (ctx) => regenerateShoppingList(ctx, 'nextweek'));
 
   bot.action('confirm_clear_shopping', async (ctx) => {
     await ctx.answerCbQuery();

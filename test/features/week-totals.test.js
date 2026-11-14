@@ -52,12 +52,14 @@ test('getWeekPlanNutrition returns one row per planned dish of the current week'
 
 test('formatWeekSummary: sums only without targets, percent of the norm with targets', () => {
   const week = {
+    kind: 'current',
+    start: '2026-11-09',
     plannedDays: 5,
     totals: { calories: 9800, protein: 450.4, fat: 320, carbs: 1100 },
     average: { calories: 1960, protein: 90.08, fat: 64, carbs: 220 }
   };
   assert.deepEqual(formatWeekSummary(week, null), [
-    '<b>За неделю</b> · дней с блюдами: 5 из 7',
+    '<b>За эту неделю, 9–15 нояб.</b> · дней с блюдами: 5 из 7',
     'Всего: 9800 ккал · Б 450 г · Ж 320 г · У 1100 г',
     'В среднем в день: 1960 ккал · Б 90 г · Ж 64 г · У 220 г'
   ]);
@@ -66,22 +68,28 @@ test('formatWeekSummary: sums only without targets, percent of the norm with tar
   assert.equal(lines[2], 'В среднем в день: 1960 ккал (82%) · Б 90 г (60%) · Ж 64 г (80%) · У 220 г (73%)');
   assert.deepEqual(formatWeekSummary({ plannedDays: 0, totals: ZERO, average: ZERO }, null), []);
   assert.deepEqual(formatWeekSummary(null, null), []);
+  const next = formatWeekSummary({ ...week, kind: 'next', start: '2026-11-30' }, null);
+  assert.equal(next[0], '<b>За следующую неделю, 30 нояб. – 6 дек.</b> · дней с блюдами: 5 из 7');
 });
 
 test('buildPlanDayScreen puts the week block after the day totals, also on an empty day', () => {
   const week = {
+    kind: 'current',
+    start: '2026-11-09',
     plannedDays: 3,
     totals: { calories: 6000, protein: 300, fat: 200, carbs: 700 },
     average: { calories: 2000, protein: 100, fat: 66.7, carbs: 233.3 }
   };
-  const base = { date: '2026-11-11', today: '2026-11-12', weekStart: '2026-11-09', targets: null, week };
+  const base = {
+    date: '2026-11-11', today: '2026-11-12', horizon: { first: '2026-11-09', last: '2026-11-22' }, targets: null, week
+  };
 
   const full = buildPlanDayScreen({
     ...base,
     items: [{ slot: 1, name: 'Омлет', calories: 300, protein: 20, fat: 15, carbs: 5 }],
     totals: { calories: 300, protein: 20, fat: 15, carbs: 5 }
   }).text;
-  const header = D.weekHeader.replace('{days}', 3);
+  const header = '<b>За эту неделю, 9–15 нояб.</b> · дней с блюдами: 3 из 7';
   assert.ok(full.endsWith('В среднем в день: 2000 ккал · Б 100 г · Ж 67 г · У 233 г'));
   assert.ok(full.indexOf(header) > full.indexOf(D.totalsHeader));
 

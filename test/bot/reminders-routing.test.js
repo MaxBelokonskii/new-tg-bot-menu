@@ -127,8 +127,8 @@ test('reminder buttons work when pressed from a fresh reminder message', async (
   assert.equal(toast(), texts.shoppingList.emptyForPeriod.week);
 
   reset();
-  await sendCallback('generate_weekly_plan');
-  assert.ok(sentTexts().includes(texts.weeklyPlan.generated));
+  await sendCallback(`gen_week_${defaultClock().week.start}`);
+  assert.ok(calls.some(c => c.method === 'editMessageText' && c.payload.text.startsWith('Готово!')));
 
   await saveSelectedDish(TELEGRAM_ID, (await dbGet('SELECT id FROM recipes LIMIT 1')).id, TODAY);
   reset();

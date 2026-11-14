@@ -3,6 +3,7 @@ const texts = require('../bot/texts');
 const { NUTRIENTS } = require('../utils/nutrition-totals');
 const { addDays, weekdayOf } = require('../utils/date-helpers');
 const { slotLabel } = require('../utils/formatters');
+const { fillWeek } = require('./weekly-plan');
 
 const T = texts.weeklyPlan;
 const D = T.day;
@@ -69,19 +70,21 @@ function formatNutrientRow(values, targets = null) {
 }
 
 /**
- * Compact week block for the bottom of the day screen: days with dishes,
- * week sums and the average per planned day (vs daily targets when known).
- * Empty when nothing is planned this week.
- * @param {{plannedDays: number,
+ * Compact week block for the bottom of the day screen: which week (this /
+ * next, with dates), days with dishes, week sums and the average per
+ * planned day (vs daily targets when known). Empty when nothing is planned
+ * in that week.
+ * @param {{kind: 'current'|'next', start: string, plannedDays: number,
  *   totals: {calories: number, protein: number, fat: number, carbs: number},
  *   average: {calories: number, protein: number, fat: number, carbs: number}}|null} week
+ *   summarizePlanWeek result plus the week's kind and Monday
  * @param {{calories: number, protein: number, fat: number, carbs: number}|null} targets
  * @returns {string[]}
  */
 function formatWeekSummary(week, targets) {
   if (!week || week.plannedDays === 0) return [];
   return [
-    D.weekHeader.replace('{days}', week.plannedDays),
+    fillWeek(D.weekHeader, week.kind, week.start).replace('{days}', week.plannedDays),
     D.weekTotal.replace('{values}', formatNutrientRow(week.totals)),
     D.weekAverage.replace('{values}', formatNutrientRow(week.average, targets))
   ];
@@ -120,13 +123,20 @@ function formatDayTotals(totals, targets) {
   return lines;
 }
 
-function buildNavRow(date, weekStart) {
+/**
+ * ◀️/▶️ to the neighbouring days within the plan horizon (current Monday …
+ * next Sunday); the buttons cross the week boundary.
+ * @param {string} date - YYYY-MM-DD
+ * @param {{first: string, last: string}} horizon
+ * @returns {Array<object>}
+ */
+function buildNavRow(date, { first, last }) {
   const row = [];
-  if (date > weekStart) {
+  if (date > first) {
     const prev = addDays(date, -1);
     row.push(Markup.button.callback(D.prevBtn.replace('{day}', T.daysShort[weekdayOf(prev)]), `wp_day_${prev}`));
   }
-  if (date < addDays(weekStart, 6)) {
+  if (date < last) {
     const next = addDays(date, 1);
     row.push(Markup.button.callback(D.nextBtn.replace('{day}', T.daysShort[weekdayOf(next)]), `wp_day_${next}`));
   }
@@ -135,8 +145,9 @@ function buildNavRow(date, weekStart) {
 
 /**
  * Builds one day of the weekly plan: weekday header, dishes with kcal,
- * totals vs targets, a compact week summary, per-dish replace/remove buttons, "clear day",
- * ◀️/▶️ navigation within the current week and "back to the plan menu".
+ * totals vs targets, a compact summary of the week containing the day,
+ * per-dish replace/remove buttons, "clear day", ◀️/▶️ navigation within the
+ * plan horizon (this and next week) and "back to the plan menu".
  *
  * [RU] Один день на экран вместо всей недели: на полной неделе было
  * ~77 кнопок в одном сообщении. callback_data кнопок замены/удаления/очистки
@@ -145,18 +156,23 @@ function buildNavRow(date, weekStart) {
  * buttons in one message). Replace/remove/clear callbacks are unchanged;
  * their handlers bring the user back to this day.
  *
- * @param {{date: string, today: string, weekStart: string,
+ * @param {{date: string, today: string, horizon: {first: string, last: string},
  *   items: Array<{slot: number, name: string, calories: number}>,
  *   totals: {calories: number, protein: number, fat: number, carbs: number},
  *   targets: {calories: number, protein: number, fat: number, carbs: number}|null,
- *   week?: {plannedDays: number, totals: object, average: object}|null}} view - week from summarizePlanWeek
+ *   week?: {kind: 'current'|'next', start: string, plannedDays: number,
+ *     totals: object, average: object}|null}} view
+ *   horizon from planHorizon; week — summarizePlanWeek of the day's week plus its kind and Monday
  * @returns {{text: string, extra: object}}
  */
-function buildPlanDayScreen({ date, today, weekStart, items, totals, targets, week = null }) {
+function buildPlanDayScreen({ date, today, horizon, items, totals, targets, week = null }) {
+  let mark = '';
+  if (date === today) mark = D.todayMark;
+  else if (week && week.kind === 'next') mark = D.nextWeekMark;
   const header = D.header
     .replace('{day}', T.days[weekdayOf(date)])
     .replace('{date}', formatDayMonth(date))
-    .replace('{today}', date === today ? D.todayMark : '');
+    .replace('{today}', mark);
   const lines = [`<b>${T.title}</b>`, '', header, ''];
   if (items.length === 0) {
     lines.push(D.empty);
@@ -171,7 +187,7 @@ function buildPlanDayScreen({ date, today, weekStart, items, totals, targets, we
     Markup.button.callback(texts.editSlot.removeBtn, `confirm_remove_slot_${date}_${item.slot}`)
   ]);
   if (items.length > 0) rows.push([Markup.button.callback(T.clearDay, `confirm_clear_day_${date}`)]);
-  const nav = buildNavRow(date, weekStart);
+  const nav = buildNavRow(date, horizon);
   if (nav.length) rows.push(nav);
   rows.push([Markup.button.callback(D.menuBtn, 'wp_menu')]);
 

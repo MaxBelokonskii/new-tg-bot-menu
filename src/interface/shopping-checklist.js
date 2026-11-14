@@ -1,6 +1,6 @@
 const texts = require('../bot/texts');
 const { formatShoppingQuantity } = require('../utils/formatters');
-const { orderItems, formatBoughtCounter, deriveMode } = require('./shopping-list');
+const { orderItems, formatBoughtCounter, formatPeriodLabel } = require('./shopping-list');
 
 const T = texts.shoppingList.checklist;
 
@@ -44,16 +44,17 @@ function itemLabel(item) {
  *
  * @param {{ listId: number, items: Array, periodStart: string|null, periodEnd: string|null }} list
  * @param {number} requestedPage - 0-based
+ * @param {string} today - YYYY-MM-DD, the user's local today (period label)
  * @returns {{text: string, extra: object}} message text and editMessageText options
  */
-function buildChecklistScreen(list, requestedPage) {
+function buildChecklistScreen(list, requestedPage, today) {
   const { listId, items } = list;
   const ordered = orderItems(items);
   const { page, pages } = clampPage(requestedPage, ordered.length);
   const pageItems = ordered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  const mode = deriveMode(list.periodStart, list.periodEnd);
-  const suffix = mode ? ` (${texts.shoppingList.periodLabel[mode]})` : '';
+  const label = formatPeriodLabel(list.periodStart, list.periodEnd, today);
+  const suffix = label ? ` (${label})` : '';
   const lines = [`${T.title}${suffix}`, '', T.hint];
   const counter = formatBoughtCounter(items);
   if (counter) lines.push(counter);
