@@ -18,9 +18,9 @@ async function upsertCategories(recipes) {
 }
 
 /**
- * Resolves every recipe's ingredients once (split, aliases, collisions) and
- * validates the resulting dictionary: no compound/alternative names and every
- * canonical name has a shopping-list type.
+ * Resolves every recipe's ingredients once (split, aliases, base units,
+ * collisions) and validates the result: every unit converts, no
+ * compound/alternative names, every canonical name has a shopping-list type.
  *
  * @param {Array<object>} recipes - recipes.json entries
  * @returns {{resolved: Map<string, Array<{name: string, amount: number, unit: string}>>, names: Set<string>}}
@@ -30,7 +30,9 @@ function resolveCatalog(recipes) {
   const names = new Set();
   for (const recipe of recipes) {
     const { rows, conflicts } = resolveRecipeIngredients(recipe.ingredients);
-    conflicts.forEach(c => console.warn(`Warning: "${recipe.name}" — unmergeable units, kept first (${c})`));
+    if (conflicts.length) {
+      throw new Error(`"${recipe.name}": add factors to unit-conversions.json — ${conflicts.join('; ')}`);
+    }
     rows.forEach(r => names.add(r.name));
     resolved.set(recipe.name, rows);
   }
@@ -61,16 +63,20 @@ async function upsertIngredients(names) {
 }
 
 async function upsertRecipe(recipe) {
+  const servings = Math.max(1, Number(recipe.servings) || 1);
   const existing = await get('SELECT id FROM recipes WHERE name = ?', [recipe.name]);
-  if (existing) return { id: existing.id, inserted: false };
+  if (existing) {
+    await run('UPDATE recipes SET servings = ? WHERE id = ?', [servings, existing.id]);
+    return { id: existing.id, inserted: false };
+  }
 
   const catRow = await get('SELECT id FROM meal_categories WHERE name = ?', [recipe.category]);
   if (!catRow) throw new Error(`Category not found for recipe "${recipe.name}": ${recipe.category}`);
 
   const nutrition = recipe.nutrition_per_serving || recipe.nutrition || {};
   const result = await run(
-    `INSERT INTO recipes (name, category_id, description, calories, protein, fat, carbs)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO recipes (name, category_id, description, calories, protein, fat, carbs, servings)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       recipe.name,
       catRow.id,
@@ -78,7 +84,8 @@ async function upsertRecipe(recipe) {
       nutrition.calories || 0,
       nutrition.proteins || nutrition.protein || 0,
       nutrition.fats || nutrition.fat || 0,
-      nutrition.carbs || 0
+      nutrition.carbs || 0,
+      servings
     ]
   );
   return { id: result.lastID, inserted: true };
@@ -88,10 +95,17 @@ async function linkIngredients(recipeId, rows) {
   for (const row of rows) {
     const ingRow = await get('SELECT id FROM ingredients WHERE name = ?', [row.name]);
     if (!ingRow) throw new Error(`Ingredient not found: ${row.name}`);
+    // [RU] UPSERT, а не OR IGNORE: повторный прогон дозаполняет amount_base/base_unit
+    // в старой БД после ALTER TABLE.
+    // [EN] UPSERT rather than OR IGNORE: a re-run backfills amount_base/base_unit
+    // in an old DB after ALTER TABLE.
     await run(
-      `INSERT OR IGNORE INTO recipe_ingredients (recipe_id, ingredient_id, amount, unit)
-       VALUES (?, ?, ?, ?)`,
-      [recipeId, ingRow.id, row.amount, row.unit]
+      `INSERT INTO recipe_ingredients (recipe_id, ingredient_id, amount, unit, amount_base, base_unit)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(recipe_id, ingredient_id) DO UPDATE SET
+         amount = excluded.amount, unit = excluded.unit,
+         amount_base = excluded.amount_base, base_unit = excluded.base_unit`,
+      [recipeId, ingRow.id, row.amount, row.unit, row.amountBase, row.baseUnit]
     );
   }
 }

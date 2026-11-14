@@ -1,5 +1,7 @@
 const { Markup } = require('telegraf');
 const texts = require('../bot/texts');
+const { formatShoppingQuantity } = require('../utils/formatters');
+const { formatLocalDate } = require('../utils/date-helpers');
 
 /**
  * Derives 'day' or 'week' mode from the shopping list period bounds.
@@ -20,11 +22,23 @@ function deriveMode(periodStart, periodEnd) {
 }
 
 /**
+ * @param {string} header - group title
+ * @param {Array} items
+ * @returns {string} one type block: header + "• name: qty" lines
+ */
+function formatGroup(header, items) {
+  const lines = items.map(item => `• ${item.name}: ${formatShoppingQuantity(item)}`);
+  return `<b>${header}</b>\n${lines.join('\n')}\n\n`;
+}
+
+/**
  * Builds the shopping list message (with period label and grouped items).
+ * A list whose period has already ended gets a "rebuild me" note.
  * @param {{ items: Array, periodStart: string|null, periodEnd: string|null }} list
+ * @param {string} [today] - YYYY-MM-DD local date, injectable for tests
  * @returns {string}
  */
-function formatShoppingList(list) {
+function formatShoppingList(list, today = formatLocalDate(new Date())) {
   const { items, periodStart, periodEnd } = list;
   if (!items || items.length === 0) {
     return texts.shoppingList.empty;
@@ -40,32 +54,14 @@ function formatShoppingList(list) {
   }, {});
 
   let message = `<b>${texts.shoppingList.title}</b>${suffix}\n\n`;
+  if (periodEnd && today >= periodEnd) message += `${texts.shoppingList.stale}\n\n`;
   message += `${texts.shoppingList.itemsTitle}\n\n`;
 
-  const handledTypes = new Set();
   for (const type in texts.shoppingList.types) {
-    if (grouped[type]) {
-      message += `<b>${texts.shoppingList.types[type]}</b>\n`;
-      grouped[type].forEach(item => {
-        // [RU] Если amount = 0, значит несколько единиц слиты в unit (см. saveShoppingList).
-        // [EN] amount = 0 signals "unit already contains full breakdown" (see saveShoppingList).
-        const qty = item.total_amount > 0 ? `${item.total_amount} ${item.unit}` : item.unit;
-        message += `• ${item.name}: ${qty}\n`;
-      });
-      message += '\n';
-      handledTypes.add(type);
-    }
+    if (grouped[type]) message += formatGroup(texts.shoppingList.types[type], grouped[type]);
   }
-
   for (const type in grouped) {
-    if (!handledTypes.has(type)) {
-      message += `<b>📦 ${type}</b>\n`;
-      grouped[type].forEach(item => {
-        const qty = item.total_amount > 0 ? `${item.total_amount} ${item.unit}` : item.unit;
-        message += `• ${item.name}: ${qty}\n`;
-      });
-      message += '\n';
-    }
+    if (!(type in texts.shoppingList.types)) message += formatGroup(`📦 ${type}`, grouped[type]);
   }
 
   return message;

@@ -15,10 +15,11 @@ test('compound entries split into canonical parts', () => {
     ['Соль', 'Перец черный']
   );
   assert.deepEqual(
-    resolveIngredient({ item: 'Орехи, сухофрукты', amount: '10 г' }),
+    resolveIngredient({ item: 'Орехи, сухофрукты', amount: '10 г' })
+      .map(({ name, amount, unit, amountBase }) => ({ name, amount, unit, amountBase })),
     [
-      { name: 'Орехи', amount: 5, unit: 'г' },
-      { name: 'Сухофрукты', amount: 5, unit: 'г' }
+      { name: 'Орехи', amount: 5, unit: 'г', amountBase: 5 },
+      { name: 'Сухофрукты', amount: 5, unit: 'г', amountBase: 5 }
     ]
   );
 });
@@ -42,26 +43,45 @@ test('cheese variants fold into "Сыр", kinds stay separate', () => {
   assert.equal(canonicalName('Сыр фета', 'г'), 'Сыр фета');
 });
 
-test('collisions inside a recipe are summed, not dropped', () => {
+const row = (item, amount) => resolveIngredient({ item, amount })[0];
+
+test('amounts convert to the ingredient base unit', () => {
+  assert.deepEqual(
+    [row('Яйцо', '2 шт').amountBase, row('Яйцо', '2 шт').baseUnit], [2, 'шт']
+  );
+  assert.equal(row('Мед', '1 ст. л.').amountBase, 25);
+  assert.equal(row('Молоко', '1 стакан').baseUnit, 'мл');
+  assert.equal(row('Сыр', '0,2 кг').amountBase, 200);
+  assert.equal(row('Помидор', '300 г').amountBase, 2);
+  assert.equal(row('Соль', 'по вкусу').baseUnit, null);
+  assert.equal(row('Соль', 'щепотка').baseUnit, null, 'amount 0 means to taste');
+});
+
+test('a "(N г)" hint is the total weight for gram-based ingredients', () => {
+  assert.equal(row('Рыба', '2 шт (~500 г)').amountBase, 500);
+  assert.equal(row('Рыба', '2 шт').amountBase, 800);
+});
+
+test('collisions inside a recipe are summed in base units, not dropped', () => {
   const { rows, conflicts } = mergeRecipeRows([
-    { name: 'Соль', amount: 0, unit: 'по вкусу' },
-    { name: 'Сыр', amount: 50, unit: 'г' },
-    { name: 'Сыр', amount: 30, unit: 'г' },
-    { name: 'Соль', amount: 5, unit: 'г' }
+    row('Соль', 'по вкусу'),
+    row('Молоко', '200 мл'),
+    row('Молоко', '2 ст. л.'),
+    row('Соль', '1 ч. л.'),
+    row('Сыр', '50 г'),
+    row('Сыр', '30 г')
   ]);
-  assert.deepEqual(rows, [
-    { name: 'Соль', amount: 5, unit: 'г' },
-    { name: 'Сыр', amount: 80, unit: 'г' }
-  ]);
+  const byName = Object.fromEntries(rows.map(r => [r.name, r]));
+  assert.equal(byName['Соль'].amountBase, 7);
+  assert.equal(byName['Молоко'].amountBase, 230);
+  assert.equal(byName['Молоко'].unit, 'мл');
+  assert.equal(byName['Сыр'].amount, 80);
+  assert.equal(byName['Сыр'].unit, 'г');
   assert.deepEqual(conflicts, []);
 });
 
-test('unmergeable units are reported', () => {
-  const { rows, conflicts } = mergeRecipeRows([
-    { name: 'Молоко', amount: 200, unit: 'мл' },
-    { name: 'Молоко', amount: 2, unit: 'ст. л.' }
-  ]);
-  assert.equal(rows.length, 1);
+test('units without a factor are reported', () => {
+  const { conflicts } = mergeRecipeRows([row('Сыр', '1 горсть')]);
   assert.equal(conflicts.length, 1);
 });
 
@@ -75,7 +95,7 @@ test('isDirtyName flags compound and alternative names', () => {
 test('audit on the real catalog: no compound, untyped or colliding names', () => {
   const { lines } = buildReport(recipes);
   const report = lines.join('\n');
-  for (const title of ['Compound', 'Missing in ingredient-types', 'Unmergeable collisions']) {
+  for (const title of ['Compound', 'Missing in ingredient-types', 'Units without a conversion factor']) {
     assert.match(report, new RegExp(`## ${title}[^\\n]*\\(0\\)`), title);
   }
 });

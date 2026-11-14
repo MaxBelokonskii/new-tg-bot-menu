@@ -25,6 +25,7 @@ const TABLES = [
     protein REAL NOT NULL,
     fat REAL NOT NULL,
     carbs REAL NOT NULL,
+    servings INTEGER NOT NULL DEFAULT 1,
     FOREIGN KEY (category_id) REFERENCES meal_categories(id)
   )`,
 
@@ -41,6 +42,8 @@ const TABLES = [
     ingredient_id INTEGER NOT NULL,
     amount REAL NOT NULL,
     unit TEXT NOT NULL,
+    amount_base REAL,
+    base_unit TEXT,
     PRIMARY KEY (recipe_id, ingredient_id),
     FOREIGN KEY (recipe_id) REFERENCES recipes(id),
     FOREIGN KEY (ingredient_id) REFERENCES ingredients(id)
@@ -125,6 +128,7 @@ const TABLES = [
     ingredient_id INTEGER NOT NULL,
     total_amount REAL NOT NULL,
     unit TEXT NOT NULL,
+    to_taste INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (shopping_list_id, ingredient_id),
     FOREIGN KEY (shopping_list_id) REFERENCES shopping_lists(id),
     FOREIGN KEY (ingredient_id) REFERENCES ingredients(id)
@@ -133,6 +137,16 @@ const TABLES = [
 
 // [RU] Колонки, добавленные в user_preferences после первой версии схемы.
 // [EN] Columns added to user_preferences after the initial schema version.
+// [RU] Колонки Этапа 3.1 (базовые единицы и порции). Значения заполняет migrate.js
+// (UPSERT связей), так что старой БД хватает повторного прогона миграции.
+// [EN] Stage 3.1 columns (base units, servings). migrate.js fills them via
+// link UPSERT, so an old DB only needs migrate.js to be re-run.
+const CATALOG_ADDED_COLUMNS = {
+  recipes: [['servings', 'INTEGER NOT NULL DEFAULT 1']],
+  recipe_ingredients: [['amount_base', 'REAL'], ['base_unit', 'TEXT']],
+  shopping_list_items: [['to_taste', 'INTEGER NOT NULL DEFAULT 0']]
+};
+
 const USER_PREFERENCES_ADDED_COLUMNS = [
   ['weight', 'REAL'],
   ['height', 'REAL'],
@@ -202,6 +216,9 @@ async function initDb() {
     await dbRun(sql);
   }
   await addMissingColumns('user_preferences', USER_PREFERENCES_ADDED_COLUMNS);
+  for (const [table, columns] of Object.entries(CATALOG_ADDED_COLUMNS)) {
+    await addMissingColumns(table, columns);
+  }
   await assertDailyMenuItemsUnique();
 }
 
