@@ -83,7 +83,7 @@ Telegram-бот, который помогает собирать рацион �
 - `database/` — исходный файл рецептов (`recipes.json`) и сам SQLite-файл (`bot.db`).
 - `logs/` — файлы логов winston (`error.log`, `combined.log`).
 
-Точка входа — `src/index.js`: там регистрируются все Telegraf-хэндлеры (`bot.hears` / `bot.action`).
+Точка входа — `src/index.js` (инициализация БД и запуск). Бот собирается в `src/bot/create-bot.js`, хэндлеры (`bot.hears` / `bot.action`) разнесены по фичам в `src/bot/handlers/`.
 
 ## Схема базы данных
 

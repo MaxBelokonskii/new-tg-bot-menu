@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ✅ работает, 🟡 частично, 🔴 не реализовано. Подробности — в roadmap (раздел 2).
 
 - 🟡 Рандом блюда по категории → карточка рецепта → добавление в рацион на сегодня (`interface/dish-selection.js` + `features/weekly-planner/logic.js:saveSelectedDish`). `slot` вычисляется из категории (`breakfast`→1, `main`→2/3, `salads`→4, `desserts`→5). Повторное добавление в занятый слот молча перезаписывает предыдущий рецепт (UX-подтверждение — плановая доработка 2.5).
-- 🟡 Просмотр текущего рациона (`bot.action('view_weekly_plan')` в `src/index.js`). Ограничен текущей календарной неделей Пн..Вс.
+- 🟡 Просмотр текущего рациона (`view_weekly_plan` в `src/bot/handlers/weekly-plan.js`). Ограничен текущей календарной неделей Пн..Вс.
 - ✅ Список покупок с группировкой по типам (`features/shopping-list/logic.js`, `interface/shopping-list.js`). Переключатель «📅 На сегодня / 🗓 На неделю» в экране списка; границы периода — из `utils/date-helpers.js` (`getCurrentDayBounds`/`getCurrentWeekBounds`), сохраняются в `shopping_lists.period_start/period_end`. Ингредиенты классифицированы по 11 типам через `database/ingredient-types.json`.
 - ✅ Автогенерация недельного рациона: `generateWeeklyPlan` в `features/weekly-planner/logic.js` собирает Пн..Вс текущей ISO-недели greedy-подбором по близости к `user_preferences.target_<slot>`, учитывает `exclude_ingredients`, main1≠main2, идемпотентно перезаписывает неделю. Хэндлер `generate_weekly_plan` рендерит свежий план.
 - 🔴 Редактирование конкретного приёма пищи — не реализовано.
@@ -36,20 +36,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Переменные окружения (`.env`)
 
-- `BOT_TOKEN` — токен Telegram-бота. Если не задан или равен `your_telegram_bot_token`, бот логирует предупреждение и **не стартует** (см. `src/index.js:213`).
+- `BOT_TOKEN` — токен Telegram-бота. Если не задан или равен `your_telegram_bot_token`, бот логирует предупреждение и **не стартует** (см. `src/index.js:start`).
 - `DATABASE_PATH` — путь к SQLite-файлу (по умолчанию `./database/bot.db`).
 - `LOG_LEVEL` — уровень winston-логгера (по умолчанию `info`).
 
 ## Архитектура
 
-Однопроцессный long-polling Telegraf-бот. Все апдейты от Telegram обрабатываются в `src/index.js` — это единственная точка маршрутизации, где `bot.hears` / `bot.action` вызывают функции из `interface/` и `features/`. Новые экраны добавляются именно здесь, а не в отдельных роутерах.
+Однопроцессный long-polling Telegraf-бот. `src/index.js` — только старт (`initDb` → `bot.launch`). Бот собирается в `src/bot/create-bot.js:createBot` (session → Stage → хэндлеры, без запуска — так его гоняет `test/bot/routing.test.js`). Хэндлеры (`bot.hears` / `bot.action`) живут по фичам в `src/bot/handlers/<feature>.js`, каждый файл экспортирует `register(bot)` и вызывает функции из `interface/` и `features/`. Новый экран — новый файл в `handlers/` + строка в списке `createBot`; `common.js` (middleware авто-регистрации, `/start`, `/help`) всегда первым. `handlers/helpers.js:safeEdit` — `editMessageText` с игнором «message is not modified».
 
 ### Слои (обязательная структура из `projectRules.mdc`)
 
 - `src/bot/` — константы/локализация (`texts.js`). **Все пользовательские строки на русском должны жить только здесь** — это жёсткое правило проекта.
 - `src/interface/` — UI-слой: сборка клавиатур (`Markup.inlineKeyboard`, `Markup.keyboard`), форматирование HTML-сообщений. Один файл на экран: `main-menu.js`, `dish-selection.js`, `weekly-plan.js`, `shopping-list.js`.
 - `src/features/<feature>/logic.js` — бизнес-логика и работа с БД. Фичи: `meal-suggestions/`, `weekly-planner/`, `shopping-list/`. Опционально рядом кладётся `api.js` (внешние интеграции).
-- `src/database/` — соединение sqlite3 + привязанные к нему хелперы (`db.js`), схема (`schema.js`: async `initDb()`, идемпотентно через `CREATE TABLE IF NOT EXISTS`, вызывается из `src/index.js:start()` до `bot.launch`) и миграция из JSON (`migrate.js`).
+- `src/database/` — соединение sqlite3 + привязанные к нему хелперы (`db.js`), схема (`schema.js`: async `initDb()`, идемпотентно через `CREATE TABLE IF NOT EXISTS`, вызывается из `src/index.js:start` до `bot.launch`) и миграция из JSON (`migrate.js`).
 - `src/utils/` — общие утилиты: `logger.js` (winston: консоль + `logs/error.log` + `logs/combined.log`) и `date-helpers.js` (`getCurrentWeekBounds()` → `{ start, endExclusive }` для SQL-запросов «на этой неделе»).
 
 ### Поток данных для типового сценария «выбор блюда»
@@ -81,12 +81,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Неочевидные особенности кода
 
-- **Авто-регистрация пользователя** происходит в глобальном middleware `src/index.js:24` через `getOrCreateUser(ctx.from.id, ctx.from.username)` — к моменту любого хэндлера пользователь уже есть в БД.
+- **Авто-регистрация пользователя** происходит в глобальном middleware `src/bot/handlers/common.js` через `getOrCreateUser(ctx.from.id, ctx.from.username)` — к моменту любого хэндлера пользователь уже есть в БД.
 - **Доступ к БД — только через хелперы** `const { dbGet, dbAll, dbRun, withTransaction } = require('../../database/db')` (фабрика — `utils/db-helpers.js`). Не вызывать `db.get/all/run` с колбэками и не писать `BEGIN/COMMIT` руками. Все записи идут через одну очередь процесса: node-sqlite3 — одно соединение, и без очереди чужая запись попала бы в открытую транзакцию и пропала на ROLLBACK. Многошаговые записи (read-then-write, несколько INSERT) — в `withTransaction(async () => …)`; вложенные вызовы реентерабельны (AsyncLocalStorage), вложенная транзакция присоединяется к внешней. Чтения не ставятся в очередь — не держите долгие чтения внутри транзакции.
 - **`confirm_dish`** всегда пишет в `daily_menu` за **сегодня** через `formatLocalDate(new Date())` из `utils/date-helpers.js` (локальная дата, не UTC — иначе у пользователей в UTC+N рядом с полуночью блюдо уезжало бы на следующие сутки и выпадало из окна `getWeeklyPlan`). Явного выбора даты нет — это намеренно для текущего MVP.
 - **Нутриенты**: в JSON поля называются `proteins`/`fats`, в БД — `protein`/`fat`. `migrate.js` нормализует это при вставке (`nutrition.proteins || nutrition.protein || 0`). Не менять без сверки с JSON-источником.
-- **Рассогласование ключей категорий**: в `recipes.json` `category` приходит как английский ключ (`breakfast`, `main`, `salads`, `desserts`), матчинг рецептов в `features/meal-suggestions/logic.js:getRandomRecipeByCategory` делается через `LOWER(mc.name) = LOWER(?)`. `src/index.js:94` содержит локальный `categoryMap` с русскими подписями — формально это дубликат, который должен уехать в `texts.js`/`utils/formatters.js` (см. roadmap 4.6).
-- **Сессия и Scenes**: `src/index.js` регистрирует `session()` (in-memory) + `Scenes.Stage([profileScene])` — нужно для многошагового WizardScene анкеты профиля. Стор памяти достаточно: состояние анкеты короткоживущее, при рестарте пользователь просто начнёт заново. Если понадобится персистентность — адаптеры из `@telegraf/session` (см. roadmap 2.6).
+- **Рассогласование ключей категорий**: в `recipes.json` `category` приходит как английский ключ (`breakfast`, `main`, `salads`, `desserts`), матчинг рецептов в `features/meal-suggestions/logic.js:getRandomRecipeByCategory` делается через `LOWER(mc.name) = LOWER(?)`. `CATEGORY_LABEL` в `src/bot/handlers/weekly-plan.js` и подписи в `interface/dish-selection.js` собирают русские названия категорий локально — формально это дубликат, который должен уехать в `texts.js`/`utils/formatters.js` (см. roadmap 4.6).
+- **Сессия и Scenes**: `src/bot/create-bot.js` регистрирует `session()` (in-memory) + `Scenes.Stage([profileScene, reverseSearchScene])` — нужно для многошаговых WizardScene. Стор памяти достаточно: состояние анкеты короткоживущее, при рестарте пользователь просто начнёт заново. Если понадобится персистентность — адаптеры из `@telegraf/session` (см. roadmap 2.6).
 - **Миграция схемы через ALTER TABLE**: `CREATE TABLE IF NOT EXISTS` не ретрофитит изменения. В `src/database/schema.js` (`addMissingColumns`) для новых колонок `user_preferences` используется `PRAGMA table_info` + `ALTER TABLE ADD COLUMN` — идемпотентно, без нужды в `npm run db:reset`. При добавлении новых столбцов в существующие таблицы держите этот паттерн.
 
 ## Известные проблемы (⚠️ читать перед правками)
@@ -109,7 +109,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **✅ SQL-окна дат исправлены (roadmap 4.3 + 4.4).** `getIngredientsFromPlan` и `getWeeklyPlan` принимают границы Пн..Вс текущей недели из `utils/date-helpers.js:getCurrentWeekBounds()`. Семантика недели: ISO (понедельник — начало, воскресенье — конец).
 - **✅ `slot` теперь вычисляется из категории (roadmap 4.2).** `saveSelectedDish` JOIN'ит `meal_categories`, мапит имя категории на slots (`breakfast`→[1], `main`→[2,3], `salads`→[4], `desserts`→[5]) и делает UPSERT через `ON CONFLICT(daily_menu_id, slot) DO UPDATE SET recipe_id=excluded.recipe_id`. В схеме `daily_menu_items` добавлен `UNIQUE(daily_menu_id, slot)` — требует `npm run db:reset` для существующих БД.
-- **`BOT_TOKEN` placeholder-check не ловит значение из `.env.example` (roadmap 4.7).** `src/index.js:213` сравнивает с `'your_telegram_bot_token'`, а в `.env.example` строка `your_telegram_bot_token_here` — бот попытается стартовать с заглушкой.
+- **`BOT_TOKEN` placeholder-check не ловит значение из `.env.example` (roadmap 4.7).** `src/index.js:start` сравнивает с `'your_telegram_bot_token'`, а в `.env.example` строка `your_telegram_bot_token_here` — бот попытается стартовать с заглушкой.
 - **Генерация недельного плана не реализована.** `bot.action('generate_weekly_plan')` отвечает заглушкой, `features/weekly-planner/logic.js:generateWeeklyPlan` — пустая функция. Это **не баг, а запланированная фича** (roadmap 2.2) — не «чините» до обсуждения подхода.
 - **✅ Двухшаговое подтверждение очистки реализовано (roadmap 2.5).** Кнопки в планe/списке ведут на `confirm_clear_day_<date>` / `confirm_clear_shopping`; эти хэндлеры меняют сообщение на Yes/No-диалог (`do_clear_*` / `cancel_clear_*`). Отмена восстанавливает предыдущий экран из БД.
 
