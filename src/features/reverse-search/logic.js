@@ -1,37 +1,10 @@
-const fs = require('fs');
-const path = require('path');
 const { dbGet, dbAll } = require('../../database/db');
+const {
+  EMPTY_PREFS, parseIdList, filterByPrefs, favoriteCount
+} = require('../ingredient-prefs/scoring');
 
 const MAX_MISSING = 3;
 const RESULT_LIMIT = 10;
-
-// [RU] Единый словарь «что ввёл пользователь → канонический ингредиент».
-// Ключи в нижнем регистре; в карту попадают и канонические имена из
-// ingredient-types.json (170 записей), и все алиасы из ingredient-aliases.json.
-// Собираем один раз на module-load: данные в JSON не меняются в рантайме.
-// [EN] One shared "user-typed → canonical" dictionary. Keys lowercased; the
-// map includes both canonical names from ingredient-types.json (170 entries)
-// and every alias from ingredient-aliases.json. Built once at module load
-// since the JSON files don't change at runtime.
-const INVENTORY_LOOKUP = (() => {
-  const map = new Map();
-  const dataDir = path.resolve(__dirname, '../../../database');
-
-  const typesRaw = JSON.parse(fs.readFileSync(path.join(dataDir, 'ingredient-types.json'), 'utf8'));
-  for (const name of Object.keys(typesRaw)) {
-    if (name.startsWith('_')) continue;
-    map.set(name.toLowerCase(), name);
-  }
-
-  const aliasesRaw = JSON.parse(fs.readFileSync(path.join(dataDir, 'ingredient-aliases.json'), 'utf8'));
-  for (const [canonical, aliases] of Object.entries(aliasesRaw)) {
-    if (canonical.startsWith('_') || !Array.isArray(aliases)) continue;
-    for (const alias of aliases) {
-      map.set(alias.toLowerCase(), canonical);
-    }
-  }
-  return map;
-})();
 
 // [RU] Соответствие категории рецепта → поле user_preferences для оценки
 // близости к целевой калорийности. Для main используем среднее main1/main2
@@ -45,40 +18,6 @@ const CATEGORY_TARGET_KEYS = {
   salads: ['target_salad'],
   desserts: ['target_dessert']
 };
-
-/**
- * Parses a comma-separated list of ingredient names typed by the user
- * and normalizes every token to its canonical DB name via aliases+types
- * lookup. Tokens that can't be resolved are returned separately so the UI
- * can warn the user.
- *
- * @param {string} text - raw user input, e.g. "огурец, помидор, лук"
- * @returns {{canonical: string[], unknown: string[]}} ordered, deduped
- */
-function parseInventory(text) {
-  if (!text) return { canonical: [], unknown: [] };
-  const tokens = String(text)
-    .split(',')
-    .map(t => t.trim())
-    .filter(Boolean);
-
-  const canonicalSet = new Set();
-  const canonical = [];
-  const unknown = [];
-
-  for (const token of tokens) {
-    const hit = INVENTORY_LOOKUP.get(token.toLowerCase());
-    if (hit) {
-      if (!canonicalSet.has(hit)) {
-        canonicalSet.add(hit);
-        canonical.push(hit);
-      }
-    } else {
-      unknown.push(token);
-    }
-  }
-  return { canonical, unknown };
-}
 
 /**
  * Returns the user_preferences row for a Telegram user, or null if the
@@ -116,23 +55,27 @@ function _targetForCategory(targets, categoryName) {
 }
 
 /**
- * Ranks recipes by (1) number of missing ingredients ascending, (2) distance
- * from the user's per-slot calorie target ascending when available, (3)
- * alphabetical. Returns up to {@link RESULT_LIMIT} entries.
+ * Ranks recipes by (1) number of missing ingredients ascending, (2) number
+ * of the user's favorite products descending, (3) distance from the user's
+ * per-slot calorie target ascending when available, (4) alphabetical.
+ * Recipes with excluded products are dropped. Returns up to
+ * {@link RESULT_LIMIT} entries.
  *
  * A recipe is included only if it lacks at most {@link MAX_MISSING}
  * ingredients from the user's inventory.
  *
  * @param {string[]} canonicalInventory - canonical DB ingredient names
  * @param {object|null} userTargets - row from user_preferences or null
+ * @param {{excluded: Set<number>, favorite: Set<number>}} [prefs]
  * @returns {Promise<Array<{id: number, name: string, calories: number,
- *   category: string, missing: string[], missingCount: number}>>}
+ *   category: string, missing: string[], missingCount: number, favorites: number}>>}
  */
-async function findRecipesByInventory(canonicalInventory, userTargets) {
+async function findRecipesByInventory(canonicalInventory, userTargets, prefs = EMPTY_PREFS) {
   const inventorySet = new Set(canonicalInventory);
   const rows = await dbAll(
     `SELECT r.id, r.name, r.calories, mc.name AS category,
-            COALESCE(GROUP_CONCAT(i.name, '|'), '') AS ingredients
+            COALESCE(GROUP_CONCAT(i.name, '|'), '') AS ingredients,
+            GROUP_CONCAT(i.id) AS ingredient_ids
      FROM recipes r
      JOIN meal_categories mc ON r.category_id = mc.id
      LEFT JOIN recipe_ingredients ri ON ri.recipe_id = r.id
@@ -141,8 +84,9 @@ async function findRecipesByInventory(canonicalInventory, userTargets) {
     []
   );
 
+  const candidates = rows.map(r => ({ ...r, ingredientIds: parseIdList(r.ingredient_ids) }));
   const matches = [];
-  for (const row of rows) {
+  for (const row of filterByPrefs(candidates, prefs)) {
     // [RU] COALESCE(GROUP_CONCAT,'') для рецепта без связей выдаёт '', и
     // ''.split('|') вернул бы [''] — ложный «недостающий» ингредиент. Отсекаем.
     // [EN] COALESCE(GROUP_CONCAT,'') for a recipe with no links yields '',
@@ -157,12 +101,14 @@ async function findRecipesByInventory(canonicalInventory, userTargets) {
       calories: row.calories,
       category: row.category,
       missing,
-      missingCount: missing.length
+      missingCount: missing.length,
+      favorites: favoriteCount(row, prefs)
     });
   }
 
   matches.sort((a, b) => {
     if (a.missingCount !== b.missingCount) return a.missingCount - b.missingCount;
+    if (a.favorites !== b.favorites) return b.favorites - a.favorites;
     const ta = _targetForCategory(userTargets, a.category);
     const tb = _targetForCategory(userTargets, b.category);
     if (ta != null && tb != null) {
@@ -195,7 +141,6 @@ async function getRecipeById(recipeId) {
 }
 
 module.exports = {
-  parseInventory,
   findRecipesByInventory,
   getUserTargets,
   getRecipeById,

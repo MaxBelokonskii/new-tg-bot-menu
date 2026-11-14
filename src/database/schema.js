@@ -1,4 +1,5 @@
 const { dbGet, dbAll, dbRun } = require('./db');
+const { migrateLegacyExclusions } = require('./legacy-exclusions');
 
 const TABLES = [
   // 1. users
@@ -93,7 +94,6 @@ const TABLES = [
   // 10. user_preferences
   `CREATE TABLE IF NOT EXISTS user_preferences (
     user_id INTEGER PRIMARY KEY,
-    exclude_ingredients TEXT,
     target_calories INTEGER,
     weight REAL,
     height REAL,
@@ -131,6 +131,18 @@ const TABLES = [
     to_taste INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (shopping_list_id, ingredient_id),
     FOREIGN KEY (shopping_list_id) REFERENCES shopping_lists(id),
+    FOREIGN KEY (ingredient_id) REFERENCES ingredients(id)
+  )`,
+
+  // 12. user_ingredient_prefs — исключённые (жёсткий фильтр) и любимые
+  // (мягкий приоритет) продукты; продукт не может быть в обоих списках.
+  `CREATE TABLE IF NOT EXISTS user_ingredient_prefs (
+    user_id INTEGER NOT NULL,
+    ingredient_id INTEGER NOT NULL,
+    kind TEXT NOT NULL CHECK (kind IN ('excluded', 'favorite')),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, ingredient_id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (ingredient_id) REFERENCES ingredients(id)
   )`
 ];
@@ -219,6 +231,7 @@ async function initDb() {
   for (const [table, columns] of Object.entries(CATALOG_ADDED_COLUMNS)) {
     await addMissingColumns(table, columns);
   }
+  await migrateLegacyExclusions();
   await assertDailyMenuItemsUnique();
 }
 

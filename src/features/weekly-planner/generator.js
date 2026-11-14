@@ -1,6 +1,10 @@
 const { dbGet, dbAll, dbRun, withTransaction } = require('../../database/db');
 const { getCurrentWeekBounds, formatLocalDate } = require('../../utils/date-helpers');
 const { getOrCreateUser } = require('./logic');
+const { getUserIngredientPrefs } = require('../ingredient-prefs/logic');
+const {
+  EMPTY_PREFS, parseIdList, filterByPrefs, favoriteWeight, pickWeighted
+} = require('../ingredient-prefs/scoring');
 
 // [RU] Порядок обхода слотов в дне. main1 раньше main2 — тогда main2 исключает
 // рецепт, уже взятый в main1, и два основных блюда дня всегда разные.
@@ -27,8 +31,8 @@ const TOP_K = 4;
 const GENERATION_MODES = Object.freeze({ OVERWRITE: 'overwrite', FILL_EMPTY: 'fill' });
 
 /**
- * Error thrown when no recipe candidates remain after applying
- * `exclude_ingredients`. Carries the internal category key so the UI layer
+ * Error thrown when no recipe candidates remain after applying the user's
+ * excluded products. Carries the internal category key so the UI layer
  * can map it to a localized label without parsing the message string.
  */
 class EmptyCategoryError extends Error {
@@ -40,55 +44,22 @@ class EmptyCategoryError extends Error {
 }
 
 /**
- * Loads all recipes for a category with a pipe-separated list of ingredient
- * names for the exclusion filter (~30 rows per category — cheap to rank in JS).
+ * Loads all recipes for a category with their ingredient ids for the
+ * preference filter (~30 rows per category — cheap to rank in JS).
  * @param {string} category - mc.name key (`breakfast|main|salads|desserts`)
- * @returns {Promise<Array<{id: number, calories: number, ingredients: string}>>}
+ * @returns {Promise<Array<{id: number, calories: number, ingredientIds: number[]}>>}
  */
 async function loadCandidatesByCategory(category) {
-  return dbAll(
-    `SELECT r.id, r.calories,
-            COALESCE(GROUP_CONCAT(i.name, '|'), '') AS ingredients
+  const rows = await dbAll(
+    `SELECT r.id, r.calories, GROUP_CONCAT(ri.ingredient_id) AS ingredient_ids
      FROM recipes r
      JOIN meal_categories mc ON r.category_id = mc.id
      LEFT JOIN recipe_ingredients ri ON ri.recipe_id = r.id
-     LEFT JOIN ingredients i ON ri.ingredient_id = i.id
      WHERE LOWER(mc.name) = LOWER(?)
      GROUP BY r.id`,
     [category]
   );
-}
-
-/**
- * Parses the free-form exclude_ingredients string into a lower-cased token set.
- * @param {string|null} raw
- * @returns {Set<string>}
- */
-function parseExcludeIngredients(raw) {
-  if (!raw) return new Set();
-  return new Set(
-    raw.split(/[,;\n]/)
-      .map(s => s.trim().toLowerCase())
-      .filter(Boolean)
-  );
-}
-
-/**
- * True if any of the recipe's ingredient names contains any exclusion token.
- * Matching is per ingredient name, so "рис" matches "рис бурый".
- * @param {{ingredients: string}} candidate
- * @param {Set<string>} excludeSet
- * @returns {boolean}
- */
-function isExcluded(candidate, excludeSet) {
-  if (excludeSet.size === 0 || !candidate.ingredients) return false;
-  // [RU] Регистр сворачиваем в JS: SQLite LOWER() не умеет кириллицу.
-  // [EN] Fold case in JS: SQLite LOWER() is ASCII-only.
-  const names = candidate.ingredients.toLowerCase().split('|');
-  for (const token of excludeSet) {
-    if (names.some(name => name.includes(token))) return true;
-  }
-  return false;
+  return rows.map(r => ({ id: r.id, calories: r.calories, ingredientIds: parseIdList(r.ingredient_ids) }));
 }
 
 /**
@@ -104,39 +75,44 @@ function isExcluded(candidate, excludeSet) {
  * repeats only start after every recipe was used. With a kcal target the
  * random draw is among the TOP_K closest; without one — the whole pool.
  *
+ * [RU] Любимые продукты (2.11) — мягкий бонус: вес рецепта делит расстояние
+ * до цели при отборе TOP_K и повышает шанс в розыгрыше.
+ * [EN] Favorite products (2.11) are a soft bonus: the recipe weight divides
+ * its kcal distance when ranking TOP_K and raises its odds in the draw.
+ *
  * @param {Array<{id: number, calories: number}>} candidates
  * @param {number|null} targetKcal
  * @param {Set<number>} weekUsed - mutated: cleared when the pool is exhausted
  * @param {Set<number>} dayTaken
  * @param {() => number} [random=Math.random]
+ * @param {{excluded: Set<number>, favorite: Set<number>}} [prefs]
  * @returns {{id: number, calories: number}|null}
  */
-function pickRecipe(candidates, targetKcal, weekUsed, dayTaken, random = Math.random) {
+function pickRecipe(candidates, targetKcal, weekUsed, dayTaken, random = Math.random, prefs = EMPTY_PREFS) {
   let pool = candidates.filter(c => !weekUsed.has(c.id) && !dayTaken.has(c.id));
   if (pool.length === 0) {
     weekUsed.clear();
     pool = candidates.filter(c => !dayTaken.has(c.id));
   }
   if (pool.length === 0) return null;
+  const weightOf = (c) => favoriteWeight(c, prefs);
+  const score = (c) => Math.abs(c.calories - targetKcal) / weightOf(c);
   const ranked = targetKcal
-    ? [...pool]
-      .sort((a, b) => Math.abs(a.calories - targetKcal) - Math.abs(b.calories - targetKcal))
-      .slice(0, TOP_K)
+    ? [...pool].sort((a, b) => score(a) - score(b)).slice(0, TOP_K)
     : pool;
-  return ranked[Math.floor(random() * ranked.length)];
+  return pickWeighted(ranked, weightOf, random);
 }
 
 /**
- * Loads candidates per category with exclusions applied.
- * @param {Set<string>} excludeSet
+ * Loads candidates per category with excluded products filtered out.
+ * @param {{excluded: Set<number>}} prefs
  * @returns {Promise<Record<string, Array>>}
  * @throws {EmptyCategoryError}
  */
-async function loadFilteredCandidates(excludeSet) {
+async function loadFilteredCandidates(prefs) {
   const byCategory = {};
   for (const category of CATEGORIES) {
-    const rows = await loadCandidatesByCategory(category);
-    byCategory[category] = rows.filter(c => !isExcluded(c, excludeSet));
+    byCategory[category] = filterByPrefs(await loadCandidatesByCategory(category), prefs);
     if (byCategory[category].length === 0) throw new EmptyCategoryError(category);
   }
   return byCategory;
@@ -232,7 +208,8 @@ function buildInitialState(items, mode) {
  * Generates the plan for the current ISO week (Mon..Sun): for every slot
  * picks a random recipe among the TOP_K closest to the user's per-slot kcal
  * target, without repeating a recipe within the week until its category is
- * exhausted. Honors user_preferences.exclude_ingredients.
+ * exhausted. Skips recipes with excluded products and favors recipes with
+ * favorite ones (user_ingredient_prefs).
  *
  * Read-only preparation runs outside the write queue; all writes happen in
  * one transaction, so a failure leaves no partially generated week.
@@ -248,13 +225,13 @@ async function generateWeeklyPlan(telegramId, options = {}) {
   const userId = await getOrCreateUser(telegramId);
   const bounds = getCurrentWeekBounds();
 
-  const prefs = await dbGet(
-    `SELECT exclude_ingredients, target_breakfast, target_main1,
-            target_main2, target_salad, target_dessert
+  const targets = await dbGet(
+    `SELECT target_breakfast, target_main1, target_main2, target_salad, target_dessert
      FROM user_preferences WHERE user_id = ?`,
     [userId]
   ) || {};
-  const candidates = await loadFilteredCandidates(parseExcludeIngredients(prefs.exclude_ingredients));
+  const prefs = await getUserIngredientPrefs(userId);
+  const candidates = await loadFilteredCandidates(prefs);
 
   return withTransaction(async () => {
     const days = await ensureWeekDays(userId, bounds.start);
@@ -267,7 +244,9 @@ async function generateWeeklyPlan(telegramId, options = {}) {
       );
       for (const { slot, category, targetKey } of SLOT_PLAN) {
         if (occupied.has(`${date}_${slot}`)) continue;
-        const pick = pickRecipe(candidates[category], prefs[targetKey] || null, weekUsed[category], dayTaken, random);
+        const pick = pickRecipe(
+          candidates[category], targets[targetKey] || null, weekUsed[category], dayTaken, random, prefs
+        );
         if (!pick) continue;
         weekUsed[category].add(pick.id);
         dayTaken.add(pick.id);
