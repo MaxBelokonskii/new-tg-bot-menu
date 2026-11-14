@@ -148,6 +148,55 @@ async function deleteEntry(telegramId, entryId) {
 }
 
 /**
+ * Loads the user's own diary entry with per-serving recipe nutrition.
+ * @param {number} telegramId
+ * @param {number} entryId
+ * @returns {Promise<{id: number, date: string, portion: number, recipeId: number, name: string,
+ *   calories: number, protein: number, fat: number, carbs: number}|null>} null if not found / not owned
+ */
+async function getEntry(telegramId, entryId) {
+  const userId = await getOrCreateUser(telegramId);
+  const row = await dbGet(
+    `SELECT fl.id, fl.date, fl.portion, fl.recipe_id,
+            r.name, r.calories, r.protein, r.fat, r.carbs
+     FROM food_log fl
+     JOIN recipes r ON r.id = fl.recipe_id
+     WHERE fl.id = ? AND fl.user_id = ?`,
+    [entryId, userId]
+  );
+  if (!row) return null;
+  const { recipe_id: recipeId, ...rest } = row;
+  return { ...rest, recipeId };
+}
+
+/**
+ * Changes the portion of the user's own diary entry within the diary window.
+ * @param {number} telegramId
+ * @param {number} entryId
+ * @param {number} portion - one of PORTIONS
+ * @param {string} [today] - YYYY-MM-DD, defaults to the local today
+ * @returns {Promise<{status: 'updated'|'notFound'|'outOfRange', date?: string}>}
+ *   date of the entry when it exists and belongs to the user
+ * @throws {Error} on a portion outside the allowed values
+ */
+async function updateEntryPortion(telegramId, entryId, portion, today = todayString()) {
+  if (!PORTIONS.includes(portion)) throw new Error(`Invalid portion: ${portion}`);
+  const userId = await getOrCreateUser(telegramId);
+  return withTransaction(async () => {
+    const row = await dbGet(
+      'SELECT date FROM food_log WHERE id = ? AND user_id = ?',
+      [entryId, userId]
+    );
+    if (!row) return { status: 'notFound' };
+    // [RU] Записи старше окна дневника не правим — как и не показываем их.
+    // [EN] Entries outside the diary window are read-only, like they are hidden.
+    if (!isDiaryDate(row.date, today)) return { status: 'outOfRange', date: row.date };
+    await dbRun('UPDATE food_log SET portion = ? WHERE id = ? AND user_id = ?', [portion, entryId, userId]);
+    return { status: 'updated', date: row.date };
+  });
+}
+
+/**
  * Returns the user's diary entries for a date with nutrition scaled by portion.
  * @param {number} telegramId
  * @param {string} date - YYYY-MM-DD
@@ -225,6 +274,8 @@ module.exports = {
   getRecipeNutrition,
   addEntry,
   deleteEntry,
+  getEntry,
+  updateEntryPortion,
   getDayLog,
   getDayTotals,
   getPlanDishes

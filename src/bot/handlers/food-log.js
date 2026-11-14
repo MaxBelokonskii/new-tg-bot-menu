@@ -12,16 +12,20 @@ const {
   getRecipeNutrition,
   addEntry,
   deleteEntry,
+  getEntry,
+  updateEntryPortion,
   getDayLog,
   getPlanDishes
 } = require('../../features/food-log/logic');
 const { SCENE_ID } = require('../../features/food-log/search-scene');
 const { buildDayScreen } = require('../../interface/food-log');
-const { buildPlanPicker, buildPortionPicker } = require('../../interface/food-log-pickers');
+const { buildPlanPicker, buildPortionPicker, buildEntryEditor } = require('../../interface/food-log-pickers');
 
 const T = texts.foodLog;
 const DATE = '(\\d{4}-\\d{2}-\\d{2})';
 const today = () => formatLocalDate(new Date());
+// Тост по статусу updateEntryPortion
+const PORTION_TOASTS = { updated: T.portionUpdated, outOfRange: T.entryOutOfRange, notFound: T.entryNotFound };
 
 /**
  * Loads the diary day and builds its screen.
@@ -79,7 +83,8 @@ async function ensureDiaryDate(ctx, date) {
 
 /**
  * Registers food diary handlers: day screen, day navigation, add from plan,
- * recipe search, portion choice, entry deletion and "🍽 Съел" from recipe cards.
+ * recipe search, portion choice, entry portion editing and deletion, and
+ * "🍽 Съел" from recipe cards.
  * @param {import('telegraf').Telegraf} bot
  */
 function register(bot) {
@@ -144,6 +149,36 @@ function register(bot) {
     }
     await ctx.answerCbQuery(entryId ? T.added : T.recipeNotFound);
     if (entryId) await showDay(ctx, date);
+  }));
+
+  // [RU] Редактор записи: только своя запись и только в окне дневника;
+  // иначе — тост и экран сегодняшнего дня.
+  // [EN] Entry editor: own entries within the diary window only; otherwise
+  // a toast and today's screen.
+  bot.action(/^fl_entry_(\d+)$/, guarded('opening entry editor', async (ctx) => {
+    const entry = await getEntry(ctx.from.id, Number(ctx.match[1]));
+    if (!entry || !isDiaryDate(entry.date)) {
+      await ctx.answerCbQuery(entry ? T.entryOutOfRange : T.entryNotFound);
+      await showDay(ctx, today());
+      return;
+    }
+    await ctx.answerCbQuery();
+    const { text, extra } = buildEntryEditor(entry);
+    await safeEdit(ctx, text, extra);
+  }));
+
+  bot.action(/^fl_port_(\d+)_([1-4])$/, guarded('updating portion', async (ctx) => {
+    const [, entryId, halves] = ctx.match;
+    let result;
+    try {
+      result = await updateEntryPortion(ctx.from.id, Number(entryId), portionFromHalves(Number(halves)));
+    } catch (error) {
+      logger.error('Food log: error updating portion:', error);
+      await ctx.answerCbQuery(T.errorSave);
+      return;
+    }
+    await ctx.answerCbQuery(PORTION_TOASTS[result.status]);
+    await showDay(ctx, result.status === 'updated' ? result.date : today());
   }));
 
   bot.action(/^fl_del_(\d+)$/, guarded('deleting entry', async (ctx) => {
