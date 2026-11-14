@@ -2,102 +2,12 @@ const fs = require('fs');
 const path = require('path');
 const { db, dbGet: get, dbRun: run, withTransaction } = require('./db');
 const { initDb } = require('./schema');
-
-// [RU] Словари нормализации. Ключ — канонический вариант, значение — список алиасов.
-// [EN] Normalization dictionaries. Keys are canonical forms; values are their aliases.
-function loadAliasMap(filePath) {
-  let raw;
-  try {
-    raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  } catch (err) {
-    throw new Error(`Failed to load alias map from ${filePath}: ${err.message}`);
-  }
-  const map = new Map();
-  for (const [canonical, aliases] of Object.entries(raw)) {
-    if (canonical.startsWith('_') || !Array.isArray(aliases)) continue;
-    for (const alias of aliases) map.set(alias, canonical);
-  }
-  return map;
-}
-
-const ALIAS_DIR = path.resolve(__dirname, '../../database');
-const ingredientAliases = loadAliasMap(path.join(ALIAS_DIR, 'ingredient-aliases.json'));
-const unitAliases = loadAliasMap(path.join(ALIAS_DIR, 'unit-aliases.json'));
-
-// [RU] Плоский словарь canonical→type для классификации ингредиентов в UI списка покупок.
-// [EN] Flat canonical→type dictionary for shopping-list UI grouping.
-function loadTypeMap(filePath) {
-  let raw;
-  try {
-    raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  } catch (err) {
-    throw new Error(`Failed to load type map from ${filePath}: ${err.message}`);
-  }
-  const map = new Map();
-  for (const [name, type] of Object.entries(raw)) {
-    if (name.startsWith('_') || typeof type !== 'string') continue;
-    map.set(name, type);
-  }
-  return map;
-}
-
-const ingredientTypes = loadTypeMap(path.join(ALIAS_DIR, 'ingredient-types.json'));
-const FALLBACK_TYPE = 'Другое';
-
-function normalizeIngredient(name) {
-  return ingredientAliases.get(name) || name;
-}
-
-function classifyIngredient(canonicalName) {
-  return ingredientTypes.get(canonicalName) || FALLBACK_TYPE;
-}
-
-function normalizeUnit(unit) {
-  if (!unit) return unit;
-  // [RU] Убираем уточнение веса в скобках: "шт (150 г)" → "шт".
-  // [EN] Strip parenthetical weight hint: "шт (150 г)" → "шт".
-  const clean = unit.replace(/\s*\(.*\)\s*$/, '').trim();
-  return unitAliases.get(clean) || clean;
-}
-
-/**
- * Parses an ingredient amount string into a numeric amount + unit.
- *
- * Supports:
- *   "100 г"           → { amount: 100, unit: "г" }
- *   "3 шт"            → { amount: 3,   unit: "шт" }
- *   "1/2 ст."         → { amount: 0.5, unit: "ст." }
- *   "2-3 шт"          → { amount: 2,   unit: "шт" }   (lower bound)
- *   "250-300 г"       → { amount: 250, unit: "г" }
- *   "2-3 шт (200 г)"  → { amount: 2,   unit: "шт (200 г)" }
- *   "по вкусу"        → { amount: 0,   unit: "по вкусу" }
- *   ""                → { amount: 0,   unit: "не указано" }
- *
- * @param {string} amountStr
- * @returns {{amount: number, unit: string}}
- */
-function parseAmount(amountStr) {
-  if (!amountStr) return { amount: 0, unit: 'не указано' };
-
-  // [RU] Диапазон: ведущее число, опционально "-/–/— второе число", затем единица.
-  // [EN] Range: leading number, optional "- / – / — second number", then unit.
-  const match = amountStr.match(
-    /^([\d.,]+(?:\/[\d.,]+)?)(?:\s*[-–—]\s*[\d.,]+(?:\/[\d.,]+)?)?\s*(.*)$/
-  );
-  if (!match) return { amount: 0, unit: amountStr };
-
-  const lead = match[1];
-  let amount;
-  if (lead.includes('/')) {
-    const [num, den] = lead.split('/').map(s => parseFloat(s.replace(',', '.')));
-    amount = den ? num / den : num;
-  } else {
-    amount = parseFloat(lead.replace(',', '.'));
-  }
-
-  const unit = match[2].trim() || 'шт';
-  return { amount: isNaN(amount) ? 0 : amount, unit };
-}
+const {
+  resolveRecipeIngredients,
+  classifyIngredient,
+  hasType,
+  isDirtyName
+} = require('./ingredient-normalizer');
 
 async function upsertCategories(recipes) {
   const categories = [...new Set(recipes.map(r => r.category))];
@@ -107,13 +17,36 @@ async function upsertCategories(recipes) {
   return categories.length;
 }
 
-async function upsertIngredients(recipes) {
+/**
+ * Resolves every recipe's ingredients once (split, aliases, collisions) and
+ * validates the resulting dictionary: no compound/alternative names and every
+ * canonical name has a shopping-list type.
+ *
+ * @param {Array<object>} recipes - recipes.json entries
+ * @returns {{resolved: Map<string, Array<{name: string, amount: number, unit: string}>>, names: Set<string>}}
+ */
+function resolveCatalog(recipes) {
+  const resolved = new Map();
   const names = new Set();
-  recipes.forEach(r => r.ingredients.forEach(i => names.add(normalizeIngredient(i.item))));
-  let unclassified = 0;
+  for (const recipe of recipes) {
+    const { rows, conflicts } = resolveRecipeIngredients(recipe.ingredients);
+    conflicts.forEach(c => console.warn(`Warning: "${recipe.name}" — unmergeable units, kept first (${c})`));
+    rows.forEach(r => names.add(r.name));
+    resolved.set(recipe.name, rows);
+  }
+  const dirty = [...names].filter(isDirtyName);
+  if (dirty.length) {
+    throw new Error(`Compound ingredient names left after normalization: ${dirty.join('; ')}`);
+  }
+  const untyped = [...names].filter(n => !hasType(n));
+  if (untyped.length) {
+    throw new Error(`Ingredients missing in ingredient-types.json: ${untyped.join('; ')}`);
+  }
+  return { resolved, names };
+}
+
+async function upsertIngredients(names) {
   for (const name of names) {
-    const type = classifyIngredient(name);
-    if (type === FALLBACK_TYPE && !ingredientTypes.has(name)) unclassified++;
     // [RU] ON CONFLICT обновляет type для уже существующих строк — полезно при добавлении
     // новых записей в ingredient-types.json без db:reset.
     // [EN] ON CONFLICT updates type for existing rows — handy when ingredient-types.json
@@ -121,11 +54,8 @@ async function upsertIngredients(recipes) {
     await run(
       `INSERT INTO ingredients (name, type) VALUES (?, ?)
        ON CONFLICT(name) DO UPDATE SET type = excluded.type`,
-      [name, type]
+      [name, classifyIngredient(name)]
     );
-  }
-  if (unclassified > 0) {
-    console.warn(`Warning: ${unclassified} ingredient(s) fell back to "${FALLBACK_TYPE}" — consider adding them to ingredient-types.json.`);
   }
   return names.size;
 }
@@ -154,16 +84,14 @@ async function upsertRecipe(recipe) {
   return { id: result.lastID, inserted: true };
 }
 
-async function linkIngredients(recipeId, ingredients) {
-  for (const ing of ingredients) {
-    const canonicalName = normalizeIngredient(ing.item);
-    const ingRow = await get('SELECT id FROM ingredients WHERE name = ?', [canonicalName]);
-    if (!ingRow) throw new Error(`Ingredient not found: ${canonicalName}`);
-    const { amount, unit } = parseAmount(ing.amount);
+async function linkIngredients(recipeId, rows) {
+  for (const row of rows) {
+    const ingRow = await get('SELECT id FROM ingredients WHERE name = ?', [row.name]);
+    if (!ingRow) throw new Error(`Ingredient not found: ${row.name}`);
     await run(
       `INSERT OR IGNORE INTO recipe_ingredients (recipe_id, ingredient_id, amount, unit)
        VALUES (?, ?, ?, ?)`,
-      [recipeId, ingRow.id, amount, normalizeUnit(unit)]
+      [recipeId, ingRow.id, row.amount, row.unit]
     );
   }
 }
@@ -176,12 +104,13 @@ async function migrate() {
   const jsonPath = path.resolve(__dirname, '../../database/recipes.json');
   const { recipes } = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
   console.log(`Loaded ${recipes.length} recipes from JSON.`);
+  const { resolved, names } = resolveCatalog(recipes);
 
   await withTransaction(async () => {
     const catCount = await upsertCategories(recipes);
     console.log(`Processed ${catCount} categories.`);
 
-    const ingCount = await upsertIngredients(recipes);
+    const ingCount = await upsertIngredients(names);
     console.log(`Processed ${ingCount} unique ingredients.`);
 
     let inserted = 0;
@@ -189,7 +118,7 @@ async function migrate() {
     for (let i = 0; i < recipes.length; i++) {
       const recipe = recipes[i];
       const { id, inserted: wasInserted } = await upsertRecipe(recipe);
-      await linkIngredients(id, recipe.ingredients);
+      await linkIngredients(id, resolved.get(recipe.name));
       wasInserted ? inserted++ : skipped++;
       if ((i + 1) % 50 === 0) console.log(`Processed ${i + 1} recipes...`);
     }
@@ -215,9 +144,4 @@ if (require.main === module) {
     .finally(() => db.close());
 }
 
-module.exports = {
-  migrate,
-  parseAmount,
-  normalizeUnit,
-  normalizeIngredient
-};
+module.exports = { migrate, resolveCatalog };
