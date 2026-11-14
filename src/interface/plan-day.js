@@ -147,7 +147,8 @@ function buildNavRow(date, { first, last }) {
  * Builds one day of the weekly plan: weekday header, dishes with kcal,
  * totals vs targets, a compact summary of the week containing the day,
  * per-dish replace/remove buttons, "clear day", ◀️/▶️ navigation within the
- * plan horizon (this and next week) and "back to the plan menu".
+ * plan horizon (this and next week), "week as .txt" (when the week has
+ * dishes) and "back to the plan menu".
  *
  * [RU] Один день на экран вместо всей недели: на полной неделе было
  * ~77 кнопок в одном сообщении. callback_data кнопок замены/удаления/очистки
@@ -189,6 +190,9 @@ function buildPlanDayScreen({ date, today, horizon, items, totals, targets, week
   if (items.length > 0) rows.push([Markup.button.callback(T.clearDay, `confirm_clear_day_${date}`)]);
   const nav = buildNavRow(date, horizon);
   if (nav.length) rows.push(nav);
+  if (week && week.plannedDays > 0) {
+    rows.push([Markup.button.callback(texts.export.planWeekBtn, `wp_export_${week.start}`)]);
+  }
   rows.push([Markup.button.callback(D.menuBtn, 'wp_menu')]);
 
   return { text: lines.join('\n'), extra: { parse_mode: 'HTML', ...Markup.inlineKeyboard(rows) } };

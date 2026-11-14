@@ -134,14 +134,17 @@ function formatShoppingList(list, today) {
 }
 
 /**
- * Inline keyboard for the shopping list screen: checklist (when there is a
- * list), today / this week / next week generate, clear.
- * @param {number|null} [listId] - current list id; no checklist button without it
+ * Inline keyboard for the shopping list screen: checklist and .txt export
+ * (when there is a list), today / this week / next week generate, clear.
+ * @param {number|null} [listId] - current list id; no checklist/export buttons without it
  * @returns {object} reply_markup payload
  */
 function getShoppingListKeyboard(listId = null) {
   const checklistRow = listId
-    ? [[Markup.button.callback(texts.shoppingList.checklist.openBtn, `sl_check_${listId}_0`)]]
+    ? [
+      [Markup.button.callback(texts.shoppingList.checklist.openBtn, `sl_check_${listId}_0`)],
+      [Markup.button.callback(texts.export.shoppingListBtn, 'sl_export')]
+    ]
     : [];
   return Markup.inlineKeyboard([
     ...checklistRow,

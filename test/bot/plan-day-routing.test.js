@@ -68,7 +68,8 @@ test('view shows today with weekday name, kcal per dish, totals and day navigati
   assert.equal(data.filter(d => d.startsWith('edit_slot_')).length, 5);
   assert.ok(data.includes(`confirm_clear_day_${TODAY}`));
   assert.ok(data.includes('wp_menu'));
-  assert.ok(data.length <= 14, 'one day per screen');
+  assert.ok(data.includes(`wp_export_${MONDAY}`), 'week export button');
+  assert.ok(data.length <= 15, 'one day per screen');
   assert.equal(data.includes(`wp_day_${addDays(TODAY, -1)}`), TODAY > MONDAY);
   assert.ok(data.includes(`wp_day_${addDays(TODAY, 1)}`), '▶️ always: the horizon includes next week');
 });

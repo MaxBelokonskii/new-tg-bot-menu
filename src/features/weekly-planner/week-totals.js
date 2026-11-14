@@ -3,20 +3,23 @@ const { getOrCreateUser } = require('./logic');
 const { NUTRIENTS, sumNutrition } = require('../../utils/nutrition-totals');
 
 /**
- * Returns every planned dish of an ISO week (Mon..Sun) with its date and
- * per-serving nutrition — one row per daily_menu_items entry.
+ * Returns every planned dish of an ISO week (Mon..Sun) with its date, slot,
+ * name and per-serving nutrition — one row per daily_menu_items entry,
+ * ordered by date and slot.
  * @param {number} telegramId
  * @param {{start: string, endExclusive: string}} week - from getWeekBounds
- * @returns {Promise<Array<{date: string, calories: number, protein: number, fat: number, carbs: number}>>}
+ * @returns {Promise<Array<{date: string, slot: number, name: string,
+ *   calories: number, protein: number, fat: number, carbs: number}>>}
  */
 async function getWeekPlanNutrition(telegramId, { start, endExclusive }) {
   const userId = await getOrCreateUser(telegramId);
   return dbAll(
-    `SELECT dm.date, r.calories, r.protein, r.fat, r.carbs
+    `SELECT dm.date, dmi.slot, r.name, r.calories, r.protein, r.fat, r.carbs
      FROM daily_menu_items dmi
      JOIN daily_menu dm ON dmi.daily_menu_id = dm.id
      JOIN recipes r ON dmi.recipe_id = r.id
-     WHERE dm.user_id = ? AND dm.date >= ? AND dm.date < ?`,
+     WHERE dm.user_id = ? AND dm.date >= ? AND dm.date < ?
+     ORDER BY dm.date ASC, dmi.slot ASC`,
     [userId, start, endExclusive]
   );
 }
