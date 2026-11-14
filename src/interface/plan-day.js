@@ -54,6 +54,50 @@ function formatPlanItem(item) {
 }
 
 /**
+ * Share of a target in whole percent; 0 when the target is missing.
+ * @param {number} value
+ * @param {number} target
+ * @returns {number}
+ */
+function percentOf(value, target) {
+  return target > 0 ? Math.round((value / target) * 100) : 0;
+}
+
+/**
+ * Joins nutrients into "1960 ккал · Б 90 г · Ж 64 г · У 220 г", optionally
+ * with the share of each daily target: "1960 ккал (82%) · …".
+ * @param {{calories: number, protein: number, fat: number, carbs: number}} values
+ * @param {{calories: number, protein: number, fat: number, carbs: number}|null} [targets]
+ * @returns {string}
+ */
+function formatNutrientRow(values, targets = null) {
+  return NUTRIENTS.map((key) => {
+    const piece = D.nutrientShort[key].replace('{value}', Math.round(values[key]));
+    if (!targets) return piece;
+    return piece + D.percentOfTarget.replace('{percent}', percentOf(values[key], Number(targets[key]) || 0));
+  }).join(' · ');
+}
+
+/**
+ * Compact week block for the bottom of the day screen: days with dishes,
+ * week sums and the average per planned day (vs daily targets when known).
+ * Empty when nothing is planned this week.
+ * @param {{plannedDays: number,
+ *   totals: {calories: number, protein: number, fat: number, carbs: number},
+ *   average: {calories: number, protein: number, fat: number, carbs: number}}|null} week
+ * @param {{calories: number, protein: number, fat: number, carbs: number}|null} targets
+ * @returns {string[]}
+ */
+function formatWeekSummary(week, targets) {
+  if (!week || week.plannedDays === 0) return [];
+  return [
+    D.weekHeader.replace('{days}', week.plannedDays),
+    D.weekTotal.replace('{values}', formatNutrientRow(week.totals)),
+    D.weekAverage.replace('{values}', formatNutrientRow(week.average, targets))
+  ];
+}
+
+/**
  * Day totals: planned vs targets per nutrient with a percentage, or the
  * bare sums plus a fill-the-profile hint when there are no targets.
  * @param {{calories: number, protein: number, fat: number, carbs: number}} totals
@@ -75,7 +119,7 @@ function formatDayTotals(totals, targets) {
   }
   for (const key of NUTRIENTS) {
     const target = Number(targets[key]) || 0;
-    const percent = target > 0 ? Math.round((totals[key] / target) * 100) : 0;
+    const percent = percentOf(totals[key], target);
     lines.push(D.nutrientLine
       .replace('{label}', texts.macroTargets.labels[key])
       .replace('{value}', Math.round(totals[key]))
@@ -101,7 +145,7 @@ function buildNavRow(date, weekStart) {
 
 /**
  * Builds one day of the weekly plan: weekday header, dishes with kcal,
- * totals vs targets, per-dish replace/remove buttons, "clear day",
+ * totals vs targets, a compact week summary, per-dish replace/remove buttons, "clear day",
  * ◀️/▶️ navigation within the current week and "back to the plan menu".
  *
  * [RU] Один день на экран вместо всей недели: на полной неделе было
@@ -114,10 +158,11 @@ function buildNavRow(date, weekStart) {
  * @param {{date: string, today: string, weekStart: string,
  *   items: Array<{slot: number, name: string, calories: number}>,
  *   totals: {calories: number, protein: number, fat: number, carbs: number},
- *   targets: {calories: number, protein: number, fat: number, carbs: number}|null}} view
+ *   targets: {calories: number, protein: number, fat: number, carbs: number}|null,
+ *   week?: {plannedDays: number, totals: object, average: object}|null}} view - week from summarizePlanWeek
  * @returns {{text: string, extra: object}}
  */
-function buildPlanDayScreen({ date, today, weekStart, items, totals, targets }) {
+function buildPlanDayScreen({ date, today, weekStart, items, totals, targets, week = null }) {
   const header = D.header
     .replace('{day}', T.days[weekdayIndex(date)])
     .replace('{date}', formatDayMonth(date))
@@ -128,6 +173,8 @@ function buildPlanDayScreen({ date, today, weekStart, items, totals, targets }) 
   } else {
     lines.push(...items.map(item => `• ${formatPlanItem(item)}`), '', ...formatDayTotals(totals, targets));
   }
+  const weekLines = formatWeekSummary(week, targets);
+  if (weekLines.length) lines.push('', ...weekLines);
 
   const rows = items.map(item => [
     Markup.button.callback(`${texts.editSlot.replaceBtn} ${truncate(item.name)}`, `edit_slot_${date}_${item.slot}`),
@@ -146,5 +193,6 @@ module.exports = {
   formatPlanDate,
   formatPlanItem,
   formatDayTotals,
+  formatWeekSummary,
   buildPlanDayScreen
 };

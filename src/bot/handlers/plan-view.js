@@ -4,6 +4,7 @@ const { sumNutrition } = require('../../utils/nutrition-totals');
 const { getUserProfile } = require('../../features/profile/logic');
 const { pickTargets } = require('../../features/profile/targets');
 const { getDayPlan } = require('../../features/weekly-planner/day-plan');
+const { getWeekPlanNutrition, summarizePlanWeek } = require('../../features/weekly-planner/week-totals');
 const { buildPlanDayScreen } = require('../../interface/plan-day');
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -22,7 +23,8 @@ function resolvePlanDate(date, now = new Date()) {
 }
 
 /**
- * Loads one day of the plan and the user's targets and builds its screen.
+ * Loads one day of the plan, the week's nutrition and the user's targets
+ * and builds the day screen.
  * @param {number} telegramId
  * @param {string} date - YYYY-MM-DD
  * @returns {Promise<{text: string, extra: object}>}
@@ -31,6 +33,7 @@ async function buildPlanDayView(telegramId, date) {
   const now = new Date();
   const day = resolvePlanDate(date, now);
   const items = await getDayPlan(telegramId, day);
+  const weekRows = await getWeekPlanNutrition(telegramId, now);
   const profile = await getUserProfile(telegramId);
   return buildPlanDayScreen({
     date: day,
@@ -38,7 +41,8 @@ async function buildPlanDayView(telegramId, date) {
     weekStart: getCurrentWeekBounds(now).start,
     items,
     totals: sumNutrition(items),
-    targets: profile ? pickTargets(profile) : null
+    targets: profile ? pickTargets(profile) : null,
+    week: summarizePlanWeek(weekRows)
   });
 }
 
