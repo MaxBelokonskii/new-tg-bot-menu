@@ -162,7 +162,18 @@ const TABLES = [
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (recipe_id) REFERENCES recipes(id)
   )`,
-  'CREATE INDEX IF NOT EXISTS idx_food_log_user_date ON food_log(user_id, date)'
+  'CREATE INDEX IF NOT EXISTS idx_food_log_user_date ON food_log(user_id, date)',
+
+  // 14. favorite_recipes — избранные рецепты пользователя (⭐). Не путать с
+  // любимыми продуктами (user_ingredient_prefs.kind = 'favorite', ❤️).
+  `CREATE TABLE IF NOT EXISTS favorite_recipes (
+    user_id INTEGER NOT NULL,
+    recipe_id INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, recipe_id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (recipe_id) REFERENCES recipes(id)
+  )`
 ];
 
 // [RU] Колонки, добавленные в user_preferences после первой версии схемы.

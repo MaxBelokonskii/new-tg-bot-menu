@@ -38,7 +38,7 @@ test('main menu has the diary button; empty diary without a profile shows the hi
   assert.ok(text.includes(T.empty));
   assert.ok(text.includes(T.noProfileHint));
   assert.deepEqual(callbackData(calls[0].payload), [
-    `fl_plan_${TODAY}`, `fl_search_${TODAY}`, `fl_day_${YESTERDAY}`
+    `fl_plan_${TODAY}`, `fl_search_${TODAY}`, `fl_fav_${TODAY}_0`, `fl_day_${YESTERDAY}`
   ]);
 });
 

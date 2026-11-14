@@ -216,5 +216,6 @@ module.exports = {
 
   shoppingList: require('./texts/shopping-list'),
   foodLog: require('./texts/food-log'),
+  favoriteRecipes: require('./texts/favorite-recipes'),
   whatToEat: require('./texts/what-to-eat')
 };

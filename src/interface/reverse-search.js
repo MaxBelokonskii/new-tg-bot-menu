@@ -1,6 +1,7 @@
 const { Markup } = require('telegraf');
 const texts = require('../bot/texts');
 const { formatNutrition, formatIngredientsHeader } = require('../utils/formatters');
+const { favoriteButton } = require('./favorite-recipes');
 
 /**
  * Builds the HTML message + inline keyboard with numbered recipe buttons
@@ -57,9 +58,10 @@ function buildResultsMessage(recipes, unknownTokens) {
  *   nutrition and servings
  * @param {Array<{name:string,amount:number,unit:string}>} ingredients
  * @param {string[]} missingNames - canonical names missing from inventory
+ * @param {{favorite?: boolean}} [options] - favorite: recipe is in the user's ⭐ favorites
  * @returns {{text: string, keyboard: object}}
  */
-function buildRecipeCard(recipe, ingredients, missingNames) {
+function buildRecipeCard(recipe, ingredients, missingNames, { favorite = false } = {}) {
   const missingSet = new Set(missingNames);
   const ingredientLines = ingredients.map(i => {
     const mark = missingSet.has(i.name) ? '❗️' : '✅';
@@ -88,7 +90,7 @@ function buildRecipeCard(recipe, ingredients, missingNames) {
 
   const keyboard = Markup.inlineKeyboard([
     [Markup.button.callback(texts.reverseSearch.addBtn, `confirm_dish_${recipe.id}`)],
-    [Markup.button.callback(texts.foodLog.ateBtn, `fl_eat_${recipe.id}`)],
+    [Markup.button.callback(texts.foodLog.ateBtn, `fl_eat_${recipe.id}`), favoriteButton(recipe.id, favorite)],
     [Markup.button.callback(texts.reverseSearch.backToList, 'reverse_back_to_list')]
   ]);
 
