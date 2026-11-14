@@ -1,0 +1,295 @@
+const { dbGet, dbAll, dbRun, withTransaction } = require('../../database/db');
+const { getCurrentWeekBounds, formatLocalDate } = require('../../utils/date-helpers');
+const { getOrCreateUser } = require('./logic');
+
+// [RU] Порядок обхода слотов в дне. main1 раньше main2 — тогда main2 исключает
+// рецепт, уже взятый в main1, и два основных блюда дня всегда разные.
+// [EN] Order in which a day is filled. main1 precedes main2 so main2 can
+// exclude the recipe taken by main1 — two distinct mains per day.
+const SLOT_PLAN = Object.freeze([
+  { slot: 1, category: 'breakfast', targetKey: 'target_breakfast' },
+  { slot: 2, category: 'main',      targetKey: 'target_main1' },
+  { slot: 3, category: 'main',      targetKey: 'target_main2' },
+  { slot: 4, category: 'salads',    targetKey: 'target_salad' },
+  { slot: 5, category: 'desserts',  targetKey: 'target_dessert' }
+]);
+
+const CATEGORIES = ['breakfast', 'main', 'salads', 'desserts'];
+
+// [RU] Сколько ближайших по ккал кандидатов участвуют в случайном выборе.
+// 1 = строгий greedy (детерминированная, скучная неделя); больше — разнообразнее,
+// но дальше от цели по калориям.
+// [EN] How many kcal-closest candidates enter the random draw. 1 = strict
+// greedy (deterministic, boring week); larger = more variety, less kcal accuracy.
+const TOP_K = 4;
+
+/** Generation modes: rewrite every slot, or only fill the empty ones. */
+const GENERATION_MODES = Object.freeze({ OVERWRITE: 'overwrite', FILL_EMPTY: 'fill' });
+
+/**
+ * Error thrown when no recipe candidates remain after applying
+ * `exclude_ingredients`. Carries the internal category key so the UI layer
+ * can map it to a localized label without parsing the message string.
+ */
+class EmptyCategoryError extends Error {
+  constructor(category) {
+    super(`No recipes available for category "${category}" after exclusions`);
+    this.name = 'EmptyCategoryError';
+    this.category = category;
+  }
+}
+
+/**
+ * Loads all recipes for a category with a pipe-separated list of ingredient
+ * names for the exclusion filter (~30 rows per category — cheap to rank in JS).
+ * @param {string} category - mc.name key (`breakfast|main|salads|desserts`)
+ * @returns {Promise<Array<{id: number, calories: number, ingredients: string}>>}
+ */
+async function loadCandidatesByCategory(category) {
+  return dbAll(
+    `SELECT r.id, r.calories,
+            COALESCE(GROUP_CONCAT(i.name, '|'), '') AS ingredients
+     FROM recipes r
+     JOIN meal_categories mc ON r.category_id = mc.id
+     LEFT JOIN recipe_ingredients ri ON ri.recipe_id = r.id
+     LEFT JOIN ingredients i ON ri.ingredient_id = i.id
+     WHERE LOWER(mc.name) = LOWER(?)
+     GROUP BY r.id`,
+    [category]
+  );
+}
+
+/**
+ * Parses the free-form exclude_ingredients string into a lower-cased token set.
+ * @param {string|null} raw
+ * @returns {Set<string>}
+ */
+function parseExcludeIngredients(raw) {
+  if (!raw) return new Set();
+  return new Set(
+    raw.split(/[,;\n]/)
+      .map(s => s.trim().toLowerCase())
+      .filter(Boolean)
+  );
+}
+
+/**
+ * True if any of the recipe's ingredient names contains any exclusion token.
+ * Matching is per ingredient name, so "рис" matches "рис бурый".
+ * @param {{ingredients: string}} candidate
+ * @param {Set<string>} excludeSet
+ * @returns {boolean}
+ */
+function isExcluded(candidate, excludeSet) {
+  if (excludeSet.size === 0 || !candidate.ingredients) return false;
+  // [RU] Регистр сворачиваем в JS: SQLite LOWER() не умеет кириллицу.
+  // [EN] Fold case in JS: SQLite LOWER() is ASCII-only.
+  const names = candidate.ingredients.toLowerCase().split('|');
+  for (const token of excludeSet) {
+    if (names.some(name => name.includes(token))) return true;
+  }
+  return false;
+}
+
+/**
+ * Picks a recipe for one slot.
+ *
+ * [RU] Кандидаты, уже использованные на этой неделе (`weekUsed`) или в этот
+ * день (`dayTaken`), пропускаются. Когда пул категории исчерпан, недельный
+ * счётчик сбрасывается — повторы начинаются только после того, как
+ * перебраны все рецепты. С целью по ккал случайный выбор идёт из TOP_K
+ * ближайших, без цели — из всего пула.
+ * [EN] Recipes already used this week (`weekUsed`) or today (`dayTaken`) are
+ * skipped. Once the category pool is exhausted the weekly set is reset, so
+ * repeats only start after every recipe was used. With a kcal target the
+ * random draw is among the TOP_K closest; without one — the whole pool.
+ *
+ * @param {Array<{id: number, calories: number}>} candidates
+ * @param {number|null} targetKcal
+ * @param {Set<number>} weekUsed - mutated: cleared when the pool is exhausted
+ * @param {Set<number>} dayTaken
+ * @param {() => number} [random=Math.random]
+ * @returns {{id: number, calories: number}|null}
+ */
+function pickRecipe(candidates, targetKcal, weekUsed, dayTaken, random = Math.random) {
+  let pool = candidates.filter(c => !weekUsed.has(c.id) && !dayTaken.has(c.id));
+  if (pool.length === 0) {
+    weekUsed.clear();
+    pool = candidates.filter(c => !dayTaken.has(c.id));
+  }
+  if (pool.length === 0) return null;
+  const ranked = targetKcal
+    ? [...pool]
+      .sort((a, b) => Math.abs(a.calories - targetKcal) - Math.abs(b.calories - targetKcal))
+      .slice(0, TOP_K)
+    : pool;
+  return ranked[Math.floor(random() * ranked.length)];
+}
+
+/**
+ * Loads candidates per category with exclusions applied.
+ * @param {Set<string>} excludeSet
+ * @returns {Promise<Record<string, Array>>}
+ * @throws {EmptyCategoryError}
+ */
+async function loadFilteredCandidates(excludeSet) {
+  const byCategory = {};
+  for (const category of CATEGORIES) {
+    const rows = await loadCandidatesByCategory(category);
+    byCategory[category] = rows.filter(c => !isExcluded(c, excludeSet));
+    if (byCategory[category].length === 0) throw new EmptyCategoryError(category);
+  }
+  return byCategory;
+}
+
+/**
+ * Returns planned items of the user's current ISO week.
+ * @param {number} userId
+ * @param {{start: string, endExclusive: string}} bounds
+ * @returns {Promise<Array<{date: string, slot: number, recipe_id: number}>>}
+ */
+async function loadWeekItems(userId, { start, endExclusive }) {
+  return dbAll(
+    `SELECT dm.date, dmi.slot, dmi.recipe_id
+     FROM daily_menu_items dmi
+     JOIN daily_menu dm ON dmi.daily_menu_id = dm.id
+     WHERE dm.user_id = ? AND dm.date >= ? AND dm.date < ?`,
+    [userId, start, endExclusive]
+  );
+}
+
+/**
+ * Counts dishes already planned for the current ISO week — the UI asks
+ * "overwrite or fill empty" when it is non-zero.
+ * @param {number} telegramId
+ * @returns {Promise<number>}
+ */
+async function countWeekItems(telegramId) {
+  const userId = await getOrCreateUser(telegramId);
+  return (await loadWeekItems(userId, getCurrentWeekBounds())).length;
+}
+
+/**
+ * Ensures weekly_menu, 7 daily_menu rows and their week→day links exist.
+ * @param {number} userId
+ * @param {string} weekStart - YYYY-MM-DD (Monday)
+ * @returns {Promise<Array<{date: string, dailyMenuId: number}>>}
+ */
+async function ensureWeekDays(userId, weekStart) {
+  await dbRun('INSERT OR IGNORE INTO weekly_menu (user_id, week_start) VALUES (?, ?)', [userId, weekStart]);
+  const week = await dbGet(
+    'SELECT id FROM weekly_menu WHERE user_id = ? AND week_start = ?',
+    [userId, weekStart]
+  );
+  if (!week) throw new Error('Failed to create/find weekly_menu');
+
+  const [y, m, d] = weekStart.split('-').map(Number);
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const date = formatLocalDate(new Date(y, m - 1, d + i));
+    await dbRun('INSERT OR IGNORE INTO daily_menu (user_id, date) VALUES (?, ?)', [userId, date]);
+    const menu = await dbGet('SELECT id FROM daily_menu WHERE user_id = ? AND date = ?', [userId, date]);
+    if (!menu) throw new Error(`Failed to create/find daily_menu for ${date}`);
+    // [RU] UNIQUE на (weekly_menu_id, date) в схеме нет — проверяем в коде.
+    // [EN] No UNIQUE on (weekly_menu_id, date) in the schema — check in code.
+    const link = await dbGet(
+      'SELECT id FROM weekly_menu_days WHERE weekly_menu_id = ? AND date = ?',
+      [week.id, date]
+    );
+    if (!link) {
+      await dbRun(
+        'INSERT INTO weekly_menu_days (weekly_menu_id, date, daily_menu_id) VALUES (?, ?, ?)',
+        [week.id, date, menu.id]
+      );
+    }
+    days.push({ date, dailyMenuId: menu.id });
+  }
+  return days;
+}
+
+/**
+ * Builds generation state from the existing week: occupied slots and, in
+ * fill mode, recipes that count as already used (so new picks don't repeat
+ * the user's manual choices).
+ * @param {Array<{date: string, slot: number, recipe_id: number}>} items
+ * @param {string} mode
+ * @returns {{occupied: Map<string, number>, weekUsed: Record<string, Set<number>>}}
+ */
+function buildInitialState(items, mode) {
+  const weekUsed = Object.fromEntries(CATEGORIES.map(c => [c, new Set()]));
+  const occupied = new Map();
+  if (mode !== GENERATION_MODES.FILL_EMPTY) return { occupied, weekUsed };
+  const slotCategory = Object.fromEntries(SLOT_PLAN.map(p => [p.slot, p.category]));
+  for (const item of items) {
+    occupied.set(`${item.date}_${item.slot}`, item.recipe_id);
+    const category = slotCategory[item.slot];
+    if (category) weekUsed[category].add(item.recipe_id);
+  }
+  return { occupied, weekUsed };
+}
+
+/**
+ * Generates the plan for the current ISO week (Mon..Sun): for every slot
+ * picks a random recipe among the TOP_K closest to the user's per-slot kcal
+ * target, without repeating a recipe within the week until its category is
+ * exhausted. Honors user_preferences.exclude_ingredients.
+ *
+ * Read-only preparation runs outside the write queue; all writes happen in
+ * one transaction, so a failure leaves no partially generated week.
+ *
+ * @param {number} telegramId
+ * @param {{mode?: 'overwrite'|'fill', random?: () => number}} [options]
+ *   mode `overwrite` (default) rewrites all 35 slots, `fill` keeps existing
+ *   dishes and fills only empty slots; `random` is injectable for tests.
+ * @returns {Promise<{weekStart: string, daysFilled: string[], slotsWritten: number}>}
+ */
+async function generateWeeklyPlan(telegramId, options = {}) {
+  const { mode = GENERATION_MODES.OVERWRITE, random = Math.random } = options;
+  const userId = await getOrCreateUser(telegramId);
+  const bounds = getCurrentWeekBounds();
+
+  const prefs = await dbGet(
+    `SELECT exclude_ingredients, target_breakfast, target_main1,
+            target_main2, target_salad, target_dessert
+     FROM user_preferences WHERE user_id = ?`,
+    [userId]
+  ) || {};
+  const candidates = await loadFilteredCandidates(parseExcludeIngredients(prefs.exclude_ingredients));
+
+  return withTransaction(async () => {
+    const days = await ensureWeekDays(userId, bounds.start);
+    const { occupied, weekUsed } = buildInitialState(await loadWeekItems(userId, bounds), mode);
+    let slotsWritten = 0;
+
+    for (const { date, dailyMenuId } of days) {
+      const dayTaken = new Set(
+        SLOT_PLAN.map(p => occupied.get(`${date}_${p.slot}`)).filter(Boolean)
+      );
+      for (const { slot, category, targetKey } of SLOT_PLAN) {
+        if (occupied.has(`${date}_${slot}`)) continue;
+        const pick = pickRecipe(candidates[category], prefs[targetKey] || null, weekUsed[category], dayTaken, random);
+        if (!pick) continue;
+        weekUsed[category].add(pick.id);
+        dayTaken.add(pick.id);
+        await dbRun(
+          `INSERT INTO daily_menu_items (daily_menu_id, recipe_id, slot)
+           VALUES (?, ?, ?)
+           ON CONFLICT(daily_menu_id, slot) DO UPDATE SET recipe_id = excluded.recipe_id`,
+          [dailyMenuId, pick.id, slot]
+        );
+        slotsWritten++;
+      }
+    }
+
+    return { weekStart: bounds.start, daysFilled: days.map(d => d.date), slotsWritten };
+  });
+}
+
+module.exports = {
+  generateWeeklyPlan,
+  countWeekItems,
+  pickRecipe,
+  EmptyCategoryError,
+  GENERATION_MODES,
+  TOP_K
+};

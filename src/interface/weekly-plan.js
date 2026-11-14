@@ -108,8 +108,24 @@ function buildRemoveSlotConfirmKeyboard(date, slot) {
   };
 }
 
+/**
+ * Builds the "overwrite / fill empty / cancel" keyboard shown when the week
+ * already has dishes and the user asks to generate a plan.
+ * @returns {object} reply_markup payload
+ */
+function buildRegenerateChoiceKeyboard() {
+  return {
+    inline_keyboard: [
+      [{ text: texts.weeklyPlan.overwriteBtn, callback_data: 'generate_weekly_plan_overwrite' }],
+      [{ text: texts.weeklyPlan.fillEmptyBtn, callback_data: 'generate_weekly_plan_fill' }],
+      [{ text: texts.confirm.no, callback_data: 'cancel_generate_weekly_plan' }]
+    ]
+  };
+}
+
 module.exports = {
   sendWeeklyPlanMenu,
+  buildRegenerateChoiceKeyboard,
   buildWeeklyPlanMessage,
   buildClearDayConfirmKeyboard,
   buildRemoveSlotConfirmKeyboard
