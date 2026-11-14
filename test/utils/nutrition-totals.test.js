@@ -79,7 +79,7 @@ test('buildDayScreen with targets shows entries, totals vs norms and buttons', (
   assert.ok(text.includes(`${T.nutrients.fat}: 45 / 40 г · ${T.over.replace('{value}', 5)}`));
   assert.ok(!text.includes(T.noProfileHint));
   assert.deepEqual(callbackData(extra), [
-    'fl_plan_2026-11-14', 'fl_search_2026-11-14', 'fl_del_7', 'fl_day_2026-11-13'
+    'fl_plan_2026-11-14', 'fl_search_2026-11-14', 'fl_del_7', 'wte_show_0', 'fl_day_2026-11-13'
   ]);
 });
 
