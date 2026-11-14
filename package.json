@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
+    "test": "node --test \"test/**/*.test.js\"",
     "db:check": "node scripts/check-db-integrity.js",
     "db:cleanup": "node scripts/cleanup-dangling-refs.js",
     "db:cleanup:dry": "node scripts/cleanup-dangling-refs.js --dry-run",

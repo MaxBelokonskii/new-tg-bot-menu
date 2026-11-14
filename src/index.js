@@ -1,6 +1,6 @@
 const { Telegraf, Scenes, session } = require('telegraf');
 require('dotenv').config();
-const { initDb } = require('./database/db');
+const { initDb } = require('./database/schema');
 const logger = require('./utils/logger');
 const texts = require('./bot/texts');
 const { sendMainMenu } = require('./interface/main-menu');
@@ -62,9 +62,6 @@ const {
 const { getCurrentWeekBounds, getCurrentDayBounds } = require('./utils/date-helpers');
 
 const bot = new Telegraf(process.env.BOT_TOKEN || 'DUMMY_TOKEN');
-
-// Initialize database
-initDb();
 
 // [RU] Session + Stage нужны для многошагового ввода анкеты профиля.
 // Стор по умолчанию — in-memory: состояние анкеты живёт минуту и не
@@ -507,13 +504,19 @@ bot.catch((err, ctx) => {
 });
 
 // Start bot
-if (process.env.BOT_TOKEN && process.env.BOT_TOKEN !== 'your_telegram_bot_token') {
-  bot.launch()
-    .then(() => logger.info('Bot is running...'))
-    .catch((err) => logger.error('Failed to launch bot:', err));
-} else {
-  logger.warn('BOT_TOKEN is not set. Bot will not start.');
+async function start() {
+  await initDb();
+  if (!process.env.BOT_TOKEN || process.env.BOT_TOKEN === 'your_telegram_bot_token') {
+    logger.warn('BOT_TOKEN is not set. Bot will not start.');
+    return;
+  }
+  await bot.launch(() => logger.info('Bot is running...'));
 }
+
+start().catch((err) => {
+  logger.error('Failed to start bot:', err);
+  process.exit(1);
+});
 
 // Enable graceful stop
 process.once('SIGINT', () => bot.stop('SIGINT'));

@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { db } = require('../../database/db');
+const { dbGet, dbAll } = require('../../database/db');
 
 const MAX_MISSING = 3;
 const RESULT_LIMIT = 10;
@@ -45,13 +45,6 @@ const CATEGORY_TARGET_KEYS = {
   salads: ['target_salad'],
   desserts: ['target_dessert']
 };
-
-const dbGet = (sql, params = []) => new Promise((resolve, reject) => {
-  db.get(sql, params, (err, row) => (err ? reject(err) : resolve(row)));
-});
-const dbAll = (sql, params = []) => new Promise((resolve, reject) => {
-  db.all(sql, params, (err, rows) => (err ? reject(err) : resolve(rows)));
-});
 
 /**
  * Parses a comma-separated list of ingredient names typed by the user

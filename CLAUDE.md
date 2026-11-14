@@ -28,11 +28,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm start` — запуск бота (`node src/index.js`)
 - `npm run dev` — запуск через nodemon с автоперезагрузкой
 - `node src/database/migrate.js` — идемпотентная заливка/досыл рецептов из `database/recipes.json` в существующую SQLite. Не пересоздаёт схему.
-- `npm run db:reset` — **destructive**: переименовывает текущую `bot.db` в `.bak.<timestamp>` и прогоняет migrate.js с нуля. Использовать после изменений схемы (`src/database/db.js`) или словарей нормализации (`database/*-aliases.json`).
+- `npm run db:reset` — **destructive**: переименовывает текущую `bot.db` в `.bak.<timestamp>` и прогоняет migrate.js с нуля. Использовать после изменений схемы (`src/database/schema.js`) или словарей нормализации (`database/*-aliases.json`).
 - `npm run db:check` — диагностика (FK ON? 0 нарушений? row counts).
 - `npm run db:cleanup` / `:dry` — удаление битых FK-ссылок (idempotent).
 - `npm run db:cleanup:garbage` / `:dry` — удаление известного мусора (Test category/recipes, daily_menu 2020-01-01).
-- Тесты в проекте пока не настроены, хотя `projectRules.mdc` их предписывает — при добавлении новой утилиты/логики уточняйте у пользователя, нужен ли тестовый каркас, прежде чем вводить фреймворк.
+- `npm test` — тесты на встроенном `node:test` (`test/**/*.test.js`). Интеграционные тесты работают на in-memory SQLite: первым `require` в файле идёт `test/helpers/memory-db.js` (ставит `DATABASE_PATH=:memory:`, `seedDb()` прогоняет схему + `migrate()`). Каждый файл — отдельный процесс со своей БД. Новая логика — с тестами.
 
 ### Переменные окружения (`.env`)
 
@@ -49,7 +49,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `src/bot/` — константы/локализация (`texts.js`). **Все пользовательские строки на русском должны жить только здесь** — это жёсткое правило проекта.
 - `src/interface/` — UI-слой: сборка клавиатур (`Markup.inlineKeyboard`, `Markup.keyboard`), форматирование HTML-сообщений. Один файл на экран: `main-menu.js`, `dish-selection.js`, `weekly-plan.js`, `shopping-list.js`.
 - `src/features/<feature>/logic.js` — бизнес-логика и работа с БД. Фичи: `meal-suggestions/`, `weekly-planner/`, `shopping-list/`. Опционально рядом кладётся `api.js` (внешние интеграции).
-- `src/database/` — подключение к sqlite3 (`db.js`) и скрипт миграции из JSON (`migrate.js`). Схема БД создаётся в `initDb()` идемпотентно через `CREATE TABLE IF NOT EXISTS` и вызывается из `src/index.js` при старте.
+- `src/database/` — соединение sqlite3 + привязанные к нему хелперы (`db.js`), схема (`schema.js`: async `initDb()`, идемпотентно через `CREATE TABLE IF NOT EXISTS`, вызывается из `src/index.js:start()` до `bot.launch`) и миграция из JSON (`migrate.js`).
 - `src/utils/` — общие утилиты: `logger.js` (winston: консоль + `logs/error.log` + `logs/combined.log`) и `date-helpers.js` (`getCurrentWeekBounds()` → `{ start, endExclusive }` для SQL-запросов «на этой неделе»).
 
 ### Поток данных для типового сценария «выбор блюда»
@@ -60,14 +60,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Схема БД (11 таблиц)
 
-Создаются в `src/database/db.js:initDb`. Ключевые связи:
+Создаются в `src/database/schema.js:initDb`. Ключевые связи:
 - `users(id, telegram_id)` — внутренний `id` используется во всех FK, `telegram_id` — только для поиска пользователя.
 - `recipes` ↔ `ingredients` через `recipe_ingredients(recipe_id, ingredient_id, amount, unit)`.
 - План на день: `daily_menu(user_id, date)` 1:N `daily_menu_items(slot 1..5)`. Слот 1=завтрак, 2=основное_1, 3=основное_2, 4=салат, 5=десерт (из README).
 - Недельный план: `weekly_menu(user_id, week_start)` 1:N `weekly_menu_days` → `daily_menu`.
 - Список покупок: `shopping_lists(user_id, period_start, period_end)` 1:N `shopping_list_items(ingredient_id, total_amount, unit)`.
 
-Полные определения и комментарии по каждой таблице — в `src/database/db.js:initDb`. Обоснования (зачем нужна, как связана с остальными) — в roadmap раздел 2.
+Полные определения и комментарии по каждой таблице — в `src/database/schema.js`. Обоснования (зачем нужна, как связана с остальными) — в roadmap раздел 2.
 
 ## Конвенции (из `projectRules.mdc`)
 
@@ -82,12 +82,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Неочевидные особенности кода
 
 - **Авто-регистрация пользователя** происходит в глобальном middleware `src/index.js:24` через `getOrCreateUser(ctx.from.id, ctx.from.username)` — к моменту любого хэндлера пользователь уже есть в БД.
-- **sqlite3 работает на колбэках**; весь код оборачивает его в `new Promise` вручную (см. `features/weekly-planner/logic.js`). При добавлении новых запросов держите этот стиль, не смешивайте с `await db.all` — такого API здесь нет. Кандидат на вынесение в `utils/db-helpers.js` (в `projectRules.mdc` этот файл предусмотрен, но пока не создан).
+- **Доступ к БД — только через хелперы** `const { dbGet, dbAll, dbRun, withTransaction } = require('../../database/db')` (фабрика — `utils/db-helpers.js`). Не вызывать `db.get/all/run` с колбэками и не писать `BEGIN/COMMIT` руками. Все записи идут через одну очередь процесса: node-sqlite3 — одно соединение, и без очереди чужая запись попала бы в открытую транзакцию и пропала на ROLLBACK. Многошаговые записи (read-then-write, несколько INSERT) — в `withTransaction(async () => …)`; вложенные вызовы реентерабельны (AsyncLocalStorage), вложенная транзакция присоединяется к внешней. Чтения не ставятся в очередь — не держите долгие чтения внутри транзакции.
 - **`confirm_dish`** всегда пишет в `daily_menu` за **сегодня** через `formatLocalDate(new Date())` из `utils/date-helpers.js` (локальная дата, не UTC — иначе у пользователей в UTC+N рядом с полуночью блюдо уезжало бы на следующие сутки и выпадало из окна `getWeeklyPlan`). Явного выбора даты нет — это намеренно для текущего MVP.
 - **Нутриенты**: в JSON поля называются `proteins`/`fats`, в БД — `protein`/`fat`. `migrate.js` нормализует это при вставке (`nutrition.proteins || nutrition.protein || 0`). Не менять без сверки с JSON-источником.
 - **Рассогласование ключей категорий**: в `recipes.json` `category` приходит как английский ключ (`breakfast`, `main`, `salads`, `desserts`), матчинг рецептов в `features/meal-suggestions/logic.js:getRandomRecipeByCategory` делается через `LOWER(mc.name) = LOWER(?)`. `src/index.js:94` содержит локальный `categoryMap` с русскими подписями — формально это дубликат, который должен уехать в `texts.js`/`utils/formatters.js` (см. roadmap 4.6).
 - **Сессия и Scenes**: `src/index.js` регистрирует `session()` (in-memory) + `Scenes.Stage([profileScene])` — нужно для многошагового WizardScene анкеты профиля. Стор памяти достаточно: состояние анкеты короткоживущее, при рестарте пользователь просто начнёт заново. Если понадобится персистентность — адаптеры из `@telegraf/session` (см. roadmap 2.6).
-- **Миграция схемы через ALTER TABLE**: `CREATE TABLE IF NOT EXISTS` не ретрофитит изменения. В `src/database/db.js:initDb` для новых колонок `user_preferences` используется `PRAGMA table_info` + `ALTER TABLE ADD COLUMN` — идемпотентно, без нужды в `npm run db:reset`. При добавлении новых столбцов в существующие таблицы держите этот паттерн.
+- **Миграция схемы через ALTER TABLE**: `CREATE TABLE IF NOT EXISTS` не ретрофитит изменения. В `src/database/schema.js` (`addMissingColumns`) для новых колонок `user_preferences` используется `PRAGMA table_info` + `ALTER TABLE ADD COLUMN` — идемпотентно, без нужды в `npm run db:reset`. При добавлении новых столбцов в существующие таблицы держите этот паттерн.
 
 ## Известные проблемы (⚠️ читать перед правками)
 

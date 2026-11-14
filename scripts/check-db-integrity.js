@@ -9,11 +9,7 @@
  */
 
 require('dotenv').config();
-const { db } = require('../src/database/db');
-
-const all = (sql) => new Promise((resolve, reject) => {
-  db.all(sql, (err, rows) => (err ? reject(err) : resolve(rows)));
-});
+const { db, dbAll: all } = require('../src/database/db');
 
 const TABLES = [
   'users', 'meal_categories', 'recipes', 'ingredients',
