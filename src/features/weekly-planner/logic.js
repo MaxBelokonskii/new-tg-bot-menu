@@ -1,4 +1,4 @@
-const { db } = require('../../database/db');
+const { dbGet, dbAll, dbRun, withTransaction } = require('../../database/db');
 const logger = require('../../utils/logger');
 const { getCurrentWeekBounds, formatLocalDate } = require('../../utils/date-helpers');
 
@@ -29,19 +29,6 @@ function categoryForSlot(slot) {
   if (!category) throw new Error(`Unknown slot: ${slot}`);
   return category;
 }
-
-const dbGet = (sql, params = []) => new Promise((resolve, reject) => {
-  db.get(sql, params, (err, row) => (err ? reject(err) : resolve(row)));
-});
-const dbAll = (sql, params = []) => new Promise((resolve, reject) => {
-  db.all(sql, params, (err, rows) => (err ? reject(err) : resolve(rows)));
-});
-const dbRun = (sql, params = []) => new Promise((resolve, reject) => {
-  db.run(sql, params, function (err) {
-    if (err) reject(err);
-    else resolve(this);
-  });
-});
 
 /**
  * Returns the internal user id for a Telegram user, creating the row if missing.
@@ -185,10 +172,9 @@ class EmptyCategoryError extends Error {
  * per-slot target calories. Safe to call repeatedly — UPSERTs by (daily_menu_id, slot).
  *
  * Read-heavy preparation (user_preferences fetch, candidate loading, exclusion
- * filter) runs outside the write mutex — it doesn't mutate anything and must
- * not block other users' saveSelectedDish. Only the 7-day write loop is
- * serialized, which is the part that actually races with saveSelectedDish /
- * replaceInSlot on the same tables.
+ * filter) runs outside the write queue — it doesn't mutate anything and must
+ * not block other users' writes. Only the 7-day write loop runs inside a
+ * single transaction, so a failure mid-week leaves no partially filled plan.
  *
  * @param {number} telegramId
  * @returns {Promise<{weekStart: string, daysFilled: string[]}>}
@@ -219,7 +205,7 @@ async function generateWeeklyPlan(telegramId) {
     }
   }
 
-  return serializeWrite(async () => {
+  return withTransaction(async () => {
     await dbRun(
       'INSERT OR IGNORE INTO weekly_menu (user_id, week_start) VALUES (?, ?)',
       [userId, weekStart]
@@ -311,32 +297,6 @@ async function resolveSlot(dailyMenuId, category) {
   return slots.find(s => !taken.has(s)) ?? slots[0];
 }
 
-// [RU] JS-мьютекс: node-sqlite3 использует одно соединение и не поддерживает
-// вложенные BEGIN. Конкурентные записи в daily_menu_items (двойной тап,
-// одновременные confirm_dish и replace) без мьютекса могут увидеть слот
-// «свободным» между read и write. Промис-цепочка сериализует любые
-// write-операции к daily_menu_items на уровне процесса.
-// [EN] JS mutex: node-sqlite3 shares a single connection and does not support
-// nested BEGIN. Concurrent writes to daily_menu_items (double tap, parallel
-// confirm_dish and replace) could otherwise observe a stale "free" slot
-// between read and write. A promise chain serializes every write-op against
-// daily_menu_items at the process level.
-let saveQueue = Promise.resolve();
-
-function serializeWrite(fn) {
-  const prev = saveQueue;
-  let release;
-  saveQueue = new Promise(resolve => { release = resolve; });
-  return (async () => {
-    try {
-      await prev;
-      return await fn();
-    } finally {
-      release();
-    }
-  })();
-}
-
 async function _saveSelectedDishImpl(telegramId, recipeId) {
   const userId = await getOrCreateUser(telegramId);
   // [RU] Локальная дата, а не UTC: иначе рядом с полуночью «сегодня» уезжает
@@ -391,15 +351,15 @@ async function _saveSelectedDishImpl(telegramId, recipeId) {
  * Saves the selected dish into the user's plan for today. Slot is derived
  * from the recipe's category (README contract: 1=breakfast, 2/3=main,
  * 4=salad, 5=dessert). Re-adding into an occupied slot replaces the
- * existing recipe for that slot. Concurrent calls are serialized through
- * a module-level mutex to keep slot resolution consistent.
+ * existing recipe for that slot. Runs in a transaction on the shared write
+ * queue (see utils/db-helpers.js) to keep slot resolution consistent.
  *
  * @param {number} telegramId
  * @param {number} recipeId
  * @returns {Promise<{slot: number, status: 'added'|'replaced'|'unchanged'}>}
  */
 async function saveSelectedDish(telegramId, recipeId) {
-  return serializeWrite(() => _saveSelectedDishImpl(telegramId, recipeId));
+  return withTransaction(() => _saveSelectedDishImpl(telegramId, recipeId));
 }
 
 /**
@@ -504,8 +464,8 @@ async function _replaceInSlotImpl(telegramId, date, slot, newRecipeId) {
 }
 
 /**
- * Replaces the recipe at (date, slot) with a new one. Serialized through the
- * shared write mutex so it cannot race with a concurrent saveSelectedDish
+ * Replaces the recipe at (date, slot) with a new one. Runs in a transaction on
+ * the shared write queue so it cannot race with a concurrent saveSelectedDish
  * that targets the same slot.
  *
  * @param {number} telegramId
@@ -515,7 +475,7 @@ async function _replaceInSlotImpl(telegramId, date, slot, newRecipeId) {
  * @returns {Promise<boolean>}
  */
 async function replaceInSlot(telegramId, date, slot, newRecipeId) {
-  return serializeWrite(() => _replaceInSlotImpl(telegramId, date, slot, newRecipeId));
+  return withTransaction(() => _replaceInSlotImpl(telegramId, date, slot, newRecipeId));
 }
 
 module.exports = {

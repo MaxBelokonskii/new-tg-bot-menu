@@ -78,7 +78,7 @@ Telegram-бот, который помогает собирать рацион �
 - `src/bot/` — константы и локализация (`texts.js`). Все пользовательские строки живут только здесь.
 - `src/interface/` — UI-слой: клавиатуры и форматирование сообщений (один файл на экран).
 - `src/features/<feature>/logic.js` — бизнес-логика и работа с БД. Сейчас есть три фичи: `meal-suggestions`, `weekly-planner`, `shopping-list`.
-- `src/database/` — подключение к SQLite (`db.js`) и миграция из JSON (`migrate.js`).
+- `src/database/` — подключение к SQLite и хелперы запросов (`db.js`), схема (`schema.js`) и миграция из JSON (`migrate.js`).
 - `src/utils/` — общие утилиты (пока только `logger.js`).
 - `database/` — исходный файл рецептов (`recipes.json`) и сам SQLite-файл (`bot.db`).
 - `logs/` — файлы логов winston (`error.log`, `combined.log`).
@@ -87,7 +87,7 @@ Telegram-бот, который помогает собирать рацион �
 
 ## Схема базы данных
 
-Вся схема создаётся в `src/database/db.js:initDb` идемпотентно через `CREATE TABLE IF NOT EXISTS`. Перечень таблиц:
+Вся схема создаётся в `src/database/schema.js:initDb` идемпотентно через `CREATE TABLE IF NOT EXISTS`. Перечень таблиц:
 
 1. `users` — `id`, `telegram_id`, `username`, `created_at`. Внутренний `id` используется во всех FK.
 2. `meal_categories` — справочник категорий (`breakfast`, `main`, `salads`, `desserts`).

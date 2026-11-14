@@ -1,45 +1,35 @@
-const { db } = require('../../database/db');
+const { dbGet, dbAll } = require('../../database/db');
 
 /**
- * Получает случайный рецепт из указанной категории
- * @param {string} categoryName - Название категории
- * @returns {Promise<object>} Recipe object
+ * Returns a random recipe from the given category.
+ * @param {string} categoryName - category key (breakfast|main|salads|desserts)
+ * @returns {Promise<object|undefined>} Recipe row with `category_name`
  */
 async function getRandomRecipeByCategory(categoryName) {
-  return new Promise((resolve, reject) => {
-    const query = `
-      SELECT r.*, mc.name as category_name 
-      FROM recipes r
-      JOIN meal_categories mc ON r.category_id = mc.id
-      WHERE LOWER(mc.name) = LOWER(?)
-      ORDER BY RANDOM()
-      LIMIT 1
-    `;
-    db.get(query, [categoryName], (err, row) => {
-      if (err) reject(err);
-      else resolve(row);
-    });
-  });
+  return dbGet(
+    `SELECT r.*, mc.name as category_name
+     FROM recipes r
+     JOIN meal_categories mc ON r.category_id = mc.id
+     WHERE LOWER(mc.name) = LOWER(?)
+     ORDER BY RANDOM()
+     LIMIT 1`,
+    [categoryName]
+  );
 }
 
 /**
- * Получает ингредиенты для рецепта
+ * Returns the ingredient list of a recipe.
  * @param {number} recipeId
- * @returns {Promise<Array>} List of ingredients
+ * @returns {Promise<Array<{name: string, amount: number, unit: string}>>}
  */
 async function getRecipeIngredients(recipeId) {
-  return new Promise((resolve, reject) => {
-    const query = `
-      SELECT i.name, ri.amount, ri.unit
-      FROM recipe_ingredients ri
-      JOIN ingredients i ON ri.ingredient_id = i.id
-      WHERE ri.recipe_id = ?
-    `;
-    db.all(query, [recipeId], (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows);
-    });
-  });
+  return dbAll(
+    `SELECT i.name, ri.amount, ri.unit
+     FROM recipe_ingredients ri
+     JOIN ingredients i ON ri.ingredient_id = i.id
+     WHERE ri.recipe_id = ?`,
+    [recipeId]
+  );
 }
 
 module.exports = {

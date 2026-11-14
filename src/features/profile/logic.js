@@ -1,19 +1,9 @@
-const { db } = require('../../database/db');
+const { dbGet, dbRun } = require('../../database/db');
 const { getOrCreateUser } = require('../weekly-planner/logic');
 const {
   calculateTargetCalories,
   splitCaloriesBySlots
 } = require('../../utils/calculations');
-
-const dbGet = (sql, params = []) => new Promise((resolve, reject) => {
-  db.get(sql, params, (err, row) => (err ? reject(err) : resolve(row)));
-});
-const dbRun = (sql, params = []) => new Promise((resolve, reject) => {
-  db.run(sql, params, function (err) {
-    if (err) reject(err);
-    else resolve(this);
-  });
-});
 
 const PROFILE_COLUMNS = ['weight', 'height', 'age', 'sex', 'activity_level', 'goal'];
 

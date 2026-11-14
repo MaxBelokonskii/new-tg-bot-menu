@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
-const { db, initDb } = require('./db');
+const { db, dbGet: get, dbRun: run, withTransaction } = require('./db');
+const { initDb } = require('./schema');
 
 // [RU] Словари нормализации. Ключ — канонический вариант, значение — список алиасов.
 // [EN] Normalization dictionaries. Keys are canonical forms; values are their aliases.
@@ -98,25 +99,6 @@ function parseAmount(amountStr) {
   return { amount: isNaN(amount) ? 0 : amount, unit };
 }
 
-const run = (sql, params = []) => new Promise((resolve, reject) => {
-  db.run(sql, params, function (err) {
-    if (err) reject(err);
-    else resolve(this);
-  });
-});
-const get = (sql, params = []) => new Promise((resolve, reject) => {
-  db.get(sql, params, (err, row) => (err ? reject(err) : resolve(row)));
-});
-// [RU] initDb() ставит CREATE TABLE в serialize-очередь sqlite3; очередь FIFO,
-// поэтому `SELECT 1` с колбэком надёжно сигналит, что CREATE TABLE уже выполнены.
-// Если initDb когда-нибудь станет действительно асинхронным — переделать здесь.
-// [EN] initDb() queues CREATE TABLE into sqlite3's serialize FIFO; SELECT 1 with a
-// callback reliably signals completion. Revisit if initDb ever becomes async proper.
-const initDbAsync = () => new Promise((resolve) => {
-  initDb();
-  db.run('SELECT 1', () => resolve());
-});
-
 async function upsertCategories(recipes) {
   const categories = [...new Set(recipes.map(r => r.category))];
   for (const cat of categories) {
@@ -189,15 +171,13 @@ async function linkIngredients(recipeId, ingredients) {
 async function migrate() {
   console.log('Starting migration...');
 
-  await initDbAsync();
-  await run('PRAGMA foreign_keys = ON');
+  await initDb();
 
   const jsonPath = path.resolve(__dirname, '../../database/recipes.json');
   const { recipes } = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
   console.log(`Loaded ${recipes.length} recipes from JSON.`);
 
-  await run('BEGIN TRANSACTION');
-  try {
+  await withTransaction(async () => {
     const catCount = await upsertCategories(recipes);
     console.log(`Processed ${catCount} categories.`);
 
@@ -215,24 +195,29 @@ async function migrate() {
     }
 
     // [RU] Проверяем количество до COMMIT, чтобы при расхождении ROLLBACK откатил вставки.
-    // [EN] Verify count before COMMIT so that a mismatch triggers ROLLBACK via catch.
+    // [EN] Verify count before COMMIT so that a mismatch triggers ROLLBACK.
     const { c: dbCount } = await get('SELECT COUNT(*) AS c FROM recipes');
     if (dbCount < recipes.length) {
       throw new Error(`Recipe count mismatch: JSON=${recipes.length}, DB=${dbCount}`);
     }
 
-    await run('COMMIT');
     console.log(`Recipes: ${inserted} inserted, ${skipped} already existed.`);
     console.log(`Migration completed successfully! DB recipes: ${dbCount}.`);
-  } catch (err) {
-    await run('ROLLBACK').catch(() => {});
-    throw err;
-  }
+  });
 }
 
-migrate()
-  .catch((err) => {
-    console.error('Migration failed:', err);
-    process.exitCode = 1;
-  })
-  .finally(() => db.close());
+if (require.main === module) {
+  migrate()
+    .catch((err) => {
+      console.error('Migration failed:', err);
+      process.exitCode = 1;
+    })
+    .finally(() => db.close());
+}
+
+module.exports = {
+  migrate,
+  parseAmount,
+  normalizeUnit,
+  normalizeIngredient
+};

@@ -1,15 +1,17 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 require('dotenv').config();
+const { createDbHelpers } = require('../utils/db-helpers');
 
-const dbPath = path.resolve(process.env.DATABASE_PATH || './database/bot.db');
+// [RU] ':memory:' передаём как есть — path.resolve превратил бы его в файл.
+// Используется тестами (каждый test-файл — отдельный процесс со своей БД).
+// [EN] ':memory:' is passed through untouched — path.resolve would turn it
+// into a file path. Used by tests (each test file runs in its own process).
+const rawPath = process.env.DATABASE_PATH || './database/bot.db';
+const dbPath = rawPath === ':memory:' ? rawPath : path.resolve(rawPath);
 
 const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) {
-    console.error('Error connecting to the database:', err.message);
-  } else {
-    console.log('Connected to the SQLite database.');
-  }
+  if (err) console.error('Error connecting to the database:', err.message);
 });
 
 // SQLite отключает проверку внешних ключей по умолчанию — включаем явно
@@ -18,192 +20,7 @@ db.run('PRAGMA foreign_keys = ON', (err) => {
   if (err) console.error('Error enabling foreign keys:', err.message);
 });
 
-const initDb = () => {
-  db.serialize(() => {
-    // 1. users
-    db.run(`CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      telegram_id INTEGER NOT NULL UNIQUE,
-      username TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )`);
-
-    // 2. meal_categories
-    db.run(`CREATE TABLE IF NOT EXISTS meal_categories (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL UNIQUE
-    )`);
-
-    // 3. recipes
-    db.run(`CREATE TABLE IF NOT EXISTS recipes (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL UNIQUE,
-      category_id INTEGER NOT NULL,
-      description TEXT,
-      calories INTEGER NOT NULL,
-      protein REAL NOT NULL,
-      fat REAL NOT NULL,
-      carbs REAL NOT NULL,
-      FOREIGN KEY (category_id) REFERENCES meal_categories(id)
-    )`);
-
-    // 4. ingredients
-    db.run(`CREATE TABLE IF NOT EXISTS ingredients (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL UNIQUE,
-      type TEXT NOT NULL
-    )`);
-
-    // 5. recipe_ingredients
-    db.run(`CREATE TABLE IF NOT EXISTS recipe_ingredients (
-      recipe_id INTEGER NOT NULL,
-      ingredient_id INTEGER NOT NULL,
-      amount REAL NOT NULL,
-      unit TEXT NOT NULL,
-      PRIMARY KEY (recipe_id, ingredient_id),
-      FOREIGN KEY (recipe_id) REFERENCES recipes(id),
-      FOREIGN KEY (ingredient_id) REFERENCES ingredients(id)
-    )`);
-
-    // 6. daily_menu
-    db.run(`CREATE TABLE IF NOT EXISTS daily_menu (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      date DATE NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(user_id, date),
-      FOREIGN KEY (user_id) REFERENCES users(id)
-    )`);
-
-    // 7. daily_menu_items
-    db.run(`CREATE TABLE IF NOT EXISTS daily_menu_items (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      daily_menu_id INTEGER NOT NULL,
-      recipe_id INTEGER NOT NULL,
-      slot INTEGER NOT NULL,
-      UNIQUE (daily_menu_id, slot),
-      FOREIGN KEY (daily_menu_id) REFERENCES daily_menu(id),
-      FOREIGN KEY (recipe_id) REFERENCES recipes(id)
-    )`);
-
-    // 8. weekly_menu
-    db.run(`CREATE TABLE IF NOT EXISTS weekly_menu (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      week_start DATE NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE(user_id, week_start),
-      FOREIGN KEY (user_id) REFERENCES users(id)
-    )`);
-
-    // 9. weekly_menu_days
-    db.run(`CREATE TABLE IF NOT EXISTS weekly_menu_days (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      weekly_menu_id INTEGER NOT NULL,
-      date DATE NOT NULL,
-      daily_menu_id INTEGER NOT NULL,
-      FOREIGN KEY (weekly_menu_id) REFERENCES weekly_menu(id),
-      FOREIGN KEY (daily_menu_id) REFERENCES daily_menu(id)
-    )`);
-
-    // 10. user_preferences
-    db.run(`CREATE TABLE IF NOT EXISTS user_preferences (
-      user_id INTEGER PRIMARY KEY,
-      exclude_ingredients TEXT,
-      target_calories INTEGER,
-      weight REAL,
-      height REAL,
-      age INTEGER,
-      sex TEXT,
-      activity_level TEXT,
-      goal TEXT,
-      target_breakfast INTEGER,
-      target_main1 INTEGER,
-      target_main2 INTEGER,
-      target_salad INTEGER,
-      target_dessert INTEGER,
-      FOREIGN KEY (user_id) REFERENCES users(id)
-    )`);
-
-    // [RU] CREATE TABLE IF NOT EXISTS не обновляет схему существующей БД.
-    // Для существующих инсталляций добавляем недостающие колонки через
-    // ALTER TABLE ADD COLUMN — идемпотентно благодаря проверке через PRAGMA.
-    // [EN] CREATE TABLE IF NOT EXISTS does not retrofit schema changes.
-    // For existing installations, add missing columns via ALTER TABLE —
-    // made idempotent by checking PRAGMA first.
-    db.all("PRAGMA table_info(user_preferences)", (err, rows) => {
-      if (err) {
-        console.error('Failed to inspect user_preferences schema:', err.message);
-        return;
-      }
-      const existing = new Set((rows || []).map(r => r.name));
-      const columns = [
-        ['weight', 'REAL'],
-        ['height', 'REAL'],
-        ['age', 'INTEGER'],
-        ['sex', 'TEXT'],
-        ['activity_level', 'TEXT'],
-        ['goal', 'TEXT'],
-        ['target_breakfast', 'INTEGER'],
-        ['target_main1', 'INTEGER'],
-        ['target_main2', 'INTEGER'],
-        ['target_salad', 'INTEGER'],
-        ['target_dessert', 'INTEGER']
-      ];
-      for (const [name, type] of columns) {
-        if (existing.has(name)) continue;
-        db.run(`ALTER TABLE user_preferences ADD COLUMN ${name} ${type}`, (alterErr) => {
-          if (alterErr) console.error(`Failed to add column ${name}:`, alterErr.message);
-        });
-      }
-    });
-
-    // 11. shopping_lists
-    db.run(`CREATE TABLE IF NOT EXISTS shopping_lists (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      period_start DATE NOT NULL,
-      period_end DATE NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_id) REFERENCES users(id)
-    )`);
-
-    db.run(`CREATE TABLE IF NOT EXISTS shopping_list_items (
-      shopping_list_id INTEGER NOT NULL,
-      ingredient_id INTEGER NOT NULL,
-      total_amount REAL NOT NULL,
-      unit TEXT NOT NULL,
-      PRIMARY KEY (shopping_list_id, ingredient_id),
-      FOREIGN KEY (shopping_list_id) REFERENCES shopping_lists(id),
-      FOREIGN KEY (ingredient_id) REFERENCES ingredients(id)
-    )`);
-
-    // [RU] CREATE TABLE IF NOT EXISTS не обновляет схему существующей БД, поэтому
-    // UNIQUE-констрейнт на daily_menu_items может отсутствовать у пользователей,
-    // которые не прогнали `npm run db:reset` после этого изменения.
-    // [EN] CREATE TABLE IF NOT EXISTS does not retrofit schema changes, so the
-    // UNIQUE constraint on daily_menu_items may be missing for users who have
-    // not run `npm run db:reset` since the change.
-    db.get(
-      "SELECT sql FROM sqlite_master WHERE type='table' AND name='daily_menu_items'",
-      (err, row) => {
-        if (err) {
-          console.error('Schema check failed:', err.message);
-          return;
-        }
-        if (!row || !/UNIQUE\s*\(\s*daily_menu_id\s*,\s*slot\s*\)/i.test(row.sql)) {
-          console.error(
-            'daily_menu_items is missing UNIQUE(daily_menu_id, slot). ' +
-            'Run `npm run db:reset` and restart the bot.'
-          );
-          process.exit(1);
-        }
-      }
-    );
-  });
-};
-
 module.exports = {
   db,
-  initDb
+  ...createDbHelpers(db)
 };
