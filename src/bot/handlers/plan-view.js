@@ -1,46 +1,48 @@
 const { safeEdit } = require('./helpers');
-const { isValidDate, getWeekBounds } = require('../../utils/date-helpers');
 const { sumNutrition } = require('../../utils/nutrition-totals');
 const { getUserClock } = require('../../features/time-zone/logic');
 const { getUserProfile } = require('../../features/profile/logic');
 const { pickTargets } = require('../../features/profile/targets');
 const { getDayPlan } = require('../../features/weekly-planner/day-plan');
 const { getWeekPlanNutrition, summarizePlanWeek } = require('../../features/weekly-planner/week-totals');
+const { planWeeks, weekKindOfDate, planHorizon } = require('../../features/weekly-planner/plan-weeks');
 const { buildPlanDayScreen } = require('../../interface/plan-day');
 
 /**
- * Returns the date when it is a valid day of the user's current ISO week,
- * otherwise today (stale buttons from a previous week fall back to today).
+ * Returns the date when it is a valid day of the user's current or next
+ * ISO week (the plan horizon), otherwise today: stale buttons from a past
+ * week and forged dates fall back to today.
  * @param {string} date - YYYY-MM-DD from callback_data
  * @param {string} today - YYYY-MM-DD, the user's local today
  * @returns {string} YYYY-MM-DD
  */
 function resolvePlanDate(date, today) {
-  const { start, endExclusive } = getWeekBounds(today);
-  return isValidDate(date) && date >= start && date < endExclusive ? date : today;
+  return weekKindOfDate(date, today) ? date : today;
 }
 
 /**
- * Loads one day of the plan, the week's nutrition and the user's targets
- * and builds the day screen.
+ * Loads one day of the plan, the nutrition of the week containing it and
+ * the user's targets and builds the day screen.
  * @param {number} telegramId
  * @param {string} date - YYYY-MM-DD
- * @param {{today: string, week: {start: string, endExclusive: string}}} clock - getUserClock result
+ * @param {{today: string}} clock - getUserClock result
  * @returns {Promise<{text: string, extra: object}>}
  */
-async function buildPlanDayView(telegramId, date, { today, week }) {
+async function buildPlanDayView(telegramId, date, { today }) {
   const day = resolvePlanDate(date, today);
+  const kind = weekKindOfDate(day, today);
+  const week = planWeeks(today)[kind];
   const items = await getDayPlan(telegramId, day);
   const weekRows = await getWeekPlanNutrition(telegramId, week);
   const profile = await getUserProfile(telegramId);
   return buildPlanDayScreen({
     date: day,
     today,
-    weekStart: week.start,
+    horizon: planHorizon(today),
     items,
     totals: sumNutrition(items),
     targets: profile ? pickTargets(profile) : null,
-    week: summarizePlanWeek(weekRows)
+    week: { kind, start: week.start, ...summarizePlanWeek(weekRows) }
   });
 }
 

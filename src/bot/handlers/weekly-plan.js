@@ -1,121 +1,52 @@
 const texts = require('../texts');
 const logger = require('../../utils/logger');
-const { safeEdit } = require('./helpers');
 const { showPlanDay } = require('./plan-view');
 const planEdit = require('./plan-edit');
+const planGenerate = require('./plan-generate');
 const { getUserClock } = require('../../features/time-zone/logic');
-const { sendWeeklyPlanMenu, buildRegenerateChoiceKeyboard } = require('../../interface/weekly-plan');
-const {
-  generateWeeklyPlan,
-  countWeekItems,
-  EmptyCategoryError,
-  GENERATION_MODES
-} = require('../../features/weekly-planner/generator');
-
-// [RU] Английские ключи категорий из БД → локализованные подписи для UI.
-// [EN] DB category keys (en) → localized labels for UI.
-const CATEGORY_LABEL = {
-  breakfast: texts.categories.breakfast,
-  main: texts.categories.main,
-  salads: texts.categories.salad,
-  desserts: texts.categories.dessert
-};
+const { sendWeeklyPlanMenu } = require('../../interface/weekly-plan');
+const { countWeekItems } = require('../../features/weekly-planner/generator');
+const { planWeeks } = require('../../features/weekly-planner/plan-weeks');
 
 /**
- * Generates the week and reports the result. When `editPrompt` is set, the
- * "overwrite / fill" question message is replaced by the result so its
- * buttons can't be pressed twice.
- * @param {import('telegraf').Context} ctx
- * @param {'overwrite'|'fill'} mode
- * @param {boolean} editPrompt
+ * Picks the day the plan view opens on: today when the current week has
+ * dishes, next Monday when only the next week has them, null when both
+ * weeks are empty.
+ * @param {number} telegramId
+ * @param {string} today - YYYY-MM-DD, the user's local today
+ * @returns {Promise<string|null>}
  */
-async function runGeneration(ctx, mode, editPrompt) {
-  try {
-    const clock = await getUserClock(ctx.from.id);
-    const { slotsWritten } = await generateWeeklyPlan(ctx.from.id, { week: clock.week, mode });
-    const resultText = slotsWritten === 0 ? texts.weeklyPlan.nothingToFill : texts.weeklyPlan.generated;
-    if (editPrompt) await safeEdit(ctx, resultText);
-    else await ctx.reply(resultText);
-    if (slotsWritten > 0) await showPlanDay(ctx, clock.today, { edit: false, clock });
-  } catch (error) {
-    logger.error('Error generating weekly plan:', error);
-    // [RU] Специализированная подсказка при «пустой категории после исключений».
-    // [EN] Specialized hint for the "no recipes after exclusions" case.
-    if (error instanceof EmptyCategoryError) {
-      const label = CATEGORY_LABEL[error.category] || error.category;
-      return ctx.reply(texts.weeklyPlan.noRecipesForCategory.replace('{category}', label));
-    }
-    await ctx.reply(texts.weeklyPlan.errorGenerate);
-  }
-}
-
-/**
- * "Generate" button: an empty week is generated right away; otherwise the
- * user chooses between overwriting everything and filling empty slots (4.17).
- * @param {import('telegraf').Context} ctx
- */
-async function handleGenerate(ctx) {
-  let count;
-  try {
-    count = await countWeekItems(ctx.from.id, (await getUserClock(ctx.from.id)).week);
-  } catch (error) {
-    logger.error('Error counting week items:', error);
-    await ctx.answerCbQuery(texts.weeklyPlan.errorGenerate).catch(() => {});
-    return;
-  }
-  if (count === 0) {
-    await ctx.answerCbQuery(texts.weeklyPlan.generating);
-    return runGeneration(ctx, GENERATION_MODES.OVERWRITE, false);
-  }
-  await ctx.answerCbQuery();
-  try {
-    await safeEdit(ctx, texts.weeklyPlan.confirmRegenerate.replace('{count}', count), {
-      reply_markup: buildRegenerateChoiceKeyboard()
-    });
-  } catch (error) {
-    logger.error('Error showing regenerate choice:', error);
-  }
-}
-
-function registerGenerate(bot) {
-  bot.action('generate_weekly_plan', handleGenerate);
-
-  bot.action(/^generate_weekly_plan_(overwrite|fill)$/, async (ctx) => {
-    await ctx.answerCbQuery(texts.weeklyPlan.generating);
-    await runGeneration(ctx, ctx.match[1], true);
-  });
-
-  bot.action('cancel_generate_weekly_plan', async (ctx) => {
-    await ctx.answerCbQuery(texts.confirm.canceled);
-    try {
-      await sendWeeklyPlanMenu(ctx);
-    } catch (error) {
-      logger.error('Error restoring weekly plan menu:', error);
-    }
-  });
+async function pickViewDay(telegramId, today) {
+  const { current, next } = planWeeks(today);
+  if (await countWeekItems(telegramId, current) > 0) return today;
+  if (await countWeekItems(telegramId, next) > 0) return next.start;
+  return null;
 }
 
 /**
  * Registers weekly-plan handlers: menu, day view with navigation, generation
- * and (via plan-edit.js) clearing/replacing/removing dishes.
+ * (via plan-generate.js) and (via plan-edit.js) clearing/replacing/removing dishes.
  * @param {import('telegraf').Telegraf} bot
  */
 function register(bot) {
   bot.hears(texts.mainMenu.buttons.weeklyPlan, (ctx) => sendWeeklyPlanMenu(ctx));
 
-  registerGenerate(bot);
+  planGenerate.register(bot);
 
-  // [RU] Просмотр открывает сегодняшний день недели; пустая неделя — прежний текст.
-  // [EN] Viewing opens today's day of the week; an empty week keeps the old text.
+  // [RU] Просмотр открывает сегодня; если эта неделя пуста, а следующая нет —
+  // её понедельник; обе пустые — прежний текст.
+  // [EN] Viewing opens today; if this week is empty but the next one is not —
+  // next Monday; both empty — the old text.
   bot.action('view_weekly_plan', async (ctx) => {
     await ctx.answerCbQuery();
     try {
       const clock = await getUserClock(ctx.from.id);
-      if (await countWeekItems(ctx.from.id, clock.week) === 0) {
+      const day = await pickViewDay(ctx.from.id, clock.today);
+      if (!day) {
         await ctx.reply(texts.weeklyPlan.empty);
         return;
       }
-      await showPlanDay(ctx, clock.today, { clock });
+      await showPlanDay(ctx, day, { clock });
     } catch (error) {
       logger.error('Error viewing plan:', error);
       await ctx.reply(texts.errors.general);

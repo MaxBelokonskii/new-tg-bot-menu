@@ -2,20 +2,42 @@ const { Markup } = require('telegraf');
 const texts = require('../bot/texts');
 const { formatShoppingQuantity } = require('../utils/formatters');
 const { addDays } = require('../utils/date-helpers');
+const { planWeeks } = require('../features/weekly-planner/plan-weeks');
+const { formatDayMonthName, formatDateRange } = require('./date-labels');
 
 /**
- * Derives 'day' or 'week' mode from the shopping list period bounds.
- * @param {string|null} periodStart YYYY-MM-DD
- * @param {string|null} periodEnd   YYYY-MM-DD (exclusive)
- * @returns {'day'|'week'|null}
+ * Picks the period label kind relative to the user's today.
+ * @param {string} periodStart - YYYY-MM-DD
+ * @param {string} periodEnd - YYYY-MM-DD (exclusive)
+ * @param {string} today - YYYY-MM-DD, the user's local today
+ * @returns {'today'|'day'|'thisWeek'|'nextWeek'|'period'}
  */
-function deriveMode(periodStart, periodEnd) {
-  if (!periodStart || !periodEnd) return null;
-  // [RU] Разница ровно в 1 день ⇒ режим «сегодня», иначе считаем «неделей».
-  // Строгое равенство: 0/отрицательные разницы — повреждённые данные, не маскируем их как «день».
-  // [EN] A 1-day span means the user picked the daily mode. Strict equality:
-  // 0/negative spans indicate corrupted data — do not silently label them 'day'.
-  return addDays(periodStart, 1) === periodEnd ? 'day' : 'week';
+function periodKind(periodStart, periodEnd, today) {
+  // [RU] Ровно 1 день ⇒ список на день; 0/отрицательные разницы — повреждённые
+  // данные, их не маскируем как «день».
+  // [EN] Exactly 1 day ⇒ a day list; 0/negative spans are corrupted data and
+  // are not labelled as a day.
+  if (addDays(periodStart, 1) === periodEnd) return periodStart === today ? 'today' : 'day';
+  const { current, next } = planWeeks(today);
+  if (periodStart === current.start && periodEnd === current.endExclusive) return 'thisWeek';
+  if (periodStart === next.start && periodEnd === next.endExclusive) return 'nextWeek';
+  return 'period';
+}
+
+/**
+ * Period label of a list with its dates, relative to the user's today:
+ * "на сегодня, 14 нояб.", "на следующую неделю, 24–30 нояб.", "на 13 нояб." …
+ * Empty when the list has no period.
+ * @param {string|null} periodStart - YYYY-MM-DD
+ * @param {string|null} periodEnd - YYYY-MM-DD (exclusive)
+ * @param {string} today - YYYY-MM-DD, the user's local today
+ * @returns {string}
+ */
+function formatPeriodLabel(periodStart, periodEnd, today) {
+  if (!periodStart || !periodEnd) return '';
+  const last = addDays(periodEnd, -1);
+  const dates = last > periodStart ? formatDateRange(periodStart, last) : formatDayMonthName(periodStart);
+  return texts.shoppingList.periodLabel[periodKind(periodStart, periodEnd, today)].replace('{dates}', dates);
 }
 
 /**
@@ -77,7 +99,8 @@ function formatGroup(header, items) {
 
 /**
  * Builds the shopping list message (with period label and grouped items).
- * A list whose period has already ended gets a "rebuild me" note; bought
+ * A list whose period has already ended gets a "rebuild me" note (a future
+ * period, e.g. next week, is not stale); bought
  * items are struck through and counted.
  * @param {{ items: Array, periodStart: string|null, periodEnd: string|null }} list
  * @param {string} today - YYYY-MM-DD, the user's local today
@@ -89,8 +112,8 @@ function formatShoppingList(list, today) {
     return texts.shoppingList.empty;
   }
 
-  const mode = deriveMode(periodStart, periodEnd);
-  const suffix = mode ? ` (${texts.shoppingList.periodLabel[mode]})` : '';
+  const label = formatPeriodLabel(periodStart, periodEnd, today);
+  const suffix = label ? ` (${label})` : '';
 
   let message = `<b>${texts.shoppingList.title}</b>${suffix}\n\n`;
   if (periodEnd && today >= periodEnd) message += `${texts.shoppingList.stale}\n\n`;
@@ -107,7 +130,7 @@ function formatShoppingList(list, today) {
 
 /**
  * Inline keyboard for the shopping list screen: checklist (when there is a
- * list), day/week generate, clear.
+ * list), today / this week / next week generate, clear.
  * @param {number|null} [listId] - current list id; no checklist button without it
  * @returns {object} reply_markup payload
  */
@@ -121,6 +144,7 @@ function getShoppingListKeyboard(listId = null) {
       Markup.button.callback(texts.shoppingList.generateDay, 'generate_shopping_list_day'),
       Markup.button.callback(texts.shoppingList.generateWeek, 'generate_shopping_list_week')
     ],
+    [Markup.button.callback(texts.shoppingList.generateNextWeek, 'generate_shopping_list_nextweek')],
     [Markup.button.callback(texts.shoppingList.clear, 'confirm_clear_shopping')]
   ]);
 }
@@ -139,7 +163,7 @@ function buildClearShoppingConfirmKeyboard() {
 }
 
 module.exports = {
-  deriveMode,
+  formatPeriodLabel,
   groupItemsByType,
   orderItems,
   formatBoughtCounter,

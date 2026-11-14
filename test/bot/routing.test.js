@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const texts = require('../../src/bot/texts');
 const { isUsableBotToken } = require('../../src/bot/create-bot');
 const { defaultClock } = require('../helpers/clock');
+const { fillWeek } = require('../../src/interface/weekly-plan');
 const { createFakeBot } = require('../helpers/fake-bot');
 
 const { calls, sendText, sendCallback, methods, reset } = createFakeBot(5001);
@@ -37,10 +38,16 @@ for (const [key, label] of Object.entries(texts.mainMenu.buttons)) {
   });
 }
 
-test('generate → view → edit slot → cancel flow is routed', async () => {
+test('generate → choose this week → view → edit slot → cancel flow is routed', async () => {
+  const { week } = defaultClock();
   await sendCallback('generate_weekly_plan');
-  assert.deepEqual(methods(), ['answerCallbackQuery', 'sendMessage', 'sendMessage']);
-  assert.equal(calls[1].payload.text, texts.weeklyPlan.generated);
+  assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText']);
+  assert.equal(calls[1].payload.text, texts.weeklyPlan.chooseWeek);
+
+  reset();
+  await sendCallback(`gen_week_${week.start}`);
+  assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText', 'sendMessage']);
+  assert.equal(calls[1].payload.text, fillWeek(texts.weeklyPlan.generated, 'current', week.start));
 
   reset();
   await sendCallback('view_weekly_plan');
@@ -58,17 +65,21 @@ test('generate → view → edit slot → cancel flow is routed', async () => {
 });
 
 test('generate on a non-empty week asks overwrite/fill, fill reports nothing to do', async () => {
-  await sendCallback('generate_weekly_plan');
+  const { week } = defaultClock();
+  await sendCallback(`gen_week_${week.start}`);
   assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText']);
-  assert.equal(calls[1].payload.text, texts.weeklyPlan.confirmRegenerate.replace('{count}', 35));
+  assert.equal(
+    calls[1].payload.text,
+    fillWeek(texts.weeklyPlan.confirmRegenerate, 'current', week.start).replace('{count}', 35)
+  );
 
   reset();
-  await sendCallback('generate_weekly_plan_fill');
+  await sendCallback(`generate_weekly_plan_fill_${week.start}`);
   assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText']);
-  assert.equal(calls[1].payload.text, texts.weeklyPlan.nothingToFill);
+  assert.equal(calls[1].payload.text, fillWeek(texts.weeklyPlan.nothingToFill, 'current', week.start));
 
   reset();
-  await sendCallback('generate_weekly_plan_overwrite');
+  await sendCallback(`generate_weekly_plan_overwrite_${week.start}`);
   assert.deepEqual(methods(), ['answerCallbackQuery', 'editMessageText', 'sendMessage']);
 
   reset();

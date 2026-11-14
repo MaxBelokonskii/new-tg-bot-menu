@@ -2,6 +2,7 @@ const { Markup } = require('telegraf');
 const texts = require('../bot/texts');
 const { NUTRIENTS, calculateRemaining } = require('../utils/nutrition-totals');
 const { formatPlanDate, formatPlanItem, formatNutrientRow } = require('./plan-day');
+const { fillWeek } = require('./weekly-plan');
 
 const M = texts.reminders.messages;
 const B = texts.reminders.buttons;
@@ -75,16 +76,19 @@ function buildEveningMessage({ date, entriesCount, totals, targets }) {
 }
 
 /**
- * Weekly reminder: plan the week and build the shopping list.
+ * Weekly reminder: plan the target week and build its shopping list. The
+ * buttons go straight to that week: gen_week_<monday> (no week choice) and
+ * sl_week_<monday> (its shopping list); both are checked at click time.
+ * @param {{kind: 'current'|'next', monday: string}} target - weeklyReminderWeek result
  * @returns {{text: string, extra: object}}
  */
-function buildWeeklyMessage() {
+function buildWeeklyMessage({ kind, monday }) {
   const keyboard = Markup.inlineKeyboard([
-    [Markup.button.callback(B.generateWeek, 'generate_weekly_plan')],
-    [Markup.button.callback(B.shoppingWeek, 'generate_shopping_list_week')]
+    [Markup.button.callback(fillWeek(B.planWeek, kind, monday), `gen_week_${monday}`)],
+    [Markup.button.callback(fillWeek(B.shoppingWeek, kind, monday), `sl_week_${monday}`)]
   ]);
   return {
-    text: [M.weeklyTitle, '', M.weeklyBody].join('\n'),
+    text: [M.weeklyTitle, '', fillWeek(M.weeklyBody, kind, monday)].join('\n'),
     extra: { parse_mode: 'HTML', ...keyboard }
   };
 }

@@ -3,6 +3,7 @@ const { getUserProfile } = require('../profile/logic');
 const { pickTargets } = require('../profile/targets');
 const { getDayPlan } = require('../weekly-planner/day-plan');
 const { getDayLog } = require('../food-log/logic');
+const { weeklyReminderWeek } = require('./schedule');
 const {
   buildMorningMessage,
   buildEveningMessage,
@@ -48,7 +49,7 @@ async function buildReminderMessage(reminder, localDate) {
       });
     }
     case 'weekly':
-      return buildWeeklyMessage();
+      return buildWeeklyMessage(weeklyReminderWeek(localDate));
     default:
       throw new Error(`Unknown reminder type: ${reminder.type}`);
   }
