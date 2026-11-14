@@ -5,7 +5,8 @@ const {
   REMINDER_TYPES,
   TIME_OPTIONS,
   DEFAULTS,
-  lastSentAfterChange
+  lastSentAfterChange,
+  lastSentAfterSettingsChange
 } = require('./schedule');
 
 /**
@@ -80,7 +81,8 @@ async function upsertReminder(userId, reminder) {
 
 /**
  * Applies a change to one reminder and recomputes last_sent_date (a time
- * that already passed today counts as sent — see lastSentAfterChange).
+ * that already passed today counts as sent, a time still ahead fires today —
+ * see lastSentAfterSettingsChange).
  *
  * @param {number} telegramId
  * @param {'morning'|'evening'|'weekly'} type
@@ -93,7 +95,7 @@ async function changeReminder(telegramId, type, change, now) {
     const userId = await getOrCreateUser(telegramId);
     const { offsetMinutes, reminders } = await loadSettings(userId);
     const next = { ...reminders[type], ...change(reminders[type]) };
-    next.last_sent_date = lastSentAfterChange(next, offsetMinutes, now);
+    next.last_sent_date = lastSentAfterSettingsChange(next, offsetMinutes, now);
     await upsertReminder(userId, next);
     return loadSettings(userId);
   });

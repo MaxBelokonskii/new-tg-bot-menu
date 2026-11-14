@@ -84,6 +84,17 @@ test('enabling after the time today marks today as sent; before the time — not
   assert.equal(off.reminders.evening.enabled, false);
 });
 
+test('enable after the default time, then move it later today — fires at the new time', async () => {
+  const now = new Date('2026-11-14T18:45:00Z'); // 21:45 МСК
+  await toggleReminder(8006, 'evening', now); // 21:00 по умолчанию — уже прошло
+  const moved = await setReminderTime(8006, 'evening', 22 * 60, now);
+  assert.equal(moved.reminders.evening.last_sent_date, '2026-11-13');
+
+  const telegram = fakeTelegram();
+  await runReminderTick(telegram, new Date('2026-11-14T19:00:00Z')); // 22:00 МСК
+  assert.deepEqual(telegram.sent.filter(s => s.chatId === 8006).length, 1);
+});
+
 test('time, weekday and zone accept only presets', async () => {
   const now = new Date('2026-11-14T03:00:00Z');
   assert.equal(await setReminderTime(8004, 'morning', 123, now), null);

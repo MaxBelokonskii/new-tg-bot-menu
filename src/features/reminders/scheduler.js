@@ -64,6 +64,7 @@ async function runReminderTick(telegram, nowUtc) {
     try {
       const result = await deliver({ telegram, reminder, localDate: date });
       stats[result] += 1;
+      if (result === 'sent') logger.info(`Reminder ${reminder.type} sent to user ${reminder.user_id} for ${date}`);
       if (result === 'blocked') blockedUsers.add(reminder.user_id);
     } catch (error) {
       stats.failed += 1;

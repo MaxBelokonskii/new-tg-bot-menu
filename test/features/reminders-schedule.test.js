@@ -5,6 +5,7 @@ const {
   DEFAULTS,
   isDue,
   lastSentAfterChange,
+  lastSentAfterSettingsChange,
   formatTime
 } = require('../../src/features/reminders/schedule');
 
@@ -74,6 +75,32 @@ test('lastSentAfterChange: a time already passed today counts as sent', () => {
   // локальная дата берётся по поясу пользователя
   assert.equal(
     lastSentAfterChange({ time_minutes: 7 * 60, last_sent_date: null }, KAMCHATKA, at('2026-11-14T20:00:00Z')),
+    '2026-11-15'
+  );
+});
+
+test('lastSentAfterSettingsChange: a time still ahead today lifts the "sent today" mark', () => {
+  const now = at('2026-11-14T18:45:00Z'); // 21:45 МСК
+  // включили в 21:45 с 21:00 по умолчанию → сегодня считается отправленным
+  const enabled = lastSentAfterSettingsChange({ time_minutes: 21 * 60, last_sent_date: null }, MSK, now);
+  assert.equal(enabled, '2026-11-14');
+  // перенесли на 22:00 → пометка снята, напоминание придёт в 22:00
+  const moved = { type: 'evening', enabled: 1, weekday: null, time_minutes: 22 * 60 };
+  moved.last_sent_date = lastSentAfterSettingsChange({ ...moved, last_sent_date: enabled }, MSK, now);
+  assert.equal(moved.last_sent_date, '2026-11-13');
+  assert.equal(isDue(moved, MSK, at('2026-11-14T19:01:00Z')), true, '22:01');
+  // время уже прошло — как раньше, сегодня не шлём
+  assert.equal(
+    lastSentAfterSettingsChange({ time_minutes: 20 * 60, last_sent_date: null }, MSK, now),
+    '2026-11-14'
+  );
+  // более ранняя пометка и дата «из будущего» не трогаются
+  assert.equal(
+    lastSentAfterSettingsChange({ time_minutes: 22 * 60, last_sent_date: '2026-11-10' }, MSK, now),
+    '2026-11-10'
+  );
+  assert.equal(
+    lastSentAfterSettingsChange({ time_minutes: 22 * 60, last_sent_date: '2026-11-15' }, MSK, now),
     '2026-11-15'
   );
 });
