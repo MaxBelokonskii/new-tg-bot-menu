@@ -26,5 +26,8 @@ module.exports = {
   eaten: 'Записано в дневник ✅',
   comboEaten: 'Записано в дневник блюд: {count} ✅',
   comboPlanned: 'Добавлено в план на сегодня блюд: {count} ✅',
+  comboAlready: 'уже в плане: {count}',
+  comboAsked: 'занятые слоты — спрошу про замену: {count}',
+  toastJoin: ' · ',
   errorSave: 'Не удалось сохранить. Попробуйте позже.'
 };
