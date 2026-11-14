@@ -3,7 +3,7 @@
 // Без БД и таймеров.
 // [EN] Pure reminder rules: setting options and the "is it due" check in the
 // user's local time (utils/date-helpers.js:localParts). No DB, no timers.
-const { localParts, weekdayOf } = require('../../utils/date-helpers');
+const { localParts, weekdayOf, addDays } = require('../../utils/date-helpers');
 const { planWeeks } = require('../weekly-planner/plan-weeks');
 
 const REMINDER_TYPES = Object.freeze(['morning', 'evening', 'weekly']);
@@ -85,6 +85,34 @@ function lastSentAfterChange(reminder, offsetMinutes, nowUtc) {
 }
 
 /**
+ * last_sent_date after the user changed a reminder setting (toggle, time,
+ * weekday). Like lastSentAfterChange, but when the new time is still ahead
+ * today, a "sent today" mark is lifted, so the reminder fires at the new time.
+ * Example: enabling the evening reminder at 21:45 (default 21:00 → today
+ * counts as sent), then moving it to 22:00 — it must fire at 22:00.
+ * Zone changes keep lastSentAfterChange: there a repeat would be unexpected.
+ *
+ * @param {{time_minutes: number, last_sent_date: string|null}} reminder - settings after the change
+ * @param {number} offsetMinutes
+ * @param {Date} nowUtc
+ * @returns {string|null} new last_sent_date
+ */
+function lastSentAfterSettingsChange(reminder, offsetMinutes, nowUtc) {
+  const local = localParts(nowUtc, offsetMinutes);
+  // [RU] Время ещё впереди, а сегодня помечено отправленным (часто — самой
+  // прошлой правкой, а не реальной отправкой): снимаем пометку. Если
+  // напоминание сегодня уже реально приходило, после переноса на более
+  // позднее время оно придёт ещё раз — пользователь сам так настроил.
+  // [EN] The time is still ahead but today is marked as sent (often by the
+  // previous edit, not a real send): lift the mark. If it was really sent
+  // today, moving it later sends it once more — as the user configured.
+  if (local.minutes < reminder.time_minutes && reminder.last_sent_date === local.date) {
+    return addDays(local.date, -1);
+  }
+  return lastSentAfterChange(reminder, offsetMinutes, nowUtc);
+}
+
+/**
  * Which week the weekly reminder is about on the user's local date: the
  * next one from Friday to Sunday, otherwise the current one.
  * @param {string} localDate - YYYY-MM-DD, the user's local today
@@ -111,6 +139,7 @@ module.exports = {
   GRACE_MINUTES,
   isDue,
   lastSentAfterChange,
+  lastSentAfterSettingsChange,
   weeklyReminderWeek,
   formatTime
 };
